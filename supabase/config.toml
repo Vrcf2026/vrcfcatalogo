@@ -1,0 +1,4 @@
+project_id = "mgdhclajlcmepdfrkktw"
+
+[functions.generate-product-image]
+verify_jwt = false
