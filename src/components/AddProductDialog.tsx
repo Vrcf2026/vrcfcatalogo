@@ -11,26 +11,26 @@ import { toast } from "sonner";
 import { Plus, Sparkles, Loader2 } from "lucide-react";
 
 const CATEGORIES = [
-  "Smartphones",
-  "Laptops",
-  "Tablets",
-  "Acessórios",
-  "Áudio",
-  "Gaming",
-  "Câmeras",
-  "Wearables",
-  "Outros",
+  "Smartphones", "Laptops", "Tablets", "Acessórios",
+  "Áudio", "Gaming", "Câmeras", "Wearables", "Outros",
 ];
 
-export function AddProductDialog() {
+interface AddProductDialogProps {
+  families: { id: string; name: string; category: string }[];
+}
+
+export function AddProductDialog({ families }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [familyId, setFamilyId] = useState("none");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
   const queryClient = useQueryClient();
+
+  const filteredFamilies = families.filter((f) => !category || f.category === category);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -40,7 +40,6 @@ export function AddProductDialog() {
 
     setLoading(true);
     try {
-      // 1. Insert product
       const { data: product, error } = await supabase
         .from("products")
         .insert({
@@ -48,15 +47,14 @@ export function AddProductDialog() {
           description: description.trim() || null,
           category: category || null,
           price: price ? parseFloat(price) : null,
+          family_id: familyId === "none" ? null : familyId,
         })
         .select()
         .single();
 
       if (error) throw error;
-
       toast.success("Produto adicionado!");
 
-      // 2. Generate AI image
       setGeneratingImage(true);
       toast.info("Gerando imagem com IA...");
 
@@ -83,10 +81,7 @@ export function AddProductDialog() {
   };
 
   const resetForm = () => {
-    setName("");
-    setDescription("");
-    setCategory("");
-    setPrice("");
+    setName(""); setDescription(""); setCategory(""); setPrice(""); setFamilyId("none");
   };
 
   return (
@@ -105,37 +100,22 @@ export function AddProductDialog() {
           <div className="space-y-2">
             <Label htmlFor="name">Nome do Produto *</Label>
             <div className="relative">
-              <Input
-                id="name"
-                placeholder="Ex: iPhone 15 Pro Max"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              <Input id="name" placeholder="Ex: iPhone 15 Pro Max" value={name} onChange={(e) => setName(e.target.value)} />
               <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground">
-              A IA vai gerar uma imagem automaticamente com base no nome
-            </p>
+            <p className="text-xs text-muted-foreground">A IA vai gerar uma imagem automaticamente com base no nome</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              placeholder="Descreva o produto..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-            />
+            <Textarea id="description" placeholder="Descreva o produto..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+              <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -143,26 +123,26 @@ export function AddProductDialog() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="price">Preço (R$)</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="0,00"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-              />
+              <Input id="price" type="number" step="0.01" min="0" placeholder="0,00" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
           </div>
 
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full gap-2"
-          >
+          <div className="space-y-2">
+            <Label>Família</Label>
+            <Select value={familyId} onValueChange={setFamilyId}>
+              <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem família</SelectItem>
+                {filteredFamilies.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2">
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
