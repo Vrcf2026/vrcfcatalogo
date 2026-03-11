@@ -1,15 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProductCard } from "@/components/ProductCard";
+import { AddProductDialog } from "@/components/AddProductDialog";
+import { EditProductDialog } from "@/components/EditProductDialog";
+import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { Search, Cpu, Package, Loader2, ImageOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Search, Cpu, Package, Loader2, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
-const Index = () => {
+const Admin = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const { signOut, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -55,23 +69,19 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <Cpu className="h-6 w-6 text-primary" />
             <h1 className="font-heading text-xl font-bold text-foreground">TechCatalog</h1>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Admin</span>
           </div>
-          <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Admin
-          </Link>
+          <div className="flex items-center gap-2">
+            <ManageFamiliesDialog families={families} />
+            <AddProductDialog families={families} />
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
-      <section className="container mx-auto px-4 py-12 text-center">
-        <h2 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Catálogo de Eletrônicos
-        </h2>
-        <p className="mt-3 text-lg text-muted-foreground max-w-xl mx-auto">
-          Explore nossos produtos de tecnologia.
-        </p>
-      </section>
-
-      <section className="container mx-auto px-4 pb-8">
+      <section className="container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -112,53 +122,38 @@ const Index = () => {
         ) : filtered && filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filtered.map((product) => (
-              <div key={product.id} className="group product-card-shadow rounded-xl bg-card overflow-hidden border border-border">
-                <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <ImageOff className="h-10 w-10" />
-                      <span className="text-xs">Sem imagem</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    {product.category && (
-                      <span className="inline-block text-[11px] font-medium uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                        {product.category}
-                      </span>
-                    )}
-                    {product.family_id && familyMap[product.family_id] && (
-                      <span className="inline-block text-[11px] font-medium text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full">
-                        {familyMap[product.family_id]}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-heading font-semibold text-card-foreground line-clamp-1">{product.name}</h3>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                  )}
-                  {product.price != null && (
-                    <p className="font-heading font-bold text-lg text-foreground">
-                      R$ {product.price.toFixed(2).replace(".", ",")}
-                    </p>
-                  )}
-                </div>
-              </div>
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                description={product.description}
+                category={product.category}
+                price={product.price}
+                imageUrl={product.image_url}
+                familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                onEdit={() => setEditingProduct(product)}
+              />
             ))}
           </div>
         ) : (
           <div className="text-center py-20">
             <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
             <h3 className="mt-4 font-heading text-lg font-semibold text-foreground">Nenhum produto encontrado</h3>
-            <p className="mt-1 text-muted-foreground">Nenhum produto disponível no momento.</p>
+            <p className="mt-1 text-muted-foreground">Adicione seu primeiro produto clicando em "Novo Produto"</p>
           </div>
         )}
       </section>
+
+      {editingProduct && (
+        <EditProductDialog
+          open={!!editingProduct}
+          onOpenChange={(open) => !open && setEditingProduct(null)}
+          product={editingProduct}
+          families={families}
+        />
+      )}
     </div>
   );
 };
 
-export default Index;
+export default Admin;
