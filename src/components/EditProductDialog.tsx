@@ -133,7 +133,7 @@ export function EditProductDialog({ open, onOpenChange, product, families }: Edi
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-price">Preço (R$)</Label>
+              <Label htmlFor="edit-price">Preço (€)</Label>
               <Input id="edit-price" type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
           </div>

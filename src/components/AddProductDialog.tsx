@@ -124,7 +124,7 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="price">Preço (R$)</Label>
+              <Label htmlFor="price">Preço (€)</Label>
               <Input id="price" type="number" step="0.01" min="0" placeholder="0,00" value={price} onChange={(e) => setPrice(e.target.value)} />
             </div>
           </div>
