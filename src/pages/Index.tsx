@@ -141,9 +141,12 @@ const Index = () => {
                     <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
                   )}
                   {product.price != null && (
-                    <p className="font-heading font-bold text-lg text-foreground">
-                      R$ {product.price.toFixed(2).replace(".", ",")}
-                    </p>
+                    <div>
+                      <p className="font-heading font-bold text-lg text-foreground">
+                        {product.price.toFixed(2).replace(".", ",")} €
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">IVA incluído à taxa legal em vigor</p>
+                    </div>
                   )}
                 </div>
               </div>
