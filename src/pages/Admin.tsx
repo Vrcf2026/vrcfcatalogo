@@ -49,6 +49,24 @@ const Admin = () => {
     },
   });
 
+  const { data: productImages = [] } = useQuery({
+    queryKey: ["product_images"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_images")
+        .select("*")
+        .order("position", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
+    if (!acc[img.product_id]) acc[img.product_id] = [];
+    acc[img.product_id].push(img);
+    return acc;
+  }, {});
+
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
 
   const filtered = products?.filter((p) => {
@@ -130,8 +148,10 @@ const Admin = () => {
                 category={product.category}
                 price={product.price}
                 imageUrl={product.image_url}
+                images={imagesByProduct[product.id] || []}
                 familyName={product.family_id ? familyMap[product.family_id] || null : null}
                 onEdit={() => setEditingProduct(product)}
+                isAdmin
               />
             ))}
           </div>
