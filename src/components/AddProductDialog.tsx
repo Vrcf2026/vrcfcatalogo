@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Sparkles, Loader2, Upload, Wand2 } from "lucide-react";
 
 const CATEGORIES = [
   "Smartphones", "Laptops", "Tablets", "Acessórios",
@@ -28,9 +28,82 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
+
+  const handleGenerateDescription = async () => {
+    if (!name.trim()) {
+      toast.error("Preencha o nome do produto primeiro");
+      return;
+    }
+    setGeneratingDesc(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-description", {
+        body: { productName: name.trim(), category: category || null },
+      });
+      if (error) throw error;
+      if (data?.description) {
+        setDescription(data.description);
+        toast.success("Descrição gerada!");
+      }
+    } catch (e: any) {
+      toast.error("Erro ao gerar descrição");
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + uploadedFiles.length > 3) {
+      toast.error("Máximo de 3 imagens");
+      return;
+    }
+    setUploadedFiles(prev => [...prev, ...files].slice(0, 3));
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadManualImages = async (productId: string) => {
+    const urls: string[] = [];
+    for (let i = 0; i < uploadedFiles.length; i++) {
+      const file = uploadedFiles[i];
+      const ext = file.name.split(".").pop() || "png";
+      const fileName = `${productId}_manual_${i}.${ext}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+      
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        continue;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(fileName);
+
+      urls.push(publicUrlData.publicUrl);
+
+      await supabase.from("product_images").insert({
+        product_id: productId,
+        image_url: publicUrlData.publicUrl,
+        position: i,
+      });
+    }
+
+    if (urls.length > 0) {
+      await supabase.from("products").update({ image_url: urls[0] }).eq("id", productId);
+    }
+    return urls;
+  };
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -55,18 +128,26 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
       if (error) throw error;
       toast.success("Produto adicionado!");
 
-      setGeneratingImage(true);
-      toast.info("Gerando 3 imagens com IA...");
-
-      const response = await supabase.functions.invoke("generate-product-image", {
-        body: { productName: name.trim(), productId: product.id },
-      });
-
-      if (response.error) {
-        console.error("Image generation error:", response.error);
-        toast.warning("Produto salvo, mas as imagens não puderam ser geradas.");
+      if (uploadedFiles.length > 0) {
+        // Upload manual images
+        toast.info("Carregando imagens...");
+        await uploadManualImages(product.id);
+        toast.success("Imagens carregadas!");
       } else {
-        toast.success("Imagens geradas com sucesso!");
+        // Generate AI images
+        setGeneratingImage(true);
+        toast.info("Gerando 3 imagens com IA...");
+
+        const response = await supabase.functions.invoke("generate-product-image", {
+          body: { productName: name.trim(), productId: product.id },
+        });
+
+        if (response.error) {
+          console.error("Image generation error:", response.error);
+          toast.warning("Produto salvo, mas as imagens não puderam ser geradas.");
+        } else {
+          toast.success("Imagens geradas com sucesso!");
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -82,7 +163,7 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
   };
 
   const resetForm = () => {
-    setName(""); setDescription(""); setCategory(""); setPrice(""); setFamilyId("none");
+    setName(""); setDescription(""); setCategory(""); setPrice(""); setFamilyId("none"); setUploadedFiles([]);
   };
 
   return (
@@ -93,7 +174,7 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
           Novo Produto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">Adicionar Produto</DialogTitle>
         </DialogHeader>
@@ -104,12 +185,24 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
               <Input id="name" placeholder="Ex: iPhone 15 Pro Max" value={name} onChange={(e) => setName(e.target.value)} />
               <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground">A IA vai gerar uma imagem automaticamente com base no nome</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea id="description" placeholder="Descreva o produto..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Descrição</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleGenerateDescription}
+                disabled={generatingDesc || !name.trim()}
+                className="h-7 gap-1 text-xs text-primary"
+              >
+                {generatingDesc ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                Gerar com IA
+              </Button>
+            </div>
+            <Textarea id="description" placeholder="Descreva o produto ou use a IA..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -143,16 +236,60 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
             </Select>
           </div>
 
+          {/* Manual Image Upload */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Imagens próprias (opcional)</Label>
+              <span className="text-xs text-muted-foreground">{uploadedFiles.length}/3</span>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadedFiles.length >= 3}
+              className="w-full gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Carregar imagens do PC
+            </Button>
+            {uploadedFiles.length > 0 && (
+              <div className="flex gap-2 mt-2">
+                {uploadedFiles.map((file, idx) => (
+                  <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
+                    <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
+                    <button
+                      onClick={() => removeFile(idx)}
+                      className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-bl text-xs w-4 h-4 flex items-center justify-center"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {uploadedFiles.length === 0 && (
+              <p className="text-xs text-muted-foreground">Se não carregar imagens, a IA gera 3 automaticamente</p>
+            )}
+          </div>
+
           <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2">
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {generatingImage ? "Gerando imagem..." : "Salvando..."}
+                {generatingImage ? "Gerando imagens..." : "Salvando..."}
               </>
             ) : (
               <>
-                <Sparkles className="h-4 w-4" />
-                Adicionar com Imagem IA
+                {uploadedFiles.length > 0 ? <Upload className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                {uploadedFiles.length > 0 ? "Adicionar com Imagens" : "Adicionar com Imagem IA"}
               </>
             )}
           </Button>
