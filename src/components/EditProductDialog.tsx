@@ -90,13 +90,14 @@ export function EditProductDialog({ open, onOpenChange, product, families }: Edi
   const handleRegenerateImage = async () => {
     setRegenerating(true);
     try {
-      toast.info("Regenerando imagem com IA...");
+      toast.info("Regenerando 3 imagens com IA...");
       const response = await supabase.functions.invoke("generate-product-image", {
         body: { productName: name.trim(), productId: product.id },
       });
       if (response.error) throw response.error;
-      toast.success("Imagem regenerada!");
+      toast.success("Imagens regeneradas!");
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product_images"] });
     } catch (e: any) {
       toast.error("Erro ao regenerar imagem");
     } finally {

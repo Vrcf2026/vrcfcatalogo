@@ -56,7 +56,7 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
       toast.success("Produto adicionado!");
 
       setGeneratingImage(true);
-      toast.info("Gerando imagem com IA...");
+      toast.info("Gerando 3 imagens com IA...");
 
       const response = await supabase.functions.invoke("generate-product-image", {
         body: { productName: name.trim(), productId: product.id },
@@ -64,12 +64,13 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
 
       if (response.error) {
         console.error("Image generation error:", response.error);
-        toast.warning("Produto salvo, mas a imagem não pôde ser gerada.");
+        toast.warning("Produto salvo, mas as imagens não puderam ser geradas.");
       } else {
-        toast.success("Imagem gerada com sucesso!");
+        toast.success("Imagens geradas com sucesso!");
       }
 
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product_images"] });
       setOpen(false);
       resetForm();
     } catch (e: any) {
