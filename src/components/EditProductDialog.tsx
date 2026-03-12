@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Loader2, Save, Trash2, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 const CATEGORIES = [
   "Smartphones", "Laptops", "Tablets", "Acessórios",

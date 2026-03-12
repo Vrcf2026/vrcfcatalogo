@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { ProductCard } from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Search, Cpu, Package, Loader2, ImageOff } from "lucide-react";
+import { Search, Cpu, Package, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -34,6 +35,24 @@ const Index = () => {
       return data;
     },
   });
+
+  const { data: productImages = [] } = useQuery({
+    queryKey: ["product_images"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_images")
+        .select("*")
+        .order("position", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
+    if (!acc[img.product_id]) acc[img.product_id] = [];
+    acc[img.product_id].push(img);
+    return acc;
+  }, {});
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
 
@@ -112,44 +131,17 @@ const Index = () => {
         ) : filtered && filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filtered.map((product) => (
-              <div key={product.id} className="group product-card-shadow rounded-xl bg-card overflow-hidden border border-border">
-                <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                      <ImageOff className="h-10 w-10" />
-                      <span className="text-xs">Sem imagem</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    {product.category && (
-                      <span className="inline-block text-[11px] font-medium uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                        {product.category}
-                      </span>
-                    )}
-                    {product.family_id && familyMap[product.family_id] && (
-                      <span className="inline-block text-[11px] font-medium text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full">
-                        {familyMap[product.family_id]}
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="font-heading font-semibold text-card-foreground line-clamp-1">{product.name}</h3>
-                  {product.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
-                  )}
-                  {product.price != null && (
-                    <div>
-                      <p className="font-heading font-bold text-lg text-foreground">
-                        {product.price.toFixed(2).replace(".", ",")} €
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">IVA incluído à taxa legal em vigor</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                description={product.description}
+                category={product.category}
+                price={product.price}
+                imageUrl={product.image_url}
+                images={imagesByProduct[product.id] || []}
+                familyName={product.family_id ? familyMap[product.family_id] || null : null}
+              />
             ))}
           </div>
         ) : (

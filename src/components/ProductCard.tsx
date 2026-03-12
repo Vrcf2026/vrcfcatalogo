@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Package, ImageOff, Pencil } from "lucide-react";
 
 interface ProductCardProps {
@@ -7,20 +8,29 @@ interface ProductCardProps {
   category: string | null;
   price: number | null;
   imageUrl: string | null;
+  images: { id: string; image_url: string; position: number }[];
   familyName: string | null;
-  onEdit: () => void;
+  onEdit?: () => void;
+  isAdmin?: boolean;
 }
 
-export function ProductCard({ name, description, category, price, imageUrl, familyName, onEdit }: ProductCardProps) {
+export function ProductCard({ name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin }: ProductCardProps) {
+  const allImages = images.length > 0
+    ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
+    : imageUrl ? [imageUrl] : [];
+
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const currentImage = allImages[selectedIndex] || null;
+
   return (
     <div
-      className="group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer"
-      onClick={onEdit}
+      className={`group product-card-shadow rounded-xl bg-card overflow-hidden border border-border ${isAdmin ? 'cursor-pointer' : ''}`}
+      onClick={isAdmin ? onEdit : undefined}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
-        {imageUrl ? (
+        {currentImage ? (
           <img
-            src={imageUrl}
+            src={currentImage}
             alt={name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
@@ -31,12 +41,31 @@ export function ProductCard({ name, description, category, price, imageUrl, fami
             <span className="text-xs">Sem imagem</span>
           </div>
         )}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="bg-background/80 backdrop-blur-sm rounded-full p-1.5">
-            <Pencil className="h-3.5 w-3.5 text-foreground" />
+        {isAdmin && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-background/80 backdrop-blur-sm rounded-full p-1.5">
+              <Pencil className="h-3.5 w-3.5 text-foreground" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Thumbnails */}
+      {allImages.length > 1 && (
+        <div className="flex gap-1.5 px-3 py-2 bg-secondary/50">
+          {allImages.map((img, idx) => (
+            <button
+              key={idx}
+              onClick={(e) => { e.stopPropagation(); setSelectedIndex(idx); }}
+              className={`w-10 h-10 rounded-md overflow-hidden border-2 transition-all flex-shrink-0 ${
+                idx === selectedIndex ? 'border-primary ring-1 ring-primary' : 'border-transparent opacity-60 hover:opacity-100'
+              }`}
+            >
+              <img src={img} alt={`${name} ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="p-4 space-y-2">
         <div className="flex items-center gap-2">
