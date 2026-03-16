@@ -66,7 +66,7 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
     }
   };
 
-  const grouped = CATEGORIES.map((cat) => ({
+  const grouped = categories.map((cat) => ({
     category: cat,
     items: families.filter((f) => f.category === cat),
   })).filter((g) => g.items.length > 0);
