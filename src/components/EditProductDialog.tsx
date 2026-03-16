@@ -165,24 +165,36 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
   };
 
   const handleRegenerateImage = async () => {
-    setRegenerating(true);
-    try {
-      toast.info("Regenerando 3 imagens com IA...");
-      const response = await supabase.functions.invoke("generate-product-image", {
-        body: { productName: name.trim(), productId: product.id },
-      });
-      if (response.error) throw response.error;
-      toast.success("Imagens regeneradas!");
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product_images"] });
-    } catch (e: any) {
-      toast.error("Erro ao regenerar imagens");
-    } finally {
-      setRegenerating(false);
+    if (!name.trim()) {
+      toast.error("Preencha o nome do produto primeiro");
+      return;
     }
+
+    setRegenerating(true);
+    toast.info("Geração iniciada em segundo plano. Pode continuar a editar.");
+
+    void supabase.functions
+      .invoke("generate-product-image", {
+        body: { productName: name.trim(), productId: product.id },
+      })
+      .then((response) => {
+        if (response.error) {
+          throw response.error;
+        }
+        toast.success("Imagens regeneradas!");
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["product_images"] });
+      })
+      .catch((e: any) => {
+        console.error("Erro ao regenerar imagens:", e);
+        toast.error("Erro ao regenerar imagens");
+      })
+      .finally(() => {
+        setRegenerating(false);
+      });
   };
 
-  const isDisabled = loading || regenerating || uploading || generatingDesc;
+  const isDisabled = loading || uploading || generatingDesc;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -267,7 +279,7 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 Carregar do PC
               </Button>
-              <Button variant="outline" onClick={handleRegenerateImage} disabled={isDisabled} className="flex-1 gap-2">
+              <Button variant="outline" onClick={handleRegenerateImage} disabled={isDisabled || regenerating} className="flex-1 gap-2">
                 {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 Gerar com IA
               </Button>
