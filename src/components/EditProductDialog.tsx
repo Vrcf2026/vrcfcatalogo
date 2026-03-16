@@ -220,7 +220,7 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
               <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>

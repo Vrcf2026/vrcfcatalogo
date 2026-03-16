@@ -184,6 +184,7 @@ const Admin = () => {
           onOpenChange={(open) => !open && setEditingProduct(null)}
           product={editingProduct}
           families={families}
+          categories={categoryNames}
         />
       )}
     </div>
