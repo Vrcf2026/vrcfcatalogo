@@ -279,7 +279,7 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
                 {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 Carregar do PC
               </Button>
-              <Button variant="outline" onClick={handleRegenerateImage} disabled={isDisabled} className="flex-1 gap-2">
+              <Button variant="outline" onClick={handleRegenerateImage} disabled={isDisabled || regenerating} className="flex-1 gap-2">
                 {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 Gerar com IA
               </Button>

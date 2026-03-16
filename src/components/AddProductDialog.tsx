@@ -288,12 +288,12 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
             {loading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {generatingImage ? "Gerando imagens..." : "Salvando..."}
+                A guardar...
               </>
             ) : (
               <>
                 {uploadedFiles.length > 0 ? <Upload className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                {uploadedFiles.length > 0 ? "Adicionar com Imagens" : "Adicionar com Imagem IA"}
+                {uploadedFiles.length > 0 ? "Adicionar Produto" : "Adicionar e Gerar Imagens IA"}
               </>
             )}
           </Button>
