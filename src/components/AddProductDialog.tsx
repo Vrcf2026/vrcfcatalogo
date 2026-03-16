@@ -15,7 +15,7 @@ interface AddProductDialogProps {
   categories: string[];
 }
 
-export function AddProductDialog({ families }: AddProductDialogProps) {
+export function AddProductDialog({ families, categories }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
