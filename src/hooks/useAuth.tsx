@@ -7,7 +7,7 @@ interface AuthContextType {
   session: Session | null;
   isAdmin: boolean;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; isAdmin: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -28,40 +28,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const admin = await checkAdmin(session.user.id);
-        setIsAdmin(admin);
-      } else {
+    const syncAuthState = async (nextSession: Session | null) => {
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (!nextSession?.user) {
         setIsAdmin(false);
+        setLoading(false);
+        return;
       }
+
+      const admin = await checkAdmin(nextSession.user.id);
+      setIsAdmin(admin);
       setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      void syncAuthState(nextSession);
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const admin = await checkAdmin(session.user.id);
-        setIsAdmin(admin);
-      }
-      setLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      void syncAuthState(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
+
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && data.user) {
-      setUser(data.user);
-      setSession(data.session);
-      const admin = await checkAdmin(data.user.id);
-      setIsAdmin(admin);
+
+    if (error || !data.user) {
+      setLoading(false);
+      return { error: error?.message ?? "Erro ao iniciar sessão", isAdmin: false };
     }
-    return { error: error?.message ?? null };
+
+    setUser(data.user);
+    setSession(data.session);
+
+    const admin = await checkAdmin(data.user.id);
+    setIsAdmin(admin);
+    setLoading(false);
+
+    return { error: null, isAdmin: admin };
   };
 
   const signOut = async () => {
