@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, forwardRef } from "react";
+import { useState, useMemo, useRef, useCallback, forwardRef, useEffect } from "react";
 import HTMLFlipBook from "react-pageflip";
 import {
   ChevronLeft,
