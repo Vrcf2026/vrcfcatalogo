@@ -216,6 +216,8 @@ export function CatalogViewer({
   };
 
   const pageTheme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+
+  const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
   }, []);
 
