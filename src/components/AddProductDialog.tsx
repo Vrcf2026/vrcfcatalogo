@@ -10,13 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Sparkles, Loader2, Upload, Wand2 } from "lucide-react";
 
-const CATEGORIES = [
-  "Smartphones", "Laptops", "Tablets", "Acessórios",
-  "Áudio", "Gaming", "Câmeras", "Wearables", "Outros",
-];
-
 interface AddProductDialogProps {
   families: { id: string; name: string; category: string }[];
+  categories: string[];
 }
 
 export function AddProductDialog({ families }: AddProductDialogProps) {
