@@ -5,6 +5,7 @@ import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
 import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
+import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
