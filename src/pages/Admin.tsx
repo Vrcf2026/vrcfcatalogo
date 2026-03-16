@@ -103,8 +103,9 @@ const Admin = () => {
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Admin</span>
           </div>
           <div className="flex items-center gap-2">
-            <ManageFamiliesDialog families={families} />
-            <AddProductDialog families={families} />
+            <ManageCategoriesDialog categories={dbCategories} />
+            <ManageFamiliesDialog families={families} categories={categoryNames} />
+            <AddProductDialog families={families} categories={categoryNames} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
             </Button>
