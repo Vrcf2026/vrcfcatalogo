@@ -309,7 +309,7 @@ export function CatalogViewer({
 
       {/* Flipbook area */}
       <div
-        className="absolute inset-0 flex items-center justify-center overflow-hidden"
+        className="absolute inset-0 flex items-center justify-center overflow-hidden p-4"
         style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
       >
         {/* Thumbnails panel */}
