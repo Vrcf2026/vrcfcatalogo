@@ -452,6 +452,7 @@ export function CatalogViewer({
                   <span>Catálogo {category}</span>
                   <span>{pageIndex + 1} / {pages.length}</span>
                 </div>
+                </div>
               </div>
             </FlipPage>
           ))}
