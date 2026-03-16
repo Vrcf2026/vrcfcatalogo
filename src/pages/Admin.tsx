@@ -50,6 +50,18 @@ const Admin = () => {
     },
   });
 
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: productImages = [] } = useQuery({
     queryKey: ["product_images"],
     queryFn: async () => {
