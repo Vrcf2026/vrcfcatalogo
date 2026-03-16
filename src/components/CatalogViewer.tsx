@@ -49,8 +49,113 @@ const FlipPage = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
   )
 );
 FlipPage.displayName = "FlipPage";
+// Category-specific cover designs
+const CATEGORY_THEMES: Record<string, { gradient: string; icon: string; pattern: string; accent: string }> = {
+  Laptops: {
+    gradient: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)",
+    icon: "💻",
+    pattern: "radial-gradient(circle at 20% 80%, rgba(59,130,246,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(14,165,233,0.1) 0%, transparent 50%)",
+    accent: "#3b82f6",
+  },
+  Smartphones: {
+    gradient: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
+    icon: "📱",
+    pattern: "radial-gradient(circle at 30% 70%, rgba(139,92,246,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(99,102,241,0.1) 0%, transparent 50%)",
+    accent: "#8b5cf6",
+  },
+  Gaming: {
+    gradient: "linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #2d1b69 100%)",
+    icon: "🎮",
+    pattern: "radial-gradient(circle at 50% 50%, rgba(236,72,153,0.1) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(168,85,247,0.12) 0%, transparent 50%)",
+    accent: "#ec4899",
+  },
+  Outros: {
+    gradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
+    icon: "🔧",
+    pattern: "radial-gradient(circle at 25% 75%, rgba(245,158,11,0.12) 0%, transparent 50%), radial-gradient(circle at 75% 25%, rgba(251,146,60,0.08) 0%, transparent 50%)",
+    accent: "#f59e0b",
+  },
+};
 
-export function CatalogViewer({
+const DEFAULT_THEME = {
+  gradient: "linear-gradient(135deg, hsl(27 90% 20%) 0%, hsl(27 90% 35%) 50%, hsl(27 90% 50%) 100%)",
+  icon: "📦",
+  pattern: "radial-gradient(circle at 30% 70%, rgba(251,146,60,0.15) 0%, transparent 50%)",
+  accent: "hsl(27 90% 50%)",
+};
+
+function CoverPage({ category, productCount, coverImage }: { category: string; productCount: number; coverImage: string | null }) {
+  const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+
+  return (
+    <div className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+      {/* Pattern overlay */}
+      <div className="absolute inset-0" style={{ background: theme.pattern }} />
+
+      {/* Geometric decorations */}
+      <div className="absolute top-0 right-0 w-32 h-32 opacity-10" style={{ background: `linear-gradient(225deg, ${theme.accent}, transparent)` }} />
+      <div className="absolute bottom-0 left-0 w-40 h-40 opacity-10" style={{ background: `linear-gradient(45deg, ${theme.accent}, transparent)` }} />
+
+      {/* Top accent line */}
+      <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.accent }} />
+
+      {/* Corner decorations */}
+      <div className="absolute top-6 left-6 w-8 h-8 border-l-2 border-t-2" style={{ borderColor: `${theme.accent}40` }} />
+      <div className="absolute bottom-6 right-6 w-8 h-8 border-r-2 border-b-2" style={{ borderColor: `${theme.accent}40` }} />
+
+      {/* Content */}
+      <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
+        {/* VRCF branding */}
+        <div className="absolute top-8 left-0 right-0 text-center">
+          <p className="text-white/30 text-[9px] font-bold tracking-[0.5em] uppercase">VRCF</p>
+          <p className="text-white/20 text-[7px] tracking-[0.3em] uppercase mt-0.5">Informática & Segurança</p>
+        </div>
+
+        {/* Category icon */}
+        <div className="text-5xl mb-4 drop-shadow-lg">{theme.icon}</div>
+
+        {/* Cover image */}
+        {coverImage && (
+          <div className="w-28 h-28 rounded-2xl overflow-hidden mb-5 shadow-2xl ring-2 ring-white/10">
+            <img src={coverImage} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* Category title */}
+        <div className="text-center space-y-3">
+          <div className="flex items-center gap-3 justify-center">
+            <div className="w-8 h-px" style={{ backgroundColor: `${theme.accent}60` }} />
+            <p className="text-white/50 text-[10px] font-semibold tracking-[0.4em] uppercase">Catálogo</p>
+            <div className="w-8 h-px" style={{ backgroundColor: `${theme.accent}60` }} />
+          </div>
+
+          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white leading-none tracking-tight">
+            {category}
+          </h1>
+
+          <div className="w-16 h-1 rounded-full mx-auto" style={{ backgroundColor: theme.accent }} />
+
+          <p className="text-white/40 text-xs font-medium">
+            {productCount} {productCount === 1 ? "produto" : "produtos"}
+          </p>
+        </div>
+
+        {/* Bottom hint */}
+        <div className="absolute bottom-8 flex flex-col items-center gap-1">
+          <div className="w-5 h-8 rounded-full border border-white/20 flex items-start justify-center p-1">
+            <div className="w-1 h-2 rounded-full bg-white/40 animate-bounce" />
+          </div>
+          <p className="text-white/25 text-[9px] tracking-wider">Arraste para folhear</p>
+        </div>
+      </div>
+
+      {/* Bottom accent line */}
+      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: `${theme.accent}40` }} />
+    </div>
+  );
+}
+
+
   category,
   products,
   imagesByProduct,
