@@ -9,11 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { FolderTree, Plus, Trash2, Loader2 } from "lucide-react";
 
-const CATEGORIES = [
-  "Smartphones", "Laptops", "Tablets", "Acessórios",
-  "Áudio", "Gaming", "Câmeras", "Wearables", "Outros",
-];
-
 interface Family {
   id: string;
   name: string;
@@ -23,9 +18,10 @@ interface Family {
 
 interface ManageFamiliesDialogProps {
   families: Family[];
+  categories: string[];
 }
 
-export function ManageFamiliesDialog({ families }: ManageFamiliesDialogProps) {
+export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -70,7 +66,7 @@ export function ManageFamiliesDialog({ families }: ManageFamiliesDialogProps) {
     }
   };
 
-  const grouped = CATEGORIES.map((cat) => ({
+  const grouped = categories.map((cat) => ({
     category: cat,
     items: families.filter((f) => f.category === cat),
   })).filter((g) => g.items.length > 0);
@@ -100,7 +96,7 @@ export function ManageFamiliesDialog({ families }: ManageFamiliesDialogProps) {
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>

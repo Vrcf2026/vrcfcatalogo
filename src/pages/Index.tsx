@@ -98,10 +98,10 @@ const Index = () => {
           </div>
           <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Categoria" />
+              <SelectValue placeholder="Categorias" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="all">Categorias</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat!} value={cat!}>{cat}</SelectItem>
               ))}
@@ -110,10 +110,10 @@ const Index = () => {
           {visibleFamilies.length > 0 && (
             <Select value={familyFilter} onValueChange={setFamilyFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Família" />
+                <SelectValue placeholder="Famílias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">Famílias</SelectItem>
                 {visibleFamilies.map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                 ))}
@@ -153,7 +153,10 @@ const Index = () => {
         )}
       </section>
 
-      <footer className="border-t border-border py-6 text-center">
+      <footer className="border-t border-border py-6 text-center space-y-1">
+        <p className="text-xs text-muted-foreground">
+          Todos os preços apresentados incluem IVA à taxa legal em vigor.
+        </p>
         <p className="text-xs text-muted-foreground">
           As imagens apresentadas são meramente ilustrativas. O produto real pode variar.
         </p>

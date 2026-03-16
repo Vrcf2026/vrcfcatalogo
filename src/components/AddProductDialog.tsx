@@ -10,16 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Sparkles, Loader2, Upload, Wand2 } from "lucide-react";
 
-const CATEGORIES = [
-  "Smartphones", "Laptops", "Tablets", "Acessórios",
-  "Áudio", "Gaming", "Câmeras", "Wearables", "Outros",
-];
-
 interface AddProductDialogProps {
   families: { id: string; name: string; category: string }[];
+  categories: string[];
 }
 
-export function AddProductDialog({ families }: AddProductDialogProps) {
+export function AddProductDialog({ families, categories }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -211,7 +207,7 @@ export function AddProductDialog({ families }: AddProductDialogProps) {
               <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {categories.map((cat) => (
                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                   ))}
                 </SelectContent>

@@ -4,6 +4,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
+import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,18 @@ const Admin = () => {
     },
   });
 
+  const { data: dbCategories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: productImages = [] } = useQuery({
     queryKey: ["product_images"],
     queryFn: async () => {
@@ -77,7 +90,7 @@ const Admin = () => {
     return matchesSearch && matchesCategory && matchesFamily;
   });
 
-  const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
+  const categoryNames = dbCategories.map((c) => c.name);
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
 
   return (
@@ -90,8 +103,9 @@ const Admin = () => {
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Admin</span>
           </div>
           <div className="flex items-center gap-2">
-            <ManageFamiliesDialog families={families} />
-            <AddProductDialog families={families} />
+            <ManageCategoriesDialog categories={dbCategories} />
+            <ManageFamiliesDialog families={families} categories={categoryNames} />
+            <AddProductDialog families={families} categories={categoryNames} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
             </Button>
@@ -107,22 +121,22 @@ const Admin = () => {
           </div>
           <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Categoria" />
+              <SelectValue placeholder="Categorias" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat!} value={cat!}>{cat}</SelectItem>
+              <SelectItem value="all">Categorias</SelectItem>
+              {categoryNames.map((cat) => (
+                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           {visibleFamilies.length > 0 && (
             <Select value={familyFilter} onValueChange={setFamilyFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Família" />
+                <SelectValue placeholder="Famílias" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">Famílias</SelectItem>
                 {visibleFamilies.map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
                 ))}
@@ -170,6 +184,7 @@ const Admin = () => {
           onOpenChange={(open) => !open && setEditingProduct(null)}
           product={editingProduct}
           families={families}
+          categories={categoryNames}
         />
       )}
     </div>

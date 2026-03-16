@@ -28,11 +28,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "És um especialista em descrições de produtos tecnológicos para e-commerce em português de Portugal. Cria descrições curtas (2-3 frases), profissionais e apelativas que destaquem as principais características e benefícios do produto. Não uses markdown, apenas texto simples."
+            content: "És um especialista em descrições de produtos tecnológicos para e-commerce em português de Portugal. Cria descrições simples e diretas em 3-4 linhas com as características técnicas mais importantes do produto (ex: processador, memória RAM, armazenamento, ecrã, gráfica, bateria, etc., conforme aplicável). Usa formato de lista curta com bullet points (•). Não uses markdown, apenas texto simples."
           },
           {
             role: "user",
-            content: `Gera uma descrição comercial para o produto: "${productName}"${categoryHint}.`
+            content: `Gera uma descrição técnica resumida para o produto: "${productName}"${categoryHint}. Lista as specs mais relevantes em 3-4 linhas.`
           }
         ],
       }),
