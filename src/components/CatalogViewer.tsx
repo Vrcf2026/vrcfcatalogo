@@ -339,7 +339,15 @@ export function CatalogViewer({
           {/* Product pages */}
           {pages.map((pageProducts, pageIndex) => (
             <FlipPage key={pageIndex}>
-              <div className="h-full flex flex-col p-4 sm:p-5">
+              <div className="h-full flex flex-col relative overflow-hidden">
+                {/* Background image */}
+                {pageTheme.bgImage && (
+                  <div className="absolute inset-0 z-0">
+                    <img src={pageTheme.bgImage} alt="" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.88)" }} />
+                  </div>
+                )}
+                <div className="relative z-10 h-full flex flex-col p-4 sm:p-5">
                 {/* Page header */}
                 <div className="flex items-center justify-between mb-3 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
                   <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
