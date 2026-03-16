@@ -153,7 +153,10 @@ const Index = () => {
         )}
       </section>
 
-      <footer className="border-t border-border py-6 text-center">
+      <footer className="border-t border-border py-6 text-center space-y-1">
+        <p className="text-xs text-muted-foreground">
+          Todos os preços apresentados incluem IVA à taxa legal em vigor.
+        </p>
         <p className="text-xs text-muted-foreground">
           As imagens apresentadas são meramente ilustrativas. O produto real pode variar.
         </p>
