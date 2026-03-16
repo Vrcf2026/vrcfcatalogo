@@ -9,11 +9,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { FolderTree, Plus, Trash2, Loader2 } from "lucide-react";
 
-const CATEGORIES = [
-  "Smartphones", "Laptops", "Tablets", "Acessórios",
-  "Áudio", "Gaming", "Câmeras", "Wearables", "Outros",
-];
-
 interface Family {
   id: string;
   name: string;
@@ -23,6 +18,7 @@ interface Family {
 
 interface ManageFamiliesDialogProps {
   families: Family[];
+  categories: string[];
 }
 
 export function ManageFamiliesDialog({ families }: ManageFamiliesDialogProps) {
