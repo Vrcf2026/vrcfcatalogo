@@ -269,7 +269,7 @@ export function CatalogViewer({
   return (
     <div
       ref={containerRef}
-      className="min-h-screen flex flex-col relative cursor-none"
+      className="h-screen flex flex-col relative overflow-hidden"
       style={{ backgroundColor: "#2a2a2a" }}
       onMouseMove={showBars}
       onTouchStart={showBars}
