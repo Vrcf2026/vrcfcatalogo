@@ -156,6 +156,7 @@ function CoverPage({ category, productCount, coverImage }: { category: string; p
 }
 
 export function CatalogViewer({
+  category,
   products,
   imagesByProduct,
   familyMap,
