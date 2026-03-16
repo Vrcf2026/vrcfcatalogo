@@ -217,34 +217,11 @@ export function CatalogViewer({
         >
           {/* Cover page */}
           <FlipPage>
-            <div className="h-full flex flex-col items-center justify-center relative p-8"
-              style={{ background: "linear-gradient(135deg, hsl(27 90% 50%) 0%, hsl(27 90% 40%) 100%)" }}
-            >
-              {/* Decorative bar top */}
-              <div className="absolute top-0 left-8 w-16 h-2 bg-white/30 rounded-b-sm" />
-              <div className="absolute bottom-0 right-8 w-16 h-2 bg-white/30 rounded-t-sm" />
-
-              {coverImage && (
-                <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/30 mb-6 shadow-lg">
-                  <img src={coverImage} alt="" className="w-full h-full object-cover" />
-                </div>
-              )}
-
-              <div className="text-center space-y-3">
-                <p className="text-white/70 text-xs font-medium tracking-[0.3em] uppercase">VRCF — Informática & Segurança</p>
-                <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white leading-tight">
-                  {category}
-                </h1>
-                <div className="w-12 h-0.5 bg-white/40 mx-auto" />
-                <p className="text-white/60 text-sm">
-                  {filteredProducts.length} {filteredProducts.length === 1 ? "produto" : "produtos"}
-                </p>
-              </div>
-
-              <p className="absolute bottom-6 text-white/40 text-[10px] tracking-wider">
-                Arraste para folhear →
-              </p>
-            </div>
+            <CoverPage
+              category={category}
+              productCount={filteredProducts.length}
+              coverImage={coverImage}
+            />
           </FlipPage>
 
           {/* Product pages */}
