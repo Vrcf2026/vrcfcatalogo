@@ -215,7 +215,7 @@ export function CatalogViewer({
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
   };
 
-  const onFlip = useCallback((e: any) => {
+  const pageTheme = CATEGORY_THEMES[category] || DEFAULT_THEME;
     setCurrentPage(e.data);
   }, []);
 
