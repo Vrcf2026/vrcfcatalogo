@@ -269,23 +269,43 @@ export function CatalogViewer({
   return (
     <div
       ref={containerRef}
-      className="min-h-screen flex flex-col"
+      className="min-h-screen flex flex-col relative cursor-none"
       style={{ backgroundColor: "#2a2a2a" }}
+      onMouseMove={showBars}
+      onTouchStart={showBars}
+      onClick={showBars}
     >
-      {/* Top bar - minimal */}
-      {!isFullscreen && (
-        <div className="flex items-center justify-between px-4 py-2 bg-black/30 backdrop-blur-sm z-50">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Voltar
-          </button>
-          <span className="font-heading font-bold text-white/90 text-sm">{category}</span>
-          <div className="w-16" />
-        </div>
-      )}
+      {/* Top bar - auto-hide */}
+      <div
+        className={`absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-black/50 backdrop-blur-md z-50 transition-all duration-500 ${
+          barsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+        }`}
+        onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+      >
+        <button
+          onClick={onBack}
+          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Voltar
+        </button>
+        <span className="font-heading font-bold text-white/90 text-sm">{category}</span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-white/60 hover:text-white hover:bg-white/10 gap-1.5"
+          onClick={toggleFullscreen}
+        >
+          {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          <span className="hidden sm:inline text-xs">{isFullscreen ? "Sair" : "Ecrã inteiro"}</span>
+        </Button>
+      </div>
+
+      {/* Top hover zone - triggers bar visibility */}
+      <div
+        className="absolute top-0 left-0 right-0 h-12 z-40"
+        onMouseEnter={showBars}
+      />
 
       {/* Flipbook area */}
       <div
