@@ -108,11 +108,13 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
     }
 
     setLoading(true);
+    const productName = name.trim();
+
     try {
       const { data: product, error } = await supabase
         .from("products")
         .insert({
-          name: name.trim(),
+          name: productName,
           description: description.trim() || null,
           category: category || null,
           price: price ? parseFloat(price) : null,
@@ -122,39 +124,45 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
         .single();
 
       if (error) throw error;
-      toast.success("Produto adicionado!");
 
       if (uploadedFiles.length > 0) {
-        // Upload manual images
-        toast.info("Carregando imagens...");
+        toast.info("Produto guardado. A carregar imagens...");
         await uploadManualImages(product.id);
-        toast.success("Imagens carregadas!");
+        toast.success("Produto e imagens guardados!");
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["product_images"] });
       } else {
-        // Generate AI images
-        setGeneratingImage(true);
-        toast.info("Gerando 3 imagens com IA...");
+        toast.success("Produto guardado!");
+        toast.info("A gerar imagens em segundo plano. Pode continuar a usar o painel.");
 
-        const response = await supabase.functions.invoke("generate-product-image", {
-          body: { productName: name.trim(), productId: product.id },
-        });
-
-        if (response.error) {
-          console.error("Image generation error:", response.error);
-          toast.warning("Produto salvo, mas as imagens não puderam ser geradas.");
-        } else {
-          toast.success("Imagens geradas com sucesso!");
-        }
+        void supabase.functions
+          .invoke("generate-product-image", {
+            body: { productName, productId: product.id },
+          })
+          .then((response) => {
+            if (response.error) {
+              console.error("Image generation error:", response.error);
+              toast.warning("Produto guardado, mas não foi possível gerar imagens.");
+              return;
+            }
+            toast.success("Imagens geradas com sucesso!");
+          })
+          .catch((error) => {
+            console.error("Image generation request failed:", error);
+            toast.warning("Produto guardado, mas a geração de imagens falhou.");
+          })
+          .finally(() => {
+            queryClient.invalidateQueries({ queryKey: ["products"] });
+            queryClient.invalidateQueries({ queryKey: ["product_images"] });
+          });
       }
 
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product_images"] });
       setOpen(false);
       resetForm();
     } catch (e: any) {
       toast.error(e.message || "Erro ao adicionar produto");
     } finally {
       setLoading(false);
-      setGeneratingImage(false);
     }
   };
 
