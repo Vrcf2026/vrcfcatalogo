@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Cpu, Loader2, Lock } from "lucide-react";
+import { ShieldCheck, Loader2, Lock } from "lucide-react";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -33,8 +33,8 @@ const Login = () => {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2">
-            <Cpu className="h-6 w-6 text-primary" />
-            <CardTitle className="font-heading text-xl">TechCatalog</CardTitle>
+            <ShieldCheck className="h-7 w-7 text-primary" />
+            <CardTitle className="font-heading text-xl">VRCF</CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">Acesso administrativo</p>
         </CardHeader>

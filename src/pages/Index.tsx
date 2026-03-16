@@ -4,7 +4,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Search, Cpu, Package, Loader2 } from "lucide-react";
+import { Search, ShieldCheck, Package, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
@@ -71,9 +71,12 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-2">
-            <Cpu className="h-6 w-6 text-primary" />
-            <h1 className="font-heading text-xl font-bold text-foreground">TechCatalog</h1>
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-7 w-7 text-primary" />
+            <div>
+              <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
+              <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
+            </div>
           </div>
           <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
             Admin
@@ -83,10 +86,10 @@ const Index = () => {
 
       <section className="container mx-auto px-4 py-12 text-center">
         <h2 className="font-heading text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-          Catálogo de Eletrônicos
+          Catálogo de Produtos
         </h2>
         <p className="mt-3 text-lg text-muted-foreground max-w-xl mx-auto">
-          Explore nossos produtos de tecnologia.
+          Tecnologia e Segurança ao Seu Alcance
         </p>
       </section>
 
@@ -94,7 +97,7 @@ const Index = () => {
         <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            <Input placeholder="Pesquisar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
           <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
             <SelectTrigger className="w-full sm:w-[180px]">
@@ -153,13 +156,31 @@ const Index = () => {
         )}
       </section>
 
-      <footer className="border-t border-border py-6 text-center space-y-1">
-        <p className="text-xs text-muted-foreground">
-          Todos os preços apresentados incluem IVA à taxa legal em vigor.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          As imagens apresentadas são meramente ilustrativas. O produto real pode variar.
-        </p>
+      <footer className="border-t border-border bg-accent text-accent-foreground py-8">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <ShieldCheck className="h-6 w-6 text-primary" />
+              <div>
+                <p className="font-heading font-bold text-sm">VRCF - Informática & Segurança</p>
+                <p className="text-xs text-accent-foreground/70">Tecnologia e Segurança ao Seu Alcance</p>
+              </div>
+            </div>
+            <div className="text-center md:text-right space-y-1">
+              <p className="text-xs text-accent-foreground/70">
+                <a href="https://vrcf.pt" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  vrcf.pt
+                </a>
+              </p>
+              <p className="text-xs text-accent-foreground/70">
+                Todos os preços apresentados incluem IVA à taxa legal em vigor.
+              </p>
+              <p className="text-xs text-accent-foreground/70">
+                As imagens apresentadas são meramente ilustrativas.
+              </p>
+            </div>
+          </div>
+        </div>
       </footer>
     </div>
   );
