@@ -50,30 +50,34 @@ const FlipPage = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
 );
 FlipPage.displayName = "FlipPage";
 // Category-specific cover designs
-const CATEGORY_THEMES: Record<string, { gradient: string; icon: string; pattern: string; accent: string }> = {
+const CATEGORY_THEMES: Record<string, { gradient: string; icon: string; pattern: string; accent: string; bgImage: string }> = {
   Laptops: {
     gradient: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)",
     icon: "💻",
     pattern: "radial-gradient(circle at 20% 80%, rgba(59,130,246,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(14,165,233,0.1) 0%, transparent 50%)",
     accent: "#3b82f6",
+    bgImage: "/images/bg-laptops.jpg",
   },
   Smartphones: {
     gradient: "linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
     icon: "📱",
     pattern: "radial-gradient(circle at 30% 70%, rgba(139,92,246,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(99,102,241,0.1) 0%, transparent 50%)",
     accent: "#8b5cf6",
+    bgImage: "/images/bg-smartphones.jpg",
   },
   Gaming: {
     gradient: "linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #2d1b69 100%)",
     icon: "🎮",
     pattern: "radial-gradient(circle at 50% 50%, rgba(236,72,153,0.1) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(168,85,247,0.12) 0%, transparent 50%)",
     accent: "#ec4899",
+    bgImage: "/images/bg-gaming.jpg",
   },
   Outros: {
     gradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
     icon: "🔧",
     pattern: "radial-gradient(circle at 25% 75%, rgba(245,158,11,0.12) 0%, transparent 50%), radial-gradient(circle at 75% 25%, rgba(251,146,60,0.08) 0%, transparent 50%)",
     accent: "#f59e0b",
+    bgImage: "/images/bg-outros.jpg",
   },
 };
 
@@ -82,6 +86,7 @@ const DEFAULT_THEME = {
   icon: "📦",
   pattern: "radial-gradient(circle at 30% 70%, rgba(251,146,60,0.15) 0%, transparent 50%)",
   accent: "hsl(27 90% 50%)",
+  bgImage: "",
 };
 
 function CoverPage({ category, productCount, coverImage }: { category: string; productCount: number; coverImage: string | null }) {
