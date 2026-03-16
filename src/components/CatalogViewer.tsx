@@ -176,8 +176,30 @@ export function CatalogViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoom, setZoom] = useState(100);
+  const [barsVisible, setBarsVisible] = useState(true);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-hide bars after inactivity
+  const showBars = useCallback(() => {
+    setBarsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setBarsVisible(false), 3000);
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  // Start hide timer on mount and reset on interaction
+  useEffect(() => {
+    showBars();
+    return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); };
+  }, [showBars]);
 
   const filteredProducts = useMemo(() => {
     if (!searchQuery.trim()) return products;
