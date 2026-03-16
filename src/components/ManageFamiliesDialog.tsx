@@ -21,7 +21,7 @@ interface ManageFamiliesDialogProps {
   categories: string[];
 }
 
-export function ManageFamiliesDialog({ families }: ManageFamiliesDialogProps) {
+export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
