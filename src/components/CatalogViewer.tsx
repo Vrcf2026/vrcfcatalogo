@@ -137,7 +137,6 @@ export function CatalogViewer({
       ref={containerRef}
       className="min-h-screen flex flex-col"
       style={{ backgroundColor: "#2a2a2a" }}
-      onFullScreenCapture={() => setIsFullscreen(!!document.fullscreenElement)}
     >
       {/* Top bar - minimal */}
       {!isFullscreen && (
