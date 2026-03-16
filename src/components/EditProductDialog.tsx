@@ -23,6 +23,7 @@ interface EditProductDialogProps {
     family_id: string | null;
   };
   families: { id: string; name: string; category: string }[];
+  categories: string[];
 }
 
 export function EditProductDialog({ open, onOpenChange, product, families }: EditProductDialogProps) {
