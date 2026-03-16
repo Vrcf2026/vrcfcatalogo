@@ -135,19 +135,28 @@ const Index = () => {
           </div>
         ) : filtered && filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filtered.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                description={product.description}
-                category={product.category}
-                price={product.price}
-                imageUrl={product.image_url}
-                images={imagesByProduct[product.id] || []}
-                familyName={product.family_id ? familyMap[product.family_id] || null : null}
-              />
-            ))}
+              {filtered.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  description={product.description}
+                  category={product.category}
+                  price={product.price}
+                  imageUrl={product.image_url}
+                  images={imagesByProduct[product.id] || []}
+                  familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                  onClick={() => setSelectedProduct({
+                    name: product.name,
+                    description: product.description,
+                    category: product.category,
+                    price: product.price,
+                    imageUrl: product.image_url,
+                    images: imagesByProduct[product.id] || [],
+                    familyName: product.family_id ? familyMap[product.family_id] || null : null,
+                  })}
+                />
+              ))}
           </div>
         ) : (
           <div className="text-center py-20">

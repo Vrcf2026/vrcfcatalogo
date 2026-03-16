@@ -24,8 +24,8 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
 
   return (
     <div
-      className={`group product-card-shadow rounded-xl bg-card overflow-hidden border border-border ${isAdmin ? 'cursor-pointer' : ''}`}
-      onClick={isAdmin ? onEdit : undefined}
+      className={`group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer`}
+      onClick={isAdmin ? onEdit : onClick}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
         {currentImage ? (
