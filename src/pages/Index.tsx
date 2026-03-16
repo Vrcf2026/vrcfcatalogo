@@ -5,7 +5,7 @@ import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Search, ShieldCheck, Package, Loader2 } from "lucide-react";
+import { Search, ShieldCheck, Package, Loader2, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const Index = () => {
