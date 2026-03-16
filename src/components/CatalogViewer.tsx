@@ -519,14 +519,25 @@ export function CatalogViewer({
         </button>
       </div>
 
-      {/* Bottom toolbar - Flipsnack style */}
-      <div className="flex items-center justify-between px-3 py-2 z-50" style={{ backgroundColor: "#1a1a1a" }}>
+      {/* Bottom hover zone */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-12 z-40"
+        onMouseEnter={showBars}
+      />
+
+      {/* Bottom toolbar - auto-hide */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 z-50 transition-all duration-500 ${
+          barsVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
+        }`}
+        style={{ backgroundColor: "rgba(26,26,26,0.9)", backdropFilter: "blur(8px)" }}
+        onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+      >
         {/* Left: page counter */}
         <div className="flex items-center gap-3">
           <span className="text-white/70 text-xs font-medium">
             {currentPage + 1} / {totalPages}
           </span>
-          {/* Progress bar */}
           <div className="hidden sm:block w-32 h-1 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
             <div
               className="h-full rounded-full transition-all duration-300"
@@ -540,32 +551,17 @@ export function CatalogViewer({
 
         {/* Center: controls */}
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
-            onClick={() => setZoom(Math.max(50, zoom - 10))}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setZoom(Math.max(50, zoom - 10))}>
             <ZoomOut className="h-4 w-4" />
           </Button>
           <span className="text-white/50 text-[10px] w-8 text-center">{zoom}%</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
-            onClick={() => setZoom(Math.min(150, zoom + 10))}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setZoom(Math.min(150, zoom + 10))}>
             <ZoomIn className="h-4 w-4" />
           </Button>
 
           <div className="w-px h-5 mx-1" style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
-            onClick={() => setShowThumbnails(!showThumbnails)}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setShowThumbnails(!showThumbnails)}>
             <Grid3X3 className="h-4 w-4" />
           </Button>
 
@@ -583,35 +579,19 @@ export function CatalogViewer({
               </Button>
             </div>
           ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
-              onClick={() => setShowSearch(true)}
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setShowSearch(true)}>
               <Search className="h-4 w-4" />
             </Button>
           )}
 
           <div className="w-px h-5 mx-1" style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10"
-            onClick={toggleFullscreen}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </Button>
         </div>
 
-        {/* Right: back */}
-        {isFullscreen && (
-          <button onClick={toggleFullscreen} className="text-white/60 hover:text-white text-xs">
-            Sair
-          </button>
-        )}
-        {!isFullscreen && <div className="w-16" />}
+        <div className="w-16" />
       </div>
 
       {/* Product detail */}
