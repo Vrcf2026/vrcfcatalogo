@@ -194,7 +194,7 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
       });
   };
 
-  const isDisabled = loading || regenerating || uploading || generatingDesc;
+  const isDisabled = loading || uploading || generatingDesc;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
