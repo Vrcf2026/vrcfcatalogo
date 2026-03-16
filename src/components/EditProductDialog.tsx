@@ -165,21 +165,33 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
   };
 
   const handleRegenerateImage = async () => {
-    setRegenerating(true);
-    try {
-      toast.info("Regenerando 3 imagens com IA...");
-      const response = await supabase.functions.invoke("generate-product-image", {
-        body: { productName: name.trim(), productId: product.id },
-      });
-      if (response.error) throw response.error;
-      toast.success("Imagens regeneradas!");
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product_images"] });
-    } catch (e: any) {
-      toast.error("Erro ao regenerar imagens");
-    } finally {
-      setRegenerating(false);
+    if (!name.trim()) {
+      toast.error("Preencha o nome do produto primeiro");
+      return;
     }
+
+    setRegenerating(true);
+    toast.info("Geração iniciada em segundo plano. Pode continuar a editar.");
+
+    void supabase.functions
+      .invoke("generate-product-image", {
+        body: { productName: name.trim(), productId: product.id },
+      })
+      .then((response) => {
+        if (response.error) {
+          throw response.error;
+        }
+        toast.success("Imagens regeneradas!");
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["product_images"] });
+      })
+      .catch((e: any) => {
+        console.error("Erro ao regenerar imagens:", e);
+        toast.error("Erro ao regenerar imagens");
+      })
+      .finally(() => {
+        setRegenerating(false);
+      });
   };
 
   const isDisabled = loading || regenerating || uploading || generatingDesc;
