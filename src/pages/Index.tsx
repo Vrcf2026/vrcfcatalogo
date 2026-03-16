@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
@@ -11,6 +12,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -133,19 +135,28 @@ const Index = () => {
           </div>
         ) : filtered && filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filtered.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                description={product.description}
-                category={product.category}
-                price={product.price}
-                imageUrl={product.image_url}
-                images={imagesByProduct[product.id] || []}
-                familyName={product.family_id ? familyMap[product.family_id] || null : null}
-              />
-            ))}
+              {filtered.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  description={product.description}
+                  category={product.category}
+                  price={product.price}
+                  imageUrl={product.image_url}
+                  images={imagesByProduct[product.id] || []}
+                  familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                  onClick={() => setSelectedProduct({
+                    name: product.name,
+                    description: product.description,
+                    category: product.category,
+                    price: product.price,
+                    imageUrl: product.image_url,
+                    images: imagesByProduct[product.id] || [],
+                    familyName: product.family_id ? familyMap[product.family_id] || null : null,
+                  })}
+                />
+              ))}
           </div>
         ) : (
           <div className="text-center py-20">
@@ -182,6 +193,14 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {selectedProduct && (
+        <ProductDetailDialog
+          open={!!selectedProduct}
+          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          product={selectedProduct}
+        />
+      )}
     </div>
   );
 };

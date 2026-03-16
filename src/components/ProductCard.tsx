@@ -14,7 +14,7 @@ interface ProductCardProps {
   isAdmin?: boolean;
 }
 
-export function ProductCard({ name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin }: ProductCardProps) {
+export function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick }: ProductCardProps & { onClick?: () => void }) {
   const allImages = images.length > 0
     ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
     : imageUrl ? [imageUrl] : [];
@@ -24,8 +24,8 @@ export function ProductCard({ name, description, category, price, imageUrl, imag
 
   return (
     <div
-      className={`group product-card-shadow rounded-xl bg-card overflow-hidden border border-border ${isAdmin ? 'cursor-pointer' : ''}`}
-      onClick={isAdmin ? onEdit : undefined}
+      className={`group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer`}
+      onClick={isAdmin ? onEdit : onClick}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
         {currentImage ? (
