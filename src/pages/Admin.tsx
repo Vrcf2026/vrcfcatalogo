@@ -109,6 +109,7 @@ const Admin = () => {
           <div className="flex items-center gap-2">
             <ManageCategoriesDialog categories={dbCategories} />
             <ManageFamiliesDialog families={families} categories={categoryNames} />
+            <ImportProductsDialog families={families} categories={categoryNames} />
             <AddProductDialog families={families} categories={categoryNames} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
