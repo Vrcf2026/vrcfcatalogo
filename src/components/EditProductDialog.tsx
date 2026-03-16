@@ -26,7 +26,7 @@ interface EditProductDialogProps {
   categories: string[];
 }
 
-export function EditProductDialog({ open, onOpenChange, product, families }: EditProductDialogProps) {
+export function EditProductDialog({ open, onOpenChange, product, families, categories }: EditProductDialogProps) {
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description || "");
   const [category, setCategory] = useState(product.category || "");
