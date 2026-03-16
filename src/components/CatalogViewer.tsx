@@ -343,18 +343,18 @@ export function CatalogViewer({
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
-          width={500}
-          height={700}
+          width={550}
+          height={750}
           size="stretch"
-          minWidth={250}
-          maxWidth={900}
-          minHeight={350}
-          maxHeight={1200}
+          minWidth={300}
+          maxWidth={1400}
+          minHeight={400}
+          maxHeight={1800}
           showCover={true}
           mobileScrollSupport={true}
           onFlip={onFlip}
-          className="!w-full !max-w-[90vw] !max-h-[90vh]"
-          style={{}}
+          className=""
+          style={{ margin: "0 auto" }}
           startPage={0}
           drawShadow={true}
           flippingTime={800}
