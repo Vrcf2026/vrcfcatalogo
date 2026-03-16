@@ -309,7 +309,7 @@ export function CatalogViewer({
 
       {/* Flipbook area */}
       <div
-        className="flex-1 flex items-center justify-center overflow-hidden relative"
+        className="absolute inset-0 flex items-center justify-center overflow-hidden"
         style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
       >
         {/* Thumbnails panel */}
@@ -343,17 +343,17 @@ export function CatalogViewer({
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
-          width={480}
-          height={640}
+          width={500}
+          height={700}
           size="stretch"
-          minWidth={280}
-          maxWidth={560}
-          minHeight={380}
-          maxHeight={750}
+          minWidth={250}
+          maxWidth={900}
+          minHeight={350}
+          maxHeight={1200}
           showCover={true}
           mobileScrollSupport={true}
           onFlip={onFlip}
-          className=""
+          className="!w-full !max-w-[90vw] !max-h-[90vh]"
           style={{}}
           startPage={0}
           drawShadow={true}
