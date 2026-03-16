@@ -193,6 +193,14 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {selectedProduct && (
+        <ProductDetailDialog
+          open={!!selectedProduct}
+          onOpenChange={(open) => !open && setSelectedProduct(null)}
+          product={selectedProduct}
+        />
+      )}
     </div>
   );
 };
