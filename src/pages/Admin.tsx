@@ -90,7 +90,7 @@ const Admin = () => {
     return matchesSearch && matchesCategory && matchesFamily;
   });
 
-  const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
+  const categoryNames = dbCategories.map((c) => c.name);
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
 
   return (
