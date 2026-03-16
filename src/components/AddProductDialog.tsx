@@ -23,7 +23,7 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
   const [familyId, setFamilyId] = useState("none");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
+  
   const [generatingDesc, setGeneratingDesc] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
