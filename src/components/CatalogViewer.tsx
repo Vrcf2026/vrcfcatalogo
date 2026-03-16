@@ -500,10 +500,10 @@ export function CatalogViewer({
           ))}
         </HTMLFlipBook>
 
-        {/* Side navigation arrows */}
+        {/* Side navigation arrows - also auto-hide */}
         <button
           onClick={() => bookRef.current?.pageFlip().flipPrev()}
-          className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-opacity z-30"
+          className={`absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center z-30 transition-opacity duration-500 ${barsVisible ? "opacity-100" : "opacity-0"}`}
           style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
           disabled={currentPage === 0}
         >
@@ -511,7 +511,7 @@ export function CatalogViewer({
         </button>
         <button
           onClick={() => bookRef.current?.pageFlip().flipNext()}
-          className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-opacity z-30"
+          className={`absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center z-30 transition-opacity duration-500 ${barsVisible ? "opacity-100" : "opacity-0"}`}
           style={{ backgroundColor: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
           disabled={currentPage === totalPages - 1}
         >
