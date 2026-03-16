@@ -80,9 +80,15 @@ const Index = () => {
               <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
             </div>
           </div>
-          <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Admin
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/catalogos" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
+              <BookOpen className="h-4 w-4" />
+              Catálogos
+            </Link>
+            <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Admin
+            </Link>
+          </div>
         </div>
       </header>
 
