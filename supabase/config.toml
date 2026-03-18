@@ -2,3 +2,6 @@ project_id = "mgdhclajlcmepdfrkktw"
 
 [functions.generate-product-image]
 verify_jwt = false
+
+[functions.search-product-images]
+verify_jwt = false

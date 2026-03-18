@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Sparkles, Loader2, Upload, Wand2 } from "lucide-react";
+import { Plus, Wand2, Loader2, Sparkles } from "lucide-react";
+import { ImageSlotPicker, type ImageSlot } from "@/components/ImageSlotPicker";
 
 interface AddProductDialogProps {
   families: { id: string; name: string; category: string }[];
@@ -23,10 +24,8 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
   const [familyId, setFamilyId] = useState("none");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
-  
   const [generatingDesc, setGeneratingDesc] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
@@ -46,59 +45,54 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
         setDescription(data.description);
         toast.success("Descrição gerada!");
       }
-    } catch (e: any) {
+    } catch {
       toast.error("Erro ao gerar descrição");
     } finally {
       setGeneratingDesc(false);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length + uploadedFiles.length > 3) {
-      toast.error("Máximo de 3 imagens");
-      return;
-    }
-    setUploadedFiles(prev => [...prev, ...files].slice(0, 3));
-  };
-
-  const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const uploadManualImages = async (productId: string) => {
-    const urls: string[] = [];
-    for (let i = 0; i < uploadedFiles.length; i++) {
-      const file = uploadedFiles[i];
-      const ext = file.name.split(".").pop() || "png";
-      const fileName = `${productId}_manual_${i}.${ext}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, file, { contentType: file.type, upsert: true });
-      
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        continue;
+  const uploadImage = async (productId: string, source: string, position: number, fileOrUrl: File | string): Promise<string | null> => {
+    let file: File;
+    
+    if (typeof fileOrUrl === "string") {
+      // Download the image URL to a blob
+      try {
+        const resp = await fetch(fileOrUrl);
+        const blob = await resp.blob();
+        const ext = blob.type.split("/")[1] || "jpg";
+        file = new File([blob], `${productId}_${source}_${position}.${ext}`, { type: blob.type });
+      } catch (e) {
+        console.error("Failed to download image:", e);
+        return null;
       }
-
-      const { data: publicUrlData } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(fileName);
-
-      urls.push(publicUrlData.publicUrl);
-
-      await supabase.from("product_images").insert({
-        product_id: productId,
-        image_url: publicUrlData.publicUrl,
-        position: i,
-      });
+    } else {
+      file = fileOrUrl;
     }
 
-    if (urls.length > 0) {
-      await supabase.from("products").update({ image_url: urls[0] }).eq("id", productId);
+    const ext = file.name.split(".").pop() || "png";
+    const fileName = `${productId}_${source}_${position}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(fileName, file, { contentType: file.type, upsert: true });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError);
+      return null;
     }
-    return urls;
+
+    const { data: publicUrlData } = supabase.storage
+      .from("product-images")
+      .getPublicUrl(fileName);
+
+    await supabase.from("product_images").insert({
+      product_id: productId,
+      image_url: publicUrlData.publicUrl,
+      position,
+    });
+
+    return publicUrlData.publicUrl;
   };
 
   const handleSubmit = async () => {
@@ -125,31 +119,57 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
 
       if (error) throw error;
 
-      if (uploadedFiles.length > 0) {
-        toast.info("Produto guardado. A carregar imagens...");
-        await uploadManualImages(product.id);
-        toast.success("Produto e imagens guardados!");
-        queryClient.invalidateQueries({ queryKey: ["products"] });
-        queryClient.invalidateQueries({ queryKey: ["product_images"] });
-      } else {
-        toast.success("Produto guardado!");
-        toast.info("A gerar imagens em segundo plano. Pode continuar a usar o painel.");
+      const lockedSlots = imageSlots.filter((s) => s.locked || s.source === "upload" || s.source === "search");
+      const slotsToKeep = imageSlots.length > 0 ? imageSlots : [];
+      const aiSlotsNeeded = 3 - slotsToKeep.length;
+
+      // Upload locked/selected images
+      if (slotsToKeep.length > 0) {
+        toast.info("A carregar imagens selecionadas...");
+        const uploadedUrls: string[] = [];
+        for (let i = 0; i < slotsToKeep.length; i++) {
+          const slot = slotsToKeep[i];
+          const url = await uploadImage(
+            product.id,
+            slot.source,
+            i,
+            slot.file || slot.url
+          );
+          if (url) uploadedUrls.push(url);
+        }
+        if (uploadedUrls.length > 0) {
+          await supabase.from("products").update({ image_url: uploadedUrls[0] }).eq("id", product.id);
+        }
+      }
+
+      // Generate AI images for remaining slots
+      if (aiSlotsNeeded > 0) {
+        toast.info(
+          aiSlotsNeeded === 3
+            ? "A gerar 3 imagens com IA em segundo plano..."
+            : `A gerar ${aiSlotsNeeded} imagem(ns) com IA em segundo plano...`
+        );
 
         void supabase.functions
           .invoke("generate-product-image", {
-            body: { productName, productId: product.id },
+            body: {
+              productName,
+              productId: product.id,
+              startPosition: slotsToKeep.length,
+              count: aiSlotsNeeded,
+            },
           })
           .then((response) => {
             if (response.error) {
               console.error("Image generation error:", response.error);
-              toast.warning("Produto guardado, mas não foi possível gerar imagens.");
+              toast.warning("Produto guardado, mas não foi possível gerar imagens IA.");
               return;
             }
-            toast.success("Imagens geradas com sucesso!");
+            toast.success("Imagens IA geradas com sucesso!");
           })
           .catch((error) => {
-            console.error("Image generation request failed:", error);
-            toast.warning("Produto guardado, mas a geração de imagens falhou.");
+            console.error("Image generation failed:", error);
+            toast.warning("Produto guardado, mas a geração de imagens IA falhou.");
           })
           .finally(() => {
             queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -157,6 +177,9 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
           });
       }
 
+      toast.success("Produto guardado!");
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product_images"] });
       setOpen(false);
       resetForm();
     } catch (e: any) {
@@ -167,7 +190,12 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
   };
 
   const resetForm = () => {
-    setName(""); setDescription(""); setCategory(""); setPrice(""); setFamilyId("none"); setUploadedFiles([]);
+    setName("");
+    setDescription("");
+    setCategory("");
+    setPrice("");
+    setFamilyId("none");
+    setImageSlots([]);
   };
 
   return (
@@ -240,49 +268,13 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
             </Select>
           </div>
 
-          {/* Manual Image Upload */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Imagens próprias (opcional)</Label>
-              <span className="text-xs text-muted-foreground">{uploadedFiles.length}/3</span>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadedFiles.length >= 3}
-              className="w-full gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Carregar imagens do PC
-            </Button>
-            {uploadedFiles.length > 0 && (
-              <div className="flex gap-2 mt-2">
-                {uploadedFiles.map((file, idx) => (
-                  <div key={idx} className="relative w-16 h-16 rounded-md overflow-hidden border border-border">
-                    <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-cover" />
-                    <button
-                      onClick={() => removeFile(idx)}
-                      className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-bl text-xs w-4 h-4 flex items-center justify-center"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {uploadedFiles.length === 0 && (
-              <p className="text-xs text-muted-foreground">Se não carregar imagens, a IA gera 3 automaticamente</p>
-            )}
-          </div>
+          {/* New Image Slot Picker */}
+          <ImageSlotPicker
+            slots={imageSlots}
+            onSlotsChange={setImageSlots}
+            productName={name}
+            disabled={loading}
+          />
 
           <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2">
             {loading ? (
@@ -292,8 +284,8 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
               </>
             ) : (
               <>
-                {uploadedFiles.length > 0 ? <Upload className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
-                {uploadedFiles.length > 0 ? "Adicionar Produto" : "Adicionar e Gerar Imagens IA"}
+                <Sparkles className="h-4 w-4" />
+                Adicionar Produto
               </>
             )}
           </Button>
