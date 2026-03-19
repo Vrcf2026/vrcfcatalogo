@@ -76,6 +76,27 @@ const CATEGORY_THEMES: Record<string, { gradient: string; icon: string; pattern:
     accent: "#ec4899",
     bgImage: "/images/bg-gaming.jpg",
   },
+  Informatica: {
+    gradient: "linear-gradient(135deg, #0a1628 0%, #132744 50%, #1a3a5c 100%)",
+    icon: "🖥️",
+    pattern: "radial-gradient(circle at 20% 80%, rgba(56,189,248,0.12) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(59,130,246,0.1) 0%, transparent 50%)",
+    accent: "#38bdf8",
+    bgImage: "/images/bg-informatica.jpg",
+  },
+  "Segurança": {
+    gradient: "linear-gradient(135deg, #1a0a0a 0%, #2d1210 50%, #451a15 100%)",
+    icon: "🔒",
+    pattern: "radial-gradient(circle at 30% 70%, rgba(239,68,68,0.12) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(251,146,60,0.1) 0%, transparent 50%)",
+    accent: "#f97316",
+    bgImage: "/images/bg-seguranca.jpg",
+  },
+  Economato: {
+    gradient: "linear-gradient(135deg, #1c1917 0%, #2c2520 50%, #3d342a 100%)",
+    icon: "📋",
+    pattern: "radial-gradient(circle at 25% 75%, rgba(34,197,94,0.1) 0%, transparent 50%), radial-gradient(circle at 75% 25%, rgba(132,204,22,0.08) 0%, transparent 50%)",
+    accent: "#22c55e",
+    bgImage: "/images/bg-economato.jpg",
+  },
   Outros: {
     gradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
     icon: "🔧",
@@ -90,7 +111,7 @@ const DEFAULT_THEME = {
   icon: "📦",
   pattern: "radial-gradient(circle at 30% 70%, rgba(251,146,60,0.15) 0%, transparent 50%)",
   accent: "hsl(27 90% 50%)",
-  bgImage: "",
+  bgImage: "/images/bg-outros.jpg",
 };
 
 /* ─── Cover Page ─── */
