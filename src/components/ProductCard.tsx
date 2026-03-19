@@ -18,6 +18,7 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick }: ProductCardProps & { onClick?: () => void }) {
+  const { addItem } = useCart();
   const allImages = images.length > 0
     ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
     : imageUrl ? [imageUrl] : [];
