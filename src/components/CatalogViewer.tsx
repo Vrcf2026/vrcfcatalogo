@@ -11,14 +11,17 @@ import {
   Maximize,
   Minimize,
   Grid3X3,
+  Phone,
+  Mail,
+  MapPin,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Slider } from "@/components/ui/slider";
+import vrcfLogo from "@/assets/vrcf-logo.png";
 
-const DEFAULT_PRODUCTS_PER_PAGE = 6;
 const WHATSAPP_NUMBER = "351999999999";
 
 interface CatalogProduct {
@@ -40,7 +43,7 @@ interface CatalogViewerProps {
   productsPerPage?: number;
 }
 
-// Flipbook page wrapper - must be forwardRef for react-pageflip
+// Flipbook page wrapper
 const FlipPage = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
   ({ children }, ref) => (
     <div ref={ref} className="bg-white dark:bg-gray-50 h-full w-full overflow-hidden shadow-lg">
@@ -49,7 +52,8 @@ const FlipPage = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
   )
 );
 FlipPage.displayName = "FlipPage";
-// Category-specific cover designs
+
+// Category themes
 const CATEGORY_THEMES: Record<string, { gradient: string; icon: string; pattern: string; accent: string; bgImage: string }> = {
   Laptops: {
     gradient: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0c4a6e 100%)",
@@ -89,84 +93,234 @@ const DEFAULT_THEME = {
   bgImage: "",
 };
 
-function CoverPage({ category, productCount, coverImage }: { category: string; productCount: number; coverImage: string | null }) {
+/* ─── Cover Page ─── */
+function CoverPage({ category, productCount, bgImage }: { category: string; productCount: number; bgImage: string }) {
   const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
 
   return (
-    <div className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
-      {/* Pattern overlay */}
+    <div className="h-full w-full relative overflow-hidden">
+      {/* Full-bleed background image */}
+      {bgImage ? (
+        <>
+          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 40%, rgba(0,0,0,0.7) 100%)" }} />
+        </>
+      ) : (
+        <div className="absolute inset-0" style={{ background: theme.gradient }} />
+      )}
       <div className="absolute inset-0" style={{ background: theme.pattern }} />
-
-      {/* Geometric decorations */}
-      <div className="absolute top-0 right-0 w-32 h-32 opacity-10" style={{ background: `linear-gradient(225deg, ${theme.accent}, transparent)` }} />
-      <div className="absolute bottom-0 left-0 w-40 h-40 opacity-10" style={{ background: `linear-gradient(45deg, ${theme.accent}, transparent)` }} />
 
       {/* Top accent line */}
       <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.accent }} />
 
-      {/* Corner decorations */}
-      <div className="absolute top-6 left-6 w-8 h-8 border-l-2 border-t-2" style={{ borderColor: `${theme.accent}40` }} />
-      <div className="absolute bottom-6 right-6 w-8 h-8 border-r-2 border-b-2" style={{ borderColor: `${theme.accent}40` }} />
-
       {/* Content */}
       <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
-        {/* VRCF branding */}
-        <div className="absolute top-8 left-0 right-0 text-center">
-          <p className="text-white/30 text-[9px] font-bold tracking-[0.5em] uppercase">VRCF</p>
-          <p className="text-white/20 text-[7px] tracking-[0.3em] uppercase mt-0.5">Informática & Segurança</p>
+        {/* Logo at top */}
+        <div className="absolute top-6 left-0 right-0 flex flex-col items-center">
+          <img src={vrcfLogo} alt="VRCF" className="h-14 w-14 object-contain drop-shadow-lg" />
+          <p className="text-white/60 text-[8px] tracking-[0.4em] uppercase mt-1 font-medium">Informática & Segurança</p>
         </div>
 
         {/* Category icon */}
-        <div className="text-5xl mb-4 drop-shadow-lg">{theme.icon}</div>
-
-        {/* Cover image */}
-        {coverImage && (
-          <div className="w-28 h-28 rounded-2xl overflow-hidden mb-5 shadow-2xl ring-2 ring-white/10">
-            <img src={coverImage} alt="" className="w-full h-full object-cover" />
-          </div>
-        )}
+        <div className="text-6xl mb-5 drop-shadow-2xl">{theme.icon}</div>
 
         {/* Category title */}
         <div className="text-center space-y-3">
           <div className="flex items-center gap-3 justify-center">
-            <div className="w-8 h-px" style={{ backgroundColor: `${theme.accent}60` }} />
-            <p className="text-white/50 text-[10px] font-semibold tracking-[0.4em] uppercase">Catálogo</p>
-            <div className="w-8 h-px" style={{ backgroundColor: `${theme.accent}60` }} />
+            <div className="w-10 h-px" style={{ backgroundColor: `${theme.accent}80` }} />
+            <p className="text-white/60 text-[10px] font-semibold tracking-[0.5em] uppercase">Catálogo</p>
+            <div className="w-10 h-px" style={{ backgroundColor: `${theme.accent}80` }} />
           </div>
 
-          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-white leading-none tracking-tight">
+          <h1 className="font-heading text-4xl sm:text-5xl font-bold text-white leading-none tracking-tight drop-shadow-lg">
             {category}
           </h1>
 
-          <div className="w-16 h-1 rounded-full mx-auto" style={{ backgroundColor: theme.accent }} />
+          <div className="w-20 h-1 rounded-full mx-auto" style={{ backgroundColor: theme.accent }} />
 
-          <p className="text-white/40 text-xs font-medium">
+          <p className="text-white/50 text-sm font-medium">
             {productCount} {productCount === 1 ? "produto" : "produtos"}
           </p>
         </div>
 
         {/* Bottom hint */}
         <div className="absolute bottom-8 flex flex-col items-center gap-1">
-          <div className="w-5 h-8 rounded-full border border-white/20 flex items-start justify-center p-1">
-            <div className="w-1 h-2 rounded-full bg-white/40 animate-bounce" />
+          <div className="w-5 h-8 rounded-full border border-white/25 flex items-start justify-center p-1">
+            <div className="w-1 h-2 rounded-full bg-white/50 animate-bounce" />
           </div>
-          <p className="text-white/25 text-[9px] tracking-wider">Arraste para folhear</p>
+          <p className="text-white/30 text-[9px] tracking-wider">Arraste para folhear</p>
         </div>
       </div>
 
       {/* Bottom accent line */}
-      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: `${theme.accent}40` }} />
+      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: `${theme.accent}60` }} />
     </div>
   );
 }
 
+/* ─── Contacts Last Page ─── */
+function ContactsPage({ category }: { category: string }) {
+  const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+
+  return (
+    <div className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+      <div className="absolute inset-0" style={{ background: theme.pattern }} />
+      <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.accent }} />
+
+      <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
+        {/* Logo */}
+        <img src={vrcfLogo} alt="VRCF" className="h-20 w-20 object-contain drop-shadow-lg mb-6" />
+
+        <h2 className="font-heading text-2xl font-bold text-white mb-1">VRCF</h2>
+        <p className="text-white/50 text-xs tracking-[0.3em] uppercase mb-8">Informática & Segurança</p>
+
+        <div className="w-16 h-px mb-8" style={{ backgroundColor: `${theme.accent}80` }} />
+
+        {/* Contact info */}
+        <div className="space-y-4 text-center">
+          <div className="flex items-center gap-3 justify-center">
+            <Phone className="h-4 w-4" style={{ color: theme.accent }} />
+            <span className="text-white/80 text-sm">+351 912 345 678</span>
+          </div>
+          <div className="flex items-center gap-3 justify-center">
+            <Mail className="h-4 w-4" style={{ color: theme.accent }} />
+            <span className="text-white/80 text-sm">info@vrcf.pt</span>
+          </div>
+          <div className="flex items-center gap-3 justify-center">
+            <MapPin className="h-4 w-4" style={{ color: theme.accent }} />
+            <span className="text-white/80 text-sm">Rua Exemplo, 123 — Lisboa</span>
+          </div>
+          <div className="flex items-center gap-3 justify-center">
+            <Globe className="h-4 w-4" style={{ color: theme.accent }} />
+            <span className="text-white/80 text-sm">www.vrcf.pt</span>
+          </div>
+        </div>
+
+        {/* WhatsApp CTA */}
+        <button
+          onClick={() => window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Olá! Gostaria de mais informações.")}`, "_blank")}
+          className="mt-8 flex items-center gap-2 px-6 py-3 rounded-full text-white font-semibold text-sm transition-transform hover:scale-105 shadow-lg"
+          style={{ backgroundColor: "#25D366" }}
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+          </svg>
+          Fale connosco no WhatsApp
+        </button>
+
+        {/* Footer */}
+        <p className="absolute bottom-6 text-white/20 text-[9px] tracking-wider">
+          © {new Date().getFullYear()} VRCF — Todos os direitos reservados
+        </p>
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: `${theme.accent}60` }} />
+    </div>
+  );
+}
+
+/* ─── Family Section Header (inline on page) ─── */
+function FamilyHeader({ familyName, accent, bgImage }: { familyName: string; accent: string; bgImage: string }) {
+  return (
+    <div className="rounded-lg overflow-hidden mb-2 relative" style={{ height: "60px" }}>
+      {bgImage ? (
+        <>
+          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/50" />
+        </>
+      ) : (
+        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}40)` }} />
+      )}
+      <div className="relative z-10 h-full flex items-center px-3 gap-2">
+        <div className="w-1 h-6 rounded-full" style={{ backgroundColor: accent }} />
+        <h3 className="font-heading text-sm font-bold text-white drop-shadow-md">{familyName}</h3>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Build pages grouped by family (max 2 families per page) ─── */
+interface FamilyPageGroup {
+  families: { name: string; products: CatalogProduct[] }[];
+}
+
+function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, string>): FamilyPageGroup[] {
+  // Group products by family
+  const familyGroups: Record<string, CatalogProduct[]> = {};
+  const noFamily: CatalogProduct[] = [];
+
+  products.forEach((p) => {
+    if (p.family_id && familyMap[p.family_id]) {
+      const fname = familyMap[p.family_id];
+      if (!familyGroups[fname]) familyGroups[fname] = [];
+      familyGroups[fname].push(p);
+    } else {
+      noFamily.push(p);
+    }
+  });
+
+  const allFamilies: { name: string; products: CatalogProduct[] }[] = [];
+  Object.entries(familyGroups).forEach(([name, prods]) => {
+    allFamilies.push({ name, products: prods });
+  });
+  if (noFamily.length > 0) {
+    allFamilies.push({ name: "Outros", products: noFamily });
+  }
+
+  // Now pack into pages: max 2 families per page, max 6 products per page
+  const MAX_PRODUCTS = 6;
+  const MAX_FAMILIES = 2;
+  const pages: FamilyPageGroup[] = [];
+
+  let currentPageFamilies: { name: string; products: CatalogProduct[] }[] = [];
+  let currentPageProductCount = 0;
+
+  allFamilies.forEach((family) => {
+    let remaining = [...family.products];
+
+    while (remaining.length > 0) {
+      const spaceLeft = MAX_PRODUCTS - currentPageProductCount;
+      const familySlotAvailable = currentPageFamilies.length < MAX_FAMILIES;
+
+      if (spaceLeft <= 0 || !familySlotAvailable) {
+        // Flush current page
+        if (currentPageFamilies.length > 0) {
+          pages.push({ families: currentPageFamilies });
+        }
+        currentPageFamilies = [];
+        currentPageProductCount = 0;
+        continue;
+      }
+
+      const take = remaining.splice(0, spaceLeft);
+      currentPageFamilies.push({ name: family.name, products: take });
+      currentPageProductCount += take.length;
+
+      // If this family still has remaining, flush
+      if (remaining.length > 0) {
+        pages.push({ families: currentPageFamilies });
+        currentPageFamilies = [];
+        currentPageProductCount = 0;
+      }
+    }
+  });
+
+  // Flush last page
+  if (currentPageFamilies.length > 0) {
+    pages.push({ families: currentPageFamilies });
+  }
+
+  if (pages.length === 0) pages.push({ families: [] });
+  return pages;
+}
+
+/* ─── Main Component ─── */
 export function CatalogViewer({
   category,
   products,
   imagesByProduct,
   familyMap,
   onBack,
-  productsPerPage = DEFAULT_PRODUCTS_PER_PAGE,
 }: CatalogViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -181,21 +335,18 @@ export function CatalogViewer({
   const bookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-hide bars after inactivity
   const showBars = useCallback(() => {
     setBarsVisible(true);
     if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
     hideTimerRef.current = setTimeout(() => setBarsVisible(false), 3000);
   }, []);
 
-  // Listen for fullscreen changes
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
   }, []);
 
-  // Start hide timer on mount and reset on interaction
   useEffect(() => {
     showBars();
     return () => { if (hideTimerRef.current) clearTimeout(hideTimerRef.current); };
@@ -212,17 +363,10 @@ export function CatalogViewer({
     );
   }, [products, searchQuery, familyMap]);
 
-  const pages = useMemo(() => {
-    const result: CatalogProduct[][] = [];
-    for (let i = 0; i < filteredProducts.length; i += productsPerPage) {
-      result.push(filteredProducts.slice(i, i + productsPerPage));
-    }
-    if (result.length === 0) result.push([]);
-    return result;
-  }, [filteredProducts, productsPerPage]);
+  const pages = useMemo(() => buildFamilyPages(filteredProducts, familyMap), [filteredProducts, familyMap]);
 
-  // +1 for cover page
-  const totalPages = pages.length + 1;
+  // +2 for cover + contacts page
+  const totalPages = pages.length + 2;
 
   const getProductImage = (product: CatalogProduct) => {
     const imgs = imagesByProduct[product.id];
@@ -244,27 +388,16 @@ export function CatalogViewer({
   }, []);
 
   const flipTo = (page: number) => {
-    if (bookRef.current) {
-      bookRef.current.pageFlip().flip(page);
-    }
+    if (bookRef.current) bookRef.current.pageFlip().flip(page);
   };
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && containerRef.current) {
       await containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
     } else if (document.fullscreenElement) {
       await document.exitFullscreen();
-      setIsFullscreen(false);
     }
   };
-
-  // Cover image - first product with image
-  const coverProduct = products.find((p) => {
-    const imgs = imagesByProduct[p.id];
-    return (imgs && imgs.length > 0) || p.image_url;
-  });
-  const coverImage = coverProduct ? getProductImage(coverProduct) : null;
 
   return (
     <div
@@ -275,37 +408,28 @@ export function CatalogViewer({
       onTouchStart={showBars}
       onClick={showBars}
     >
-      {/* Top bar - auto-hide */}
+      {/* Top bar */}
       <div
         className={`absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-black/50 backdrop-blur-md z-50 transition-all duration-500 ${
           barsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
         }`}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
       >
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Voltar
+        <button onClick={onBack} className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors">
+          <ChevronLeft className="h-4 w-4" /> Voltar
         </button>
-        <span className="font-heading font-bold text-white/90 text-sm">{category}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-white/60 hover:text-white hover:bg-white/10 gap-1.5"
-          onClick={toggleFullscreen}
-        >
+        <div className="flex items-center gap-2">
+          <img src={vrcfLogo} alt="VRCF" className="h-6 w-6 object-contain" />
+          <span className="font-heading font-bold text-white/90 text-sm">{category}</span>
+        </div>
+        <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 gap-1.5" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           <span className="hidden sm:inline text-xs">{isFullscreen ? "Sair" : "Ecrã inteiro"}</span>
         </Button>
       </div>
 
-      {/* Top hover zone - triggers bar visibility */}
-      <div
-        className="absolute top-0 left-0 right-0 h-12 z-40"
-        onMouseEnter={showBars}
-      />
+      {/* Top hover zone */}
+      <div className="absolute top-0 left-0 right-0 h-12 z-40" onMouseEnter={showBars} />
 
       {/* Flipbook area */}
       <div
@@ -315,7 +439,6 @@ export function CatalogViewer({
         {/* Thumbnails panel */}
         {showThumbnails && (
           <div className="absolute left-0 top-0 bottom-0 w-48 bg-black/80 backdrop-blur-md z-40 overflow-y-auto p-3 space-y-2">
-            {/* Cover thumbnail */}
             <button
               onClick={() => { flipTo(0); setShowThumbnails(false); }}
               className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === 0 ? "border-primary" : "border-transparent hover:border-white/30"}`}
@@ -332,11 +455,20 @@ export function CatalogViewer({
                 className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
               >
                 <div className="aspect-[3/4] bg-white flex items-center justify-center p-1">
-                  <span className="text-[8px] text-gray-500">{productsPerPage} produtos</span>
+                  <span className="text-[8px] text-gray-500">Pág. {i + 1}</span>
                 </div>
                 <div className="bg-black/60 text-white text-[10px] text-center py-0.5">{i + 1}</div>
               </button>
             ))}
+            <button
+              onClick={() => { flipTo(pages.length + 1); setShowThumbnails(false); }}
+              className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === pages.length + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+            >
+              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+                <span className="font-heading text-[8px] font-bold text-gray-800 text-center">Contactos</span>
+              </div>
+              <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Contactos</div>
+            </button>
           </div>
         )}
 
@@ -374,133 +506,146 @@ export function CatalogViewer({
             <CoverPage
               category={category}
               productCount={filteredProducts.length}
-              coverImage={coverImage}
+              bgImage={pageTheme.bgImage}
             />
           </FlipPage>
 
-          {/* Product pages */}
-          {pages.map((pageProducts, pageIndex) => (
+          {/* Product pages grouped by family */}
+          {pages.map((page, pageIndex) => (
             <FlipPage key={pageIndex}>
               <div className="h-full flex flex-col relative overflow-hidden">
-                {/* Background image */}
+                {/* Background */}
                 {pageTheme.bgImage && (
                   <div className="absolute inset-0 z-0">
                     <img src={pageTheme.bgImage} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.88)" }} />
+                    <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.90)" }} />
                   </div>
                 )}
                 <div className="relative z-10 h-full flex flex-col p-4 sm:p-5">
-                {/* Page header */}
-                <div className="flex items-center justify-between mb-3 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
-                  <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
-                  <span className="text-[10px] font-medium" style={{ color: "hsl(27 90% 50%)" }}>
-                    VRCF
-                  </span>
-                </div>
-
-                {/* Products grid */}
-                <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2.5 content-start">
-                  {pageProducts.length === 0 ? (
-                    <div className="col-span-full flex flex-col items-center justify-center h-full" style={{ color: "#999" }}>
-                      <Search className="h-8 w-8 mb-2 opacity-40" />
-                      <p className="text-xs">Nenhum produto encontrado</p>
+                  {/* Page header with logo */}
+                  <div className="flex items-center justify-between mb-2 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
+                    <div className="flex items-center gap-2">
+                      <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                      <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
                     </div>
-                  ) : (
-                    pageProducts.map((product) => {
-                      const imgUrl = getProductImage(product);
-                      const familyName = product.family_id ? familyMap[product.family_id] || null : null;
-                      const descShort = product.description
-                        ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
-                        : null;
+                    <span className="text-[10px] font-medium" style={{ color: pageTheme.accent }}>
+                      VRCF
+                    </span>
+                  </div>
 
-                      return (
-                        <div key={product.id} className="group flex flex-col rounded-md overflow-hidden" style={{ border: "1px solid #eee" }}>
-                          {/* Image */}
-                          <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
-                            {imgUrl ? (
-                              <>
-                                <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
-                                  className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
-                                >
-                                  <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
-                                </button>
-                              </>
-                            ) : (
-                              <div className="flex items-center justify-center h-full">
-                                <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
-                              </div>
-                            )}
-                          </div>
+                  {/* Family sections */}
+                  <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                    {page.families.length === 0 ? (
+                      <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
+                        <Search className="h-8 w-8 mb-2 opacity-40" />
+                        <p className="text-xs">Nenhum produto encontrado</p>
+                      </div>
+                    ) : (
+                      page.families.map((family, fi) => {
+                        // Calculate grid based on how many families on page
+                        const isSingleFamily = page.families.length === 1;
+                        const gridCols = isSingleFamily ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2";
+                        
+                        return (
+                          <div key={fi} className={`${isSingleFamily ? "flex-1" : ""} flex flex-col min-h-0`}>
+                            {/* Family header with background */}
+                            <FamilyHeader familyName={family.name} accent={pageTheme.accent} bgImage={pageTheme.bgImage} />
+                            
+                            {/* Products grid */}
+                            <div className={`grid ${gridCols} gap-2 content-start ${isSingleFamily ? "flex-1" : ""}`}>
+                              {family.products.map((product) => {
+                                const imgUrl = getProductImage(product);
+                                const descShort = product.description
+                                  ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
+                                  : null;
 
-                          {/* Info */}
-                          <div className="p-1.5 flex flex-col gap-0.5 flex-1">
-                            {familyName && (
-                              <span className="text-[7px] font-semibold uppercase tracking-wider px-1 py-0.5 rounded self-start"
-                                style={{ color: "hsl(27 90% 45%)", backgroundColor: "hsl(27 90% 95%)" }}>
-                                {familyName}
-                              </span>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedProduct({
-                                  name: product.name, description: product.description,
-                                  category: product.category, price: product.price,
-                                  imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
-                                  familyName,
-                                });
-                              }}
-                              className="text-left"
-                            >
-                              <h4 className="font-heading text-[10px] font-bold leading-tight line-clamp-2"
-                                style={{ color: "#1a1a1a" }}>
-                                {product.name}
-                              </h4>
-                            </button>
-                            {descShort && (
-                              <p className="text-[8px] line-clamp-1 leading-snug" style={{ color: "#888" }}>{descShort}</p>
-                            )}
-                            <div className="mt-auto pt-1 flex items-center justify-between">
-                              {product.price != null ? (
-                                <span className="font-heading font-bold text-[11px]" style={{ color: "#1a1a1a" }}>
-                                  {product.price.toFixed(2).replace(".", ",")} €
-                                </span>
-                              ) : (
-                                <span className="text-[8px]" style={{ color: "#aaa" }}>Consultar</span>
-                              )}
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleWhatsApp(product); }}
-                                className="rounded-full p-1 transition-colors"
-                                style={{ backgroundColor: "#e8f5e9" }}
-                                title="WhatsApp"
-                              >
-                                <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" style={{ fill: "#25D366" }} xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                                </svg>
-                              </button>
+                                return (
+                                  <div key={product.id} className="group flex flex-col rounded-md overflow-hidden bg-white" style={{ border: "1px solid #eee" }}>
+                                    <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
+                                      {imgUrl ? (
+                                        <>
+                                          <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
+                                            className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
+                                          >
+                                            <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
+                                          </button>
+                                        </>
+                                      ) : (
+                                        <div className="flex items-center justify-center h-full">
+                                          <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="p-1.5 flex flex-col gap-0.5 flex-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedProduct({
+                                            name: product.name, description: product.description,
+                                            category: product.category, price: product.price,
+                                            imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
+                                            familyName: family.name,
+                                          });
+                                        }}
+                                        className="text-left"
+                                      >
+                                        <h4 className="font-heading text-[10px] font-bold leading-tight line-clamp-2" style={{ color: "#1a1a1a" }}>
+                                          {product.name}
+                                        </h4>
+                                      </button>
+                                      {descShort && (
+                                        <p className="text-[8px] line-clamp-1 leading-snug" style={{ color: "#888" }}>{descShort}</p>
+                                      )}
+                                      <div className="mt-auto pt-1 flex items-center justify-between">
+                                        {product.price != null ? (
+                                          <span className="font-heading font-bold text-[11px]" style={{ color: "#1a1a1a" }}>
+                                            {product.price.toFixed(2).replace(".", ",")} €
+                                          </span>
+                                        ) : (
+                                          <span className="text-[8px]" style={{ color: "#aaa" }}>Consultar</span>
+                                        )}
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleWhatsApp(product); }}
+                                          className="rounded-full p-1 transition-colors"
+                                          style={{ backgroundColor: "#e8f5e9" }}
+                                          title="WhatsApp"
+                                        >
+                                          <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" style={{ fill: "#25D366" }} xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+                        );
+                      })
+                    )}
+                  </div>
 
-                {/* Page footer */}
-                <div className="mt-2 pt-2 flex items-center justify-between text-[9px]" style={{ borderTop: "1px solid #eee", color: "#bbb" }}>
-                  <span>Catálogo {category}</span>
-                  <span>{pageIndex + 1} / {pages.length}</span>
-                </div>
+                  {/* Page footer */}
+                  <div className="mt-2 pt-2 flex items-center justify-between text-[9px]" style={{ borderTop: "1px solid #eee", color: "#bbb" }}>
+                    <span>Catálogo {category}</span>
+                    <span>{pageIndex + 1} / {pages.length}</span>
+                  </div>
                 </div>
               </div>
             </FlipPage>
           ))}
+
+          {/* Contacts last page */}
+          <FlipPage>
+            <ContactsPage category={category} />
+          </FlipPage>
         </HTMLFlipBook>
 
-        {/* Side navigation arrows - also auto-hide */}
+        {/* Navigation arrows */}
         <button
           onClick={() => bookRef.current?.pageFlip().flipPrev()}
           className={`absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center z-30 transition-opacity duration-500 ${barsVisible ? "opacity-100" : "opacity-0"}`}
@@ -520,12 +665,9 @@ export function CatalogViewer({
       </div>
 
       {/* Bottom hover zone */}
-      <div
-        className="absolute bottom-0 left-0 right-0 h-12 z-40"
-        onMouseEnter={showBars}
-      />
+      <div className="absolute bottom-0 left-0 right-0 h-12 z-40" onMouseEnter={showBars} />
 
-      {/* Bottom toolbar - auto-hide */}
+      {/* Bottom toolbar */}
       <div
         className={`absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-2 z-50 transition-all duration-500 ${
           barsVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
@@ -533,23 +675,16 @@ export function CatalogViewer({
         style={{ backgroundColor: "rgba(26,26,26,0.9)", backdropFilter: "blur(8px)" }}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
       >
-        {/* Left: page counter */}
         <div className="flex items-center gap-3">
-          <span className="text-white/70 text-xs font-medium">
-            {currentPage + 1} / {totalPages}
-          </span>
+          <span className="text-white/70 text-xs font-medium">{currentPage + 1} / {totalPages}</span>
           <div className="hidden sm:block w-32 h-1 rounded-full overflow-hidden" style={{ backgroundColor: "rgba(255,255,255,0.15)" }}>
             <div
               className="h-full rounded-full transition-all duration-300"
-              style={{
-                width: `${((currentPage + 1) / totalPages) * 100}%`,
-                backgroundColor: "hsl(27 90% 50%)",
-              }}
+              style={{ width: `${((currentPage + 1) / totalPages) * 100}%`, backgroundColor: "hsl(27 90% 50%)" }}
             />
           </div>
         </div>
 
-        {/* Center: controls */}
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setZoom(Math.max(50, zoom - 10))}>
             <ZoomOut className="h-4 w-4" />
@@ -558,13 +693,10 @@ export function CatalogViewer({
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setZoom(Math.min(150, zoom + 10))}>
             <ZoomIn className="h-4 w-4" />
           </Button>
-
           <div className="w-px h-5 mx-1" style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setShowThumbnails(!showThumbnails)}>
             <Grid3X3 className="h-4 w-4" />
           </Button>
-
           {showSearch ? (
             <div className="flex items-center gap-1 ml-1">
               <Input
@@ -583,9 +715,7 @@ export function CatalogViewer({
               <Search className="h-4 w-4" />
             </Button>
           )}
-
           <div className="w-px h-5 mx-1" style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />
-
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={toggleFullscreen}>
             {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </Button>
