@@ -88,11 +88,28 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
         {description && (
           <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
         )}
-        {price != null && (
-          <p className="font-heading font-bold text-lg text-foreground">
-            {price.toFixed(2).replace(".", ",")} €
-          </p>
-        )}
+        <div className="flex items-center justify-between">
+          {price != null && (
+            <p className="font-heading font-bold text-lg text-foreground">
+              {price.toFixed(2).replace(".", ",")} €
+            </p>
+          )}
+          {!isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                addItem({ id, name, price, imageUrl: allImages[0] || imageUrl, category });
+                toast.success(`${name} adicionado ao carrinho`);
+              }}
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              Adicionar
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
