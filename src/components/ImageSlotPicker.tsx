@@ -34,19 +34,23 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
       toast.error("Preencha o nome do produto primeiro");
       return;
     }
+
     setSearching(true);
     setSearchResults([]);
     setShowResults(true);
+
     try {
       const { data, error } = await supabase.functions.invoke("search-product-images", {
-        body: { query: productName.trim(), count: 9 },
+        body: { query: productName.trim(), count: 18 },
       });
+
       if (error) throw error;
+
       if (data?.images?.length > 0) {
         setSearchResults(data.images);
         toast.success(`${data.images.length} imagens encontradas!`);
       } else {
-        toast.warning("Nenhuma imagem encontrada. Tente gerar com IA.");
+        toast.warning("Nenhuma imagem encontrada na web para este nome.");
       }
     } catch (e: any) {
       console.error("Search error:", e);
@@ -61,6 +65,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
       toast.error("Preencha o nome do produto primeiro");
       return;
     }
+
     const toGenerate = 3 - lockedCount;
     if (toGenerate <= 0) {
       toast.error("Todos os slots estão bloqueados");
@@ -69,6 +74,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
 
     setGenerating(true);
     toast.info(`A gerar ${toGenerate} imagem(ns) com IA...`);
+
     try {
       const { data, error } = await supabase.functions.invoke("generate-product-image", {
         body: { productName: productName.trim(), count: toGenerate },
@@ -82,6 +88,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
           newSlots.push({ url, locked: false, source: "ai" });
         }
       }
+
       onSlotsChange(newSlots);
       toast.success(`${aiUrls.length} imagem(ns) gerada(s) com IA!`);
     } catch (e: any) {
@@ -99,6 +106,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
         toast.error("Todas as imagens estão bloqueadas");
         return;
       }
+
       const newSlots = [...slots];
       newSlots[idx] = { url, locked: false, source: "search" };
       onSlotsChange(newSlots);
@@ -123,7 +131,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
     const availableSlots = 3 - slots.filter((s) => s.locked).length;
     const toAdd = files.slice(0, availableSlots);
 
-    let newSlots = [...slots];
+    const newSlots = [...slots];
     for (const file of toAdd) {
       const url = URL.createObjectURL(file);
       if (newSlots.length >= 3) {
@@ -135,25 +143,34 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
         newSlots.push({ url, locked: false, source: "upload", file });
       }
     }
+
     onSlotsChange(newSlots);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const sourceLabel = (source: string) => {
     switch (source) {
-      case "search": return "Web";
-      case "ai": return "IA";
-      case "upload": return "PC";
-      default: return "";
+      case "search":
+        return "Web";
+      case "ai":
+        return "IA";
+      case "upload":
+        return "PC";
+      default:
+        return "";
     }
   };
 
   const sourceColor = (source: string) => {
     switch (source) {
-      case "search": return "bg-blue-500";
-      case "ai": return "bg-purple-500";
-      case "upload": return "bg-green-500";
-      default: return "bg-muted";
+      case "search":
+        return "bg-blue-500";
+      case "ai":
+        return "bg-purple-500";
+      case "upload":
+        return "bg-green-500";
+      default:
+        return "bg-muted";
     }
   };
 
@@ -164,7 +181,6 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
         <span className="text-xs text-muted-foreground">{slots.length}/3 slots</span>
       </div>
 
-      {/* 3 Image Slots */}
       <div className="grid grid-cols-3 gap-2">
         {Array.from({ length: 3 }).map((_, i) => {
           const slot = slots[i];
@@ -178,6 +194,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
               </div>
             );
           }
+
           return (
             <div key={i} className="relative aspect-square rounded-lg border-2 border-border overflow-hidden group">
               <img
@@ -197,7 +214,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
                   onClick={() => toggleLock(i)}
                   className={cn(
                     "p-1.5 rounded-full text-white transition-colors",
-                    slot.locked ? "bg-amber-500 hover:bg-amber-600" : "bg-white/30 hover:bg-white/50"
+                    slot.locked ? "bg-amber-500 hover:bg-amber-600" : "bg-white/30 hover:bg-white/50",
                   )}
                   title={slot.locked ? "Desbloquear" : "Bloquear"}
                 >
@@ -224,7 +241,6 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
         })}
       </div>
 
-      {/* Action Buttons */}
       <div className="flex flex-col gap-2">
         <div className="grid grid-cols-3 gap-2">
           <Button
@@ -268,12 +284,10 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
               ? `${lockedCount} bloqueada(s) — IA gerará ${3 - lockedCount} imagem(ns)`
               : slots.length === 0
                 ? "Pesquise na web, carregue do PC ou gere com IA"
-                : "Bloqueie as imagens que quer manter"
-          }
+                : "Bloqueie as imagens que quer manter"}
         </p>
       </div>
 
-      {/* Search Results Gallery */}
       {showResults && searchResults.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -287,7 +301,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
               </Button>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto">
+          <div className="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto">
             {searchResults.map((url, i) => (
               <button
                 key={i}
