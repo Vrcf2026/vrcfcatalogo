@@ -16,6 +16,7 @@ const Index = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const { totalItems, setIsOpen } = useCart();
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
