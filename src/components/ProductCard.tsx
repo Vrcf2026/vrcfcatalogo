@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Package, ImageOff, Pencil } from "lucide-react";
+import { Package, ImageOff, Pencil, ShoppingCart } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   id: string;
