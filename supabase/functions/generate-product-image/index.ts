@@ -21,7 +21,7 @@ async function generateSingleImage(productName: string, variation: number, apiKe
     },
     body: JSON.stringify({
       model: "google/gemini-2.5-flash-image",
-      messages: [{ role: "user", content: prompts[variation] || prompts[0] }],
+      messages: [{ role: "user", content: prompts[variation % prompts.length] }],
       modalities: ["image", "text"],
     }),
   });
@@ -41,7 +41,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { productName, productId } = await req.json();
+    const { productName, productId, startPosition = 0, count = 3 } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -49,27 +49,30 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log(`Generating 3 images for product: ${productName}`);
+    console.log(`Generating ${count} images for product: ${productName} starting at position ${startPosition}`);
 
-    // Delete existing images for this product if regenerating
+    // Only delete images at the positions we're going to generate
     if (productId) {
-      await supabase.from("product_images").delete().eq("product_id", productId);
+      for (let i = startPosition; i < startPosition + count; i++) {
+        await supabase.from("product_images").delete()
+          .eq("product_id", productId)
+          .eq("position", i);
+      }
     }
 
     const imageUrls: string[] = [];
 
-    // Generate 3 images sequentially to avoid rate limits
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < count; i++) {
       try {
-        console.log(`Generating image ${i + 1}/3...`);
-        const imageBase64 = await generateSingleImage(productName, i, LOVABLE_API_KEY);
+        console.log(`Generating image ${i + 1}/${count}...`);
+        const imageBase64 = await generateSingleImage(productName, startPosition + i, LOVABLE_API_KEY);
         
         if (!imageBase64) continue;
 
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
         const imageBytes = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
 
-        const fileName = `${productId || crypto.randomUUID()}_${i}.png`;
+        const fileName = `${productId || crypto.randomUUID()}_${startPosition + i}.png`;
         const { error: uploadError } = await supabase.storage
           .from("product-images")
           .upload(fileName, imageBytes, { contentType: "image/png", upsert: true });
@@ -85,12 +88,11 @@ serve(async (req) => {
 
         imageUrls.push(publicUrlData.publicUrl);
 
-        // Save to product_images table
         if (productId) {
           await supabase.from("product_images").insert({
             product_id: productId,
             image_url: publicUrlData.publicUrl,
-            position: i,
+            position: startPosition + i,
           });
         }
       } catch (e: any) {
@@ -108,8 +110,8 @@ serve(async (req) => {
       }
     }
 
-    // Update product main image_url with the first image
-    if (productId && imageUrls.length > 0) {
+    // Update product main image_url with the first generated image only if position 0 was generated
+    if (productId && imageUrls.length > 0 && startPosition === 0) {
       await supabase.from("products").update({ image_url: imageUrls[0] }).eq("id", productId);
     }
 

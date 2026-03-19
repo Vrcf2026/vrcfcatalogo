@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, RefreshCw, Upload, Wand2 } from "lucide-react";
+import { Loader2, Save, Trash2, Wand2 } from "lucide-react";
+import { ImageSlotPicker, type ImageSlot } from "@/components/ImageSlotPicker";
 
 interface EditProductDialogProps {
   open: boolean;
@@ -33,13 +34,42 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
   const [familyId, setFamilyId] = useState(product.family_id || "none");
   const [price, setPrice] = useState(product.price?.toString() || "");
   const [loading, setLoading] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
+  const [initialImagesLoaded, setInitialImagesLoaded] = useState(false);
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
+
+  // Load existing images into slots when dialog opens
+  useEffect(() => {
+    if (open && !initialImagesLoaded) {
+      const loadImages = async () => {
+        const { data: images } = await supabase
+          .from("product_images")
+          .select("*")
+          .eq("product_id", product.id)
+          .order("position");
+
+        if (images && images.length > 0) {
+          setImageSlots(
+            images.map((img) => ({
+              url: img.image_url,
+              locked: true, // Existing images start locked
+              source: "ai" as const, // Treat existing as "ai" source
+            }))
+          );
+        } else if (product.image_url) {
+          setImageSlots([{ url: product.image_url, locked: true, source: "ai" }]);
+        }
+        setInitialImagesLoaded(true);
+      };
+      loadImages();
+    }
+    if (!open) {
+      setInitialImagesLoaded(false);
+    }
+  }, [open, product.id, product.image_url, initialImagesLoaded]);
 
   const handleGenerateDescription = async () => {
     if (!name.trim()) {
@@ -56,67 +86,35 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
         setDescription(data.description);
         toast.success("Descrição gerada!");
       }
-    } catch (e: any) {
+    } catch {
       toast.error("Erro ao gerar descrição");
     } finally {
       setGeneratingDesc(false);
     }
   };
 
-  const handleUploadImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    if (files.length > 3) {
-      toast.error("Máximo de 3 imagens");
-      return;
+  const saveSlotImage = async (productId: string, slot: ImageSlot, position: number): Promise<string | null> => {
+    if (slot.source === "upload" && slot.file) {
+      const ext = slot.file.name.split(".").pop() || "png";
+      const fileName = `${productId}_upload_${position}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(fileName, slot.file, { contentType: slot.file.type, upsert: true });
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        return null;
+      }
+      const { data: publicUrlData } = supabase.storage.from("product-images").getPublicUrl(fileName);
+      await supabase.from("product_images").insert({ product_id: productId, image_url: publicUrlData.publicUrl, position });
+      return publicUrlData.publicUrl;
     }
 
-    setUploading(true);
-    try {
-      // Delete existing images
-      await supabase.from("product_images").delete().eq("product_id", product.id);
-
-      const urls: string[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const ext = file.name.split(".").pop() || "png";
-        const fileName = `${product.id}_manual_${i}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, file, { contentType: file.type, upsert: true });
-
-        if (uploadError) {
-          console.error("Upload error:", uploadError);
-          continue;
-        }
-
-        const { data: publicUrlData } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(fileName);
-
-        urls.push(publicUrlData.publicUrl);
-
-        await supabase.from("product_images").insert({
-          product_id: product.id,
-          image_url: publicUrlData.publicUrl,
-          position: i,
-        });
-      }
-
-      if (urls.length > 0) {
-        await supabase.from("products").update({ image_url: urls[0] }).eq("id", product.id);
-      }
-
-      toast.success(`${urls.length} imagem(ns) carregada(s)!`);
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product_images"] });
-    } catch (e: any) {
-      toast.error("Erro ao carregar imagens");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+    const imageUrl = slot.url;
+    if (imageUrl && imageUrl.startsWith("http")) {
+      await supabase.from("product_images").insert({ product_id: productId, image_url: imageUrl, position });
+      return imageUrl;
     }
+    return null;
   };
 
   const handleSave = async () => {
@@ -137,8 +135,23 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
         })
         .eq("id", product.id);
       if (error) throw error;
+
+      // Re-save images: delete existing and re-insert from slots
+      await supabase.from("product_images").delete().eq("product_id", product.id);
+      
+      const savedUrls: string[] = [];
+      for (let i = 0; i < imageSlots.length; i++) {
+        const url = await saveSlotImage(product.id, imageSlots[i], i);
+        if (url) savedUrls.push(url);
+      }
+      
+      await supabase.from("products").update({
+        image_url: savedUrls.length > 0 ? savedUrls[0] : null,
+      }).eq("id", product.id);
+
       toast.success("Produto atualizado!");
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product_images"] });
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e.message || "Erro ao atualizar");
@@ -163,38 +176,6 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
       setLoading(false);
     }
   };
-
-  const handleRegenerateImage = async () => {
-    if (!name.trim()) {
-      toast.error("Preencha o nome do produto primeiro");
-      return;
-    }
-
-    setRegenerating(true);
-    toast.info("Geração iniciada em segundo plano. Pode continuar a editar.");
-
-    void supabase.functions
-      .invoke("generate-product-image", {
-        body: { productName: name.trim(), productId: product.id },
-      })
-      .then((response) => {
-        if (response.error) {
-          throw response.error;
-        }
-        toast.success("Imagens regeneradas!");
-        queryClient.invalidateQueries({ queryKey: ["products"] });
-        queryClient.invalidateQueries({ queryKey: ["product_images"] });
-      })
-      .catch((e: any) => {
-        console.error("Erro ao regenerar imagens:", e);
-        toast.error("Erro ao regenerar imagens");
-      })
-      .finally(() => {
-        setRegenerating(false);
-      });
-  };
-
-  const isDisabled = loading || uploading || generatingDesc;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -257,41 +238,19 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
             </Select>
           </div>
 
-          {/* Image actions */}
-          <div className="space-y-2">
-            <Label>Imagens</Label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleUploadImages}
-              className="hidden"
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isDisabled}
-                className="flex-1 gap-2"
-              >
-                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Carregar do PC
-              </Button>
-              <Button variant="outline" onClick={handleRegenerateImage} disabled={isDisabled || regenerating} className="flex-1 gap-2">
-                {regenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                Gerar com IA
-              </Button>
-            </div>
-          </div>
+          <ImageSlotPicker
+            slots={imageSlots}
+            onSlotsChange={setImageSlots}
+            productName={name}
+            disabled={loading}
+          />
 
           <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={isDisabled} className="flex-1 gap-2">
+            <Button onClick={handleSave} disabled={loading || generatingDesc} className="flex-1 gap-2">
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Salvar
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={isDisabled} size="icon">
+            <Button variant="destructive" onClick={handleDelete} disabled={loading} size="icon">
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
