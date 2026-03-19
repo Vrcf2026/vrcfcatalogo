@@ -35,6 +35,22 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  const normalizeHeader = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+  const pickRandomImages = (images: string[], maxCount: number) => {
+    const unique = Array.from(new Set(images.filter(Boolean)));
+    for (let i = unique.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [unique[i], unique[j]] = [unique[j], unique[i]];
+    }
+    return unique.slice(0, maxCount);
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -51,25 +67,32 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
           return;
         }
 
-        const parsed: ImportRow[] = jsonData.map((row) => {
-          const keys = Object.keys(row);
-          const find = (terms: string[]) => {
-            const key = keys.find((k) => terms.some((t) => k.toLowerCase().includes(t)));
-            return key ? row[key] : undefined;
-          };
+        const parsed: ImportRow[] = jsonData
+          .map((row) => {
+            const keys = Object.keys(row);
+            const keyMap = keys.map((key) => ({ key, normalized: normalizeHeader(key) }));
+            const find = (terms: string[]) => {
+              const normalizedTerms = terms.map(normalizeHeader);
+              const match = keyMap.find(({ normalized }) =>
+                normalizedTerms.some((term) => normalized.includes(term))
+              );
+              return match ? row[match.key] : undefined;
+            };
 
-          return {
-            nome: String(find(["nome", "name", "produto", "product"]) || "").trim(),
-            categoria: String(find(["categ", "category"]) || "").trim() || undefined,
-            familia: String(find(["famil", "family"]) || "").trim() || undefined,
-            preco: (() => {
-              const v = find(["prec", "preco", "preço", "price", "valor"]);
-              if (v == null) return undefined;
-              const n = parseFloat(String(v).replace(",", "."));
-              return isNaN(n) ? undefined : n;
-            })(),
-          };
-        }).filter((r) => r.nome.length > 0);
+            return {
+              nome: String(find(["nome", "name", "produto", "product", "artigo", "designacao"]) || "").trim(),
+              categoria: String(find(["categ", "categoria", "category", "departamento", "setor"]) || "").trim() || undefined,
+              familia: String(find(["famil", "familia", "family", "subcategoria", "sub-categoria", "linha"]) || "").trim() || undefined,
+              preco: (() => {
+                const v = find(["prec", "preco", "preco", "price", "valor", "pvp"]);
+                if (v == null) return undefined;
+                const cleaned = String(v).replace(/[^\d,.-]/g, "").replace(",", ".");
+                const n = parseFloat(cleaned);
+                return isNaN(n) ? undefined : n;
+              })(),
+            };
+          })
+          .filter((r) => r.nome.length > 0);
 
         if (parsed.length === 0) {
           toast.error("Nenhum produto válido encontrado. Verifique que tem uma coluna 'Nome'.");
@@ -91,20 +114,21 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
   const findOrCreateFamily = async (familyName?: string, categoryName?: string): Promise<string | null> => {
     if (!familyName) return null;
 
-    // Check local cache first
+    const normalizedFamily = familyName.trim().toLowerCase();
+    const normalizedCategory = (categoryName || "").trim().toLowerCase();
+
     const existing = localFamilies.find(
       (f) =>
-        f.name.toLowerCase() === familyName.toLowerCase() &&
-        (!categoryName || f.category.toLowerCase() === categoryName.toLowerCase())
+        f.name.trim().toLowerCase() === normalizedFamily &&
+        (!normalizedCategory || f.category.trim().toLowerCase() === normalizedCategory)
     );
     if (existing) return existing.id;
 
-    // Create new family
-    const cat = categoryName || "Outros";
+    const cat = categoryName?.trim() || "Outros";
     try {
       const { data, error } = await supabase
         .from("product_families")
-        .insert({ name: familyName, category: cat })
+        .insert({ name: familyName.trim(), category: cat })
         .select()
         .single();
 
@@ -113,7 +137,6 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
         return null;
       }
 
-      // Update local cache
       const newFamily = { id: data.id, name: data.name, category: data.category };
       setLocalFamilies((prev) => [...prev, newFamily]);
       return data.id;
@@ -126,24 +149,23 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
   const searchAndSaveImages = async (productName: string, productId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("search-product-images", {
-        body: { query: productName, count: 3 },
+        body: { query: productName, count: 12, provider: "google" },
       });
       if (error) throw error;
 
-      const images: string[] = data?.images || [];
-      if (images.length === 0) return;
+      const images: string[] = Array.isArray(data?.images) ? data.images : [];
+      const selected = pickRandomImages(images, 3);
+      if (selected.length === 0) return;
 
-      // Save images
-      for (let i = 0; i < Math.min(images.length, 3); i++) {
+      for (let i = 0; i < selected.length; i++) {
         await supabase.from("product_images").insert({
           product_id: productId,
-          image_url: images[i],
+          image_url: selected[i],
           position: i,
         });
       }
 
-      // Set main image
-      await supabase.from("products").update({ image_url: images[0] }).eq("id", productId);
+      await supabase.from("products").update({ image_url: selected[0] }).eq("id", productId);
     } catch (e) {
       console.error("Image search failed for:", productName, e);
     }
