@@ -220,6 +220,8 @@ const Index = () => {
           product={selectedProduct}
         />
       )}
+
+      <CartDrawer />
     </div>
   );
 };
