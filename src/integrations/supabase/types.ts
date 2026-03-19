@@ -132,6 +132,36 @@ export type Database = {
           },
         ]
       }
+      quote_requests: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id: string
+          items: Json
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          id?: string
+          items?: Json
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          id?: string
+          items?: Json
+          status?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
