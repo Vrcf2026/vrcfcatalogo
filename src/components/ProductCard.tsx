@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Package, ImageOff, Pencil, ShoppingCart } from "lucide-react";
+import { Package, ImageOff, Pencil, ShoppingCart, Minus, Plus } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ interface ProductCardProps {
 
 export function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick }: ProductCardProps & { onClick?: () => void }) {
   const { addItem } = useCart();
+  const [quantity, setQuantity] = useState(1);
   const allImages = images.length > 0
     ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
     : imageUrl ? [imageUrl] : [];
@@ -28,17 +29,12 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
 
   return (
     <div
-      className={`group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer`}
+      className="group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer"
       onClick={isAdmin ? onEdit : onClick}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
         {currentImage ? (
-          <img
-            src={currentImage}
-            alt={name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
+          <img src={currentImage} alt={name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
         ) : (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <ImageOff className="h-10 w-10" />
@@ -54,7 +50,6 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
         )}
       </div>
 
-      {/* Thumbnails */}
       {allImages.length > 1 && (
         <div className="flex gap-1.5 px-3 py-2 bg-secondary/50">
           {allImages.map((img, idx) => (
@@ -88,28 +83,37 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
         {description && (
           <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
         )}
-        <div className="flex items-center justify-between">
-          {price != null && (
-            <p className="font-heading font-bold text-lg text-foreground">
-              {price.toFixed(2).replace(".", ",")} €
-            </p>
-          )}
-          {!isAdmin && (
+        {price != null && (
+          <p className="font-heading font-bold text-lg text-foreground">
+            {price.toFixed(2).replace(".", ",")} €
+          </p>
+        )}
+        {!isAdmin && (
+          <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center border border-border rounded-md">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-r-none" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
+                <Minus className="h-3 w-3" />
+              </Button>
+              <span className="w-8 text-center text-sm font-medium">{quantity}</span>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-none" onClick={() => setQuantity((q) => q + 1)}>
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5"
-              onClick={(e) => {
-                e.stopPropagation();
-                addItem({ id, name, price, imageUrl: allImages[0] || imageUrl, category });
-                toast.success(`${name} adicionado ao carrinho`);
+              className="gap-1.5 flex-1"
+              onClick={() => {
+                addItem({ id, name, price, imageUrl: allImages[0] || imageUrl, category }, quantity);
+                toast.success(`${quantity}x ${name} adicionado ao carrinho`);
+                setQuantity(1);
               }}
             >
               <ShoppingCart className="h-3.5 w-3.5" />
               Adicionar
             </Button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
