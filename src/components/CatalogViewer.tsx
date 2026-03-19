@@ -505,13 +505,13 @@ export function CatalogViewer({
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
-          width={550}
-          height={750}
+          width={isTablet ? 700 : 550}
+          height={isTablet ? 950 : 750}
           size="stretch"
-          minWidth={300}
-          maxWidth={1400}
-          minHeight={400}
-          maxHeight={1800}
+          minWidth={isTablet ? 500 : 300}
+          maxWidth={isTablet ? 900 : 1400}
+          minHeight={isTablet ? 650 : 400}
+          maxHeight={isTablet ? 1200 : 1800}
           showCover={true}
           mobileScrollSupport={true}
           onFlip={onFlip}
