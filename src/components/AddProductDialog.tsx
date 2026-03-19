@@ -104,8 +104,7 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
 
       if (error) throw error;
 
-      // Save all existing slots (locked or not)
-      const slotsToSave = imageSlots.filter((s) => s.url && !s.url.startsWith("blob:") || s.file);
+      // Save selected slots only (sem geração automática por IA)
       const allSlots = imageSlots;
 
       if (allSlots.length > 0) {
@@ -118,37 +117,6 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
         if (savedUrls.length > 0) {
           await supabase.from("products").update({ image_url: savedUrls[0] }).eq("id", product.id);
         }
-      }
-
-      // Generate AI images only for empty positions
-      const aiSlotsNeeded = 3 - allSlots.length;
-      if (aiSlotsNeeded > 0) {
-        toast.info(`A gerar ${aiSlotsNeeded} imagem(ns) com IA em segundo plano...`);
-        void supabase.functions
-          .invoke("generate-product-image", {
-            body: {
-              productName,
-              productId: product.id,
-              startPosition: allSlots.length,
-              count: aiSlotsNeeded,
-            },
-          })
-          .then((response) => {
-            if (response.error) {
-              console.error("Image generation error:", response.error);
-              toast.warning("Produto guardado, mas não foi possível gerar imagens IA.");
-              return;
-            }
-            toast.success("Imagens IA geradas com sucesso!");
-          })
-          .catch((error) => {
-            console.error("Image generation failed:", error);
-            toast.warning("Produto guardado, mas a geração de imagens IA falhou.");
-          })
-          .finally(() => {
-            queryClient.invalidateQueries({ queryKey: ["products"] });
-            queryClient.invalidateQueries({ queryKey: ["product_images"] });
-          });
       }
 
       toast.success("Produto guardado!");

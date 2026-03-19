@@ -149,12 +149,23 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
   const searchAndSaveImages = async (productName: string, productId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke("search-product-images", {
-        body: { query: productName, count: 12, provider: "google" },
+        body: { query: productName, count: 24 },
       });
       if (error) throw error;
 
       const images: string[] = Array.isArray(data?.images) ? data.images : [];
-      const selected = pickRandomImages(images, 3);
+      const safeExternal = images.filter((url) => {
+        const lower = String(url || "").toLowerCase();
+        return (
+          lower.startsWith("http") &&
+          !lower.includes("supabase.co") &&
+          !lower.includes("lovable.app") &&
+          !lower.includes("lovableproject.com") &&
+          !lower.includes("/product-images/")
+        );
+      });
+
+      const selected = pickRandomImages(safeExternal, 3);
       if (selected.length === 0) return;
 
       for (let i = 0; i < selected.length; i++) {
