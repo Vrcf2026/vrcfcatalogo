@@ -21,12 +21,13 @@ interface ImageSlotPickerProps {
 
 export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }: ImageSlotPickerProps) {
   const [searching, setSearching] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [showResults, setShowResults] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const emptySlotCount = 3 - slots.length;
-  const unlockedSlotCount = slots.filter((s) => !s.locked).length + emptySlotCount;
+  const lockedCount = slots.filter((s) => s.locked).length;
+  const unlockedSlotCount = slots.filter((s) => !s.locked).length + (3 - slots.length);
 
   const handleSearch = async () => {
     if (!productName.trim()) {
@@ -55,9 +56,44 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
     }
   };
 
+  const handleGenerateAI = async () => {
+    if (!productName.trim()) {
+      toast.error("Preencha o nome do produto primeiro");
+      return;
+    }
+    const toGenerate = 3 - lockedCount;
+    if (toGenerate <= 0) {
+      toast.error("Todos os slots estão bloqueados");
+      return;
+    }
+
+    setGenerating(true);
+    toast.info(`A gerar ${toGenerate} imagem(ns) com IA...`);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-product-image", {
+        body: { productName: productName.trim(), count: toGenerate },
+      });
+      if (error) throw error;
+
+      const aiUrls: string[] = data?.imageUrls || [];
+      const newSlots = [...slots.filter((s) => s.locked)];
+      for (const url of aiUrls) {
+        if (newSlots.length < 3) {
+          newSlots.push({ url, locked: false, source: "ai" });
+        }
+      }
+      onSlotsChange(newSlots);
+      toast.success(`${aiUrls.length} imagem(ns) gerada(s) com IA!`);
+    } catch (e: any) {
+      console.error("AI generation error:", e);
+      toast.error("Erro ao gerar imagens com IA");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   const addImageFromSearch = (url: string) => {
     if (slots.length >= 3) {
-      // Replace first unlocked slot
       const idx = slots.findIndex((s) => !s.locked);
       if (idx === -1) {
         toast.error("Todas as imagens estão bloqueadas");
@@ -152,11 +188,9 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
                   (e.target as HTMLImageElement).src = "/placeholder.svg";
                 }}
               />
-              {/* Source badge */}
               <span className={cn("absolute top-1 left-1 text-[10px] text-white px-1.5 py-0.5 rounded-full font-medium", sourceColor(slot.source))}>
                 {sourceLabel(slot.source)}
               </span>
-              {/* Lock/Remove overlay */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
                 <button
                   type="button"
@@ -180,7 +214,6 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
                   </button>
                 )}
               </div>
-              {/* Lock indicator when locked */}
               {slot.locked && (
                 <div className="absolute bottom-1 right-1">
                   <Lock className="h-4 w-4 text-amber-400 drop-shadow-md" />
@@ -199,7 +232,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
             variant="outline"
             size="sm"
             onClick={handleSearch}
-            disabled={disabled || searching || !productName.trim()}
+            disabled={disabled || searching || generating || !productName.trim()}
             className="gap-1 text-xs"
           >
             {searching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
@@ -210,7 +243,7 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
             variant="outline"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            disabled={disabled || unlockedSlotCount === 0}
+            disabled={disabled || generating || unlockedSlotCount === 0}
             className="gap-1 text-xs"
           >
             <Upload className="h-3 w-3" />
@@ -220,20 +253,22 @@ export function ImageSlotPicker({ slots, onSlotsChange, productName, disabled }:
             type="button"
             variant="outline"
             size="sm"
-            disabled
-            className="gap-1 text-xs opacity-60"
-            title="A geração IA acontece ao guardar o produto"
+            onClick={handleGenerateAI}
+            disabled={disabled || generating || searching || !productName.trim() || lockedCount >= 3}
+            className="gap-1 text-xs"
           >
-            <Sparkles className="h-3 w-3" />
+            {generating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             IA
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground text-center">
-          {slots.filter(s => s.locked).length > 0
-            ? `${slots.filter(s => s.locked).length} bloqueada(s) — IA gerará ${3 - slots.filter(s => s.locked).length - slots.filter(s => !s.locked && s.source !== "ai").length} imagem(ns) ao guardar`
-            : slots.length === 0
-              ? "Sem imagens — IA gera 3 automaticamente ao guardar"
-              : "Bloqueie as imagens que quer manter. Ao guardar, a IA preenche os slots vazios."
+          {generating
+            ? "A gerar imagens com IA..."
+            : lockedCount > 0
+              ? `${lockedCount} bloqueada(s) — IA gerará ${3 - lockedCount} imagem(ns)`
+              : slots.length === 0
+                ? "Pesquise na web, carregue do PC ou gere com IA"
+                : "Bloqueie as imagens que quer manter"
           }
         </p>
       </div>

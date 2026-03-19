@@ -26,11 +26,12 @@ interface ImportProductsDialogProps {
   categories: string[];
 }
 
-export function ImportProductsDialog({ families, categories }: ImportProductsDialogProps) {
+export function ImportProductsDialog({ families: initialFamilies, categories }: ImportProductsDialogProps) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ImportStatus[]>([]);
   const [importing, setImporting] = useState(false);
   const [done, setDone] = useState(false);
+  const [localFamilies, setLocalFamilies] = useState(initialFamilies);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -51,7 +52,6 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
         }
 
         const parsed: ImportRow[] = jsonData.map((row) => {
-          // Flexible column matching (case-insensitive)
           const keys = Object.keys(row);
           const find = (terms: string[]) => {
             const key = keys.find((k) => terms.some((t) => k.toLowerCase().includes(t)));
@@ -78,24 +78,75 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
 
         setRows(parsed.map((row) => ({ row, status: "pending" })));
         setDone(false);
+        setLocalFamilies(initialFamilies);
         toast.success(`${parsed.length} produto(s) encontrado(s) no ficheiro`);
       } catch {
         toast.error("Erro ao ler o ficheiro Excel");
       }
     };
     reader.readAsArrayBuffer(file);
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const findFamilyId = (familyName?: string, categoryName?: string): string | null => {
+  const findOrCreateFamily = async (familyName?: string, categoryName?: string): Promise<string | null> => {
     if (!familyName) return null;
-    const match = families.find(
+
+    // Check local cache first
+    const existing = localFamilies.find(
       (f) =>
         f.name.toLowerCase() === familyName.toLowerCase() &&
         (!categoryName || f.category.toLowerCase() === categoryName.toLowerCase())
     );
-    return match?.id || null;
+    if (existing) return existing.id;
+
+    // Create new family
+    const cat = categoryName || "Outros";
+    try {
+      const { data, error } = await supabase
+        .from("product_families")
+        .insert({ name: familyName, category: cat })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error creating family:", error);
+        return null;
+      }
+
+      // Update local cache
+      const newFamily = { id: data.id, name: data.name, category: data.category };
+      setLocalFamilies((prev) => [...prev, newFamily]);
+      return data.id;
+    } catch (e) {
+      console.error("Error creating family:", e);
+      return null;
+    }
+  };
+
+  const searchAndSaveImages = async (productName: string, productId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("search-product-images", {
+        body: { query: productName, count: 3 },
+      });
+      if (error) throw error;
+
+      const images: string[] = data?.images || [];
+      if (images.length === 0) return;
+
+      // Save images
+      for (let i = 0; i < Math.min(images.length, 3); i++) {
+        await supabase.from("product_images").insert({
+          product_id: productId,
+          image_url: images[i],
+          position: i,
+        });
+      }
+
+      // Set main image
+      await supabase.from("products").update({ image_url: images[0] }).eq("id", productId);
+    } catch (e) {
+      console.error("Image search failed for:", productName, e);
+    }
   };
 
   const handleImport = async () => {
@@ -104,12 +155,13 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
     for (let i = 0; i < rows.length; i++) {
       const { row } = rows[i];
 
-      // Update status: creating product
       setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "creating" } : r)));
 
       try {
-        // 1. Insert product
-        const familyId = findFamilyId(row.familia, row.categoria);
+        // 1. Find or create family
+        const familyId = await findOrCreateFamily(row.familia, row.categoria);
+
+        // 2. Insert product
         const { data: product, error } = await supabase
           .from("products")
           .insert({
@@ -123,14 +175,13 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
 
         if (error) throw error;
 
-        // 2. Generate description
+        // 3. Generate description
         setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "description" } : r)));
 
         try {
           const { data: descData } = await supabase.functions.invoke("generate-description", {
             body: { productName: row.nome, category: row.categoria || null },
           });
-
           if (descData?.description) {
             await supabase.from("products").update({ description: descData.description }).eq("id", product.id);
           }
@@ -138,16 +189,9 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
           console.error("Description generation failed for:", row.nome, e);
         }
 
-        // 3. Generate images in background
+        // 4. Search web images (instead of AI generation)
         setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "images" } : r)));
-
-        try {
-          await supabase.functions.invoke("generate-product-image", {
-            body: { productName: row.nome, productId: product.id },
-          });
-        } catch (e) {
-          console.error("Image generation failed for:", row.nome, e);
-        }
+        await searchAndSaveImages(row.nome, product.id);
 
         setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "done" } : r)));
       } catch (e: any) {
@@ -164,6 +208,7 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
     setDone(true);
     queryClient.invalidateQueries({ queryKey: ["products"] });
     queryClient.invalidateQueries({ queryKey: ["product_images"] });
+    queryClient.invalidateQueries({ queryKey: ["families"] });
     toast.success("Importação concluída!");
   };
 
@@ -187,7 +232,7 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
       case "pending": return "Em espera";
       case "creating": return "A criar...";
       case "description": return "A gerar descrição...";
-      case "images": return "A gerar imagens...";
+      case "images": return "A pesquisar imagens...";
       case "done": return "Concluído";
       case "error": return "Erro";
     }
@@ -217,7 +262,6 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-          {/* Instructions */}
           {rows.length === 0 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
@@ -226,11 +270,11 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
               <div className="bg-secondary rounded-lg p-3 text-sm space-y-1">
                 <p><strong>Nome</strong> — nome do produto (obrigatório)</p>
                 <p><strong>Categoria</strong> — categoria do produto</p>
-                <p><strong>Família</strong> — família do produto</p>
+                <p><strong>Família</strong> — família do produto (criada automaticamente se não existir)</p>
                 <p><strong>Preço</strong> — preço em euros</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Para cada produto, a descrição e as imagens serão geradas automaticamente por IA.
+                Para cada produto, a descrição será gerada por IA e as imagens pesquisadas na web automaticamente.
               </p>
 
               <input
@@ -251,7 +295,6 @@ export function ImportProductsDialog({ families, categories }: ImportProductsDia
             </div>
           )}
 
-          {/* Preview / Progress */}
           {rows.length > 0 && (
             <>
               {importing && (

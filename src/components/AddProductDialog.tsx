@@ -52,47 +52,32 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
     }
   };
 
-  const uploadImage = async (productId: string, source: string, position: number, fileOrUrl: File | string): Promise<string | null> => {
-    let file: File;
-    
-    if (typeof fileOrUrl === "string") {
-      // Download the image URL to a blob
-      try {
-        const resp = await fetch(fileOrUrl);
-        const blob = await resp.blob();
-        const ext = blob.type.split("/")[1] || "jpg";
-        file = new File([blob], `${productId}_${source}_${position}.${ext}`, { type: blob.type });
-      } catch (e) {
-        console.error("Failed to download image:", e);
+  const saveSlotImage = async (productId: string, slot: ImageSlot, position: number): Promise<string | null> => {
+    // For uploaded files, upload to storage
+    if (slot.source === "upload" && slot.file) {
+      const ext = slot.file.name.split(".").pop() || "png";
+      const fileName = `${productId}_upload_${position}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(fileName, slot.file, { contentType: slot.file.type, upsert: true });
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
         return null;
       }
-    } else {
-      file = fileOrUrl;
+      const { data: publicUrlData } = supabase.storage.from("product-images").getPublicUrl(fileName);
+      const imageUrl = publicUrlData.publicUrl;
+      await supabase.from("product_images").insert({ product_id: productId, image_url: imageUrl, position });
+      return imageUrl;
     }
 
-    const ext = file.name.split(".").pop() || "png";
-    const fileName = `${productId}_${source}_${position}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("product-images")
-      .upload(fileName, file, { contentType: file.type, upsert: true });
-
-    if (uploadError) {
-      console.error("Upload error:", uploadError);
-      return null;
+    // For search/AI URLs, store the URL directly
+    const imageUrl = slot.url;
+    if (imageUrl && imageUrl.startsWith("http")) {
+      await supabase.from("product_images").insert({ product_id: productId, image_url: imageUrl, position });
+      return imageUrl;
     }
 
-    const { data: publicUrlData } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(fileName);
-
-    await supabase.from("product_images").insert({
-      product_id: productId,
-      image_url: publicUrlData.publicUrl,
-      position,
-    });
-
-    return publicUrlData.publicUrl;
+    return null;
   };
 
   const handleSubmit = async () => {
@@ -119,43 +104,32 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
 
       if (error) throw error;
 
-      const lockedSlots = imageSlots.filter((s) => s.locked || s.source === "upload" || s.source === "search");
-      const slotsToKeep = imageSlots.length > 0 ? imageSlots : [];
-      const aiSlotsNeeded = 3 - slotsToKeep.length;
+      // Save all existing slots (locked or not)
+      const slotsToSave = imageSlots.filter((s) => s.url && !s.url.startsWith("blob:") || s.file);
+      const allSlots = imageSlots;
 
-      // Upload locked/selected images
-      if (slotsToKeep.length > 0) {
-        toast.info("A carregar imagens selecionadas...");
-        const uploadedUrls: string[] = [];
-        for (let i = 0; i < slotsToKeep.length; i++) {
-          const slot = slotsToKeep[i];
-          const url = await uploadImage(
-            product.id,
-            slot.source,
-            i,
-            slot.file || slot.url
-          );
-          if (url) uploadedUrls.push(url);
+      if (allSlots.length > 0) {
+        toast.info("A guardar imagens...");
+        const savedUrls: string[] = [];
+        for (let i = 0; i < allSlots.length; i++) {
+          const url = await saveSlotImage(product.id, allSlots[i], i);
+          if (url) savedUrls.push(url);
         }
-        if (uploadedUrls.length > 0) {
-          await supabase.from("products").update({ image_url: uploadedUrls[0] }).eq("id", product.id);
+        if (savedUrls.length > 0) {
+          await supabase.from("products").update({ image_url: savedUrls[0] }).eq("id", product.id);
         }
       }
 
-      // Generate AI images for remaining slots
+      // Generate AI images only for empty positions
+      const aiSlotsNeeded = 3 - allSlots.length;
       if (aiSlotsNeeded > 0) {
-        toast.info(
-          aiSlotsNeeded === 3
-            ? "A gerar 3 imagens com IA em segundo plano..."
-            : `A gerar ${aiSlotsNeeded} imagem(ns) com IA em segundo plano...`
-        );
-
+        toast.info(`A gerar ${aiSlotsNeeded} imagem(ns) com IA em segundo plano...`);
         void supabase.functions
           .invoke("generate-product-image", {
             body: {
               productName,
               productId: product.id,
-              startPosition: slotsToKeep.length,
+              startPosition: allSlots.length,
               count: aiSlotsNeeded,
             },
           })
@@ -268,7 +242,6 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
             </Select>
           </div>
 
-          {/* New Image Slot Picker */}
           <ImageSlotPicker
             slots={imageSlots}
             onSlotsChange={setImageSlots}
