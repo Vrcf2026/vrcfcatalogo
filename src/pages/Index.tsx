@@ -5,8 +5,11 @@ import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Search, ShieldCheck, Package, Loader2, BookOpen } from "lucide-react";
+import { Search, ShieldCheck, Package, Loader2, BookOpen, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useCart } from "@/contexts/CartContext";
+import { CartDrawer } from "@/components/CartDrawer";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [search, setSearch] = useState("");
