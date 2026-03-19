@@ -41,7 +41,6 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
 
-  // Load existing images into slots when dialog opens
   useEffect(() => {
     if (open && !initialImagesLoaded) {
       const loadImages = async () => {
@@ -55,12 +54,12 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
           setImageSlots(
             images.map((img) => ({
               url: img.image_url,
-              locked: true, // Existing images start locked
-              source: "ai" as const, // Treat existing as "ai" source
-            }))
+              locked: true,
+              source: "search" as const,
+            })),
           );
         } else if (product.image_url) {
-          setImageSlots([{ url: product.image_url, locked: true, source: "ai" }]);
+          setImageSlots([{ url: product.image_url, locked: true, source: "search" }]);
         }
         setInitialImagesLoaded(true);
       };
@@ -136,18 +135,20 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
         .eq("id", product.id);
       if (error) throw error;
 
-      // Re-save images: delete existing and re-insert from slots
       await supabase.from("product_images").delete().eq("product_id", product.id);
-      
+
       const savedUrls: string[] = [];
       for (let i = 0; i < imageSlots.length; i++) {
         const url = await saveSlotImage(product.id, imageSlots[i], i);
         if (url) savedUrls.push(url);
       }
-      
-      await supabase.from("products").update({
-        image_url: savedUrls.length > 0 ? savedUrls[0] : null,
-      }).eq("id", product.id);
+
+      await supabase
+        .from("products")
+        .update({
+          image_url: savedUrls.length > 0 ? savedUrls[0] : null,
+        })
+        .eq("id", product.id);
 
       toast.success("Produto atualizado!");
       queryClient.invalidateQueries({ queryKey: ["products"] });
@@ -210,11 +211,21 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Categoria</Label>
-              <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <Select
+                value={category}
+                onValueChange={(v) => {
+                  setCategory(v);
+                  setFamilyId("none");
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
                 <SelectContent>
                   {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -228,22 +239,21 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
           <div className="space-y-2">
             <Label>Família</Label>
             <Select value={familyId} onValueChange={setFamilyId}>
-              <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Sem família" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Sem família</SelectItem>
                 {filteredFamilies.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <ImageSlotPicker
-            slots={imageSlots}
-            onSlotsChange={setImageSlots}
-            productName={name}
-            disabled={loading}
-          />
+          <ImageSlotPicker slots={imageSlots} onSlotsChange={setImageSlots} productName={name} disabled={loading} />
 
           <div className="flex gap-2">
             <Button onClick={handleSave} disabled={loading || generatingDesc} className="flex-1 gap-2">
