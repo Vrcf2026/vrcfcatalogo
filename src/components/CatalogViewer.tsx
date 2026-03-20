@@ -550,7 +550,8 @@ export function CatalogViewer({
                 </button>
               </>
             )}
-            </button>
+          </div>
+        )}
           </div>
         )}
 
