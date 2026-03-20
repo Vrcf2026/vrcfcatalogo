@@ -98,6 +98,13 @@ const CATEGORY_THEMES: Record<string, { gradient: string; icon: string; pattern:
     accent: "#22c55e",
     bgImage: "/images/bg-economato.jpg",
   },
+  Kilomat: {
+    gradient: "linear-gradient(135deg, hsl(110 22% 18%) 0%, hsl(95 40% 22%) 45%, hsl(42 80% 52%) 100%)",
+    icon: "🛠️",
+    pattern: "radial-gradient(circle at 20% 75%, rgba(132,204,22,0.18) 0%, transparent 45%), radial-gradient(circle at 82% 18%, rgba(245,158,11,0.16) 0%, transparent 45%)",
+    accent: "hsl(84 81% 44%)",
+    bgImage: "/kilomat/kilomat_pag_1_frente.png",
+  },
   Outros: {
     gradient: "linear-gradient(135deg, #1c1917 0%, #292524 50%, #44403c 100%)",
     icon: "🔧",
