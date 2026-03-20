@@ -13,7 +13,6 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
   Informatica: { icon: "🖥️", bgImage: "/images/bg-informatica.jpg" },
   "Segurança": { icon: "🔒", bgImage: "/images/bg-seguranca.jpg" },
   Economato: { icon: "📋", bgImage: "/images/bg-economato.jpg" },
-  Kilomat: { icon: "🛠️", bgImage: "/kilomat/kilomat_pag_1_frente.png" },
   Outros: { icon: "🔧", bgImage: "/images/bg-outros.jpg" },
 };
 
@@ -26,7 +25,6 @@ const Catalogos = () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .order("featured", { ascending: false })
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
@@ -66,7 +64,7 @@ const Catalogos = () => {
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
   // Only show products marked for catalog
   const catalogProducts = products.filter((p) => p.include_in_catalog);
-  const categories = [...new Set([...catalogProducts.map((p) => p.category).filter(Boolean), "Kilomat"])] as string[];
+  const categories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
 
   const categoryProducts = selectedCategory
     ? catalogProducts.filter((p) => p.category === selectedCategory)
