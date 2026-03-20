@@ -513,7 +513,7 @@ export function CatalogViewer({
                     <img src={src} alt={`Pág. ${i + 1}`} className="w-full h-full object-contain" />
                   </div>
                   <div className="bg-black/60 text-white text-[10px] text-center py-0.5">
-                    {i === 0 ? "Capa" : i === KILOMAT_PAGES.length - 1 ? "Contra-capa" : `Pág. ${i}`}
+                    {i === 0 ? "Capa" : i === KILOMAT_PAGES.length - 1 ? "Contra-capa" : `Pág. ${i + 1}`}
                   </div>
                 </button>
               ))
