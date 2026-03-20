@@ -499,35 +499,57 @@ export function CatalogViewer({
         {/* Thumbnails panel */}
         {showThumbnails && (
           <div className="absolute left-0 top-0 bottom-0 w-48 bg-black/80 backdrop-blur-md z-40 overflow-y-auto p-3 space-y-2">
-            <button
-              onClick={() => { flipTo(0); setShowThumbnails(false); }}
-              className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === 0 ? "border-primary" : "border-transparent hover:border-white/30"}`}
-            >
-              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
-                <span className="font-heading text-[8px] font-bold text-gray-800 text-center">{category}</span>
-              </div>
-              <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Capa</div>
-            </button>
-            {pages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { flipTo(i + 1); setShowThumbnails(false); }}
-                className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
-              >
-                <div className="aspect-[3/4] bg-white flex items-center justify-center p-1">
-                  <span className="text-[8px] text-gray-500">Pág. {i + 1}</span>
-                </div>
-                <div className="bg-black/60 text-white text-[10px] text-center py-0.5">{i + 1}</div>
-              </button>
-            ))}
-            <button
-              onClick={() => { flipTo(pages.length + 1); setShowThumbnails(false); }}
-              className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === pages.length + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
-            >
-              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
-                <span className="font-heading text-[8px] font-bold text-gray-800 text-center">Contactos</span>
-              </div>
-              <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Contactos</div>
+            {isKilomat ? (
+              /* Kilomat thumbnails: show actual page images */
+              KILOMAT_PAGES.map((src, i) => (
+                <button
+                  key={i}
+                  onClick={() => { flipTo(i); setShowThumbnails(false); }}
+                  className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                >
+                  <div className="aspect-[3/4] bg-white overflow-hidden">
+                    <img src={src} alt={`Pág. ${i + 1}`} className="w-full h-full object-contain" />
+                  </div>
+                  <div className="bg-black/60 text-white text-[10px] text-center py-0.5">
+                    {i === 0 ? "Capa" : i === KILOMAT_PAGES.length - 1 ? "Contra-capa" : `Pág. ${i}`}
+                  </div>
+                </button>
+              ))
+            ) : (
+              /* Standard thumbnails */
+              <>
+                <button
+                  onClick={() => { flipTo(0); setShowThumbnails(false); }}
+                  className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === 0 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                >
+                  <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+                    <span className="font-heading text-[8px] font-bold text-gray-800 text-center">{category}</span>
+                  </div>
+                  <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Capa</div>
+                </button>
+                {pages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { flipTo(i + 1); setShowThumbnails(false); }}
+                    className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                  >
+                    <div className="aspect-[3/4] bg-white flex items-center justify-center p-1">
+                      <span className="text-[8px] text-gray-500">Pág. {i + 1}</span>
+                    </div>
+                    <div className="bg-black/60 text-white text-[10px] text-center py-0.5">{i + 1}</div>
+                  </button>
+                ))}
+                <button
+                  onClick={() => { flipTo(pages.length + 1); setShowThumbnails(false); }}
+                  className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === pages.length + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                >
+                  <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+                    <span className="font-heading text-[8px] font-bold text-gray-800 text-center">Contactos</span>
+                  </div>
+                  <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Contactos</div>
+                </button>
+              </>
+            )}
             </button>
           </div>
         )}
