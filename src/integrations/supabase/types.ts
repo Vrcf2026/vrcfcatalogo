@@ -94,8 +94,10 @@ export type Database = {
           created_at: string
           description: string | null
           family_id: string | null
+          featured: boolean
           id: string
           image_url: string | null
+          include_in_catalog: boolean
           name: string
           price: number | null
           updated_at: string
@@ -105,8 +107,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           family_id?: string | null
+          featured?: boolean
           id?: string
           image_url?: string | null
+          include_in_catalog?: boolean
           name: string
           price?: number | null
           updated_at?: string
@@ -116,8 +120,10 @@ export type Database = {
           created_at?: string
           description?: string | null
           family_id?: string | null
+          featured?: boolean
           id?: string
           image_url?: string | null
+          include_in_catalog?: boolean
           name?: string
           price?: number | null
           updated_at?: string

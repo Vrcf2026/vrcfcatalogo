@@ -169,6 +169,8 @@ const Admin = () => {
                 imageUrl={product.image_url}
                 images={imagesByProduct[product.id] || []}
                 familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                featured={product.featured}
+                includeInCatalog={product.include_in_catalog}
                 onEdit={() => setEditingProduct(product)}
                 isAdmin
               />
