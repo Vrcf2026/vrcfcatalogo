@@ -68,6 +68,10 @@ const Index = () => {
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
     const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
     return matchesSearch && matchesCategory && matchesFamily;
+  })?.sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    return 0;
   });
 
   const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
