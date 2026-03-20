@@ -66,7 +66,7 @@ const Catalogos = () => {
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
   // Only show products marked for catalog
   const catalogProducts = products.filter((p) => p.include_in_catalog);
-  const categories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
+  const categories = [...new Set([...catalogProducts.map((p) => p.category).filter(Boolean), "Kilomat"])] as string[];
 
   const categoryProducts = selectedCategory
     ? catalogProducts.filter((p) => p.category === selectedCategory)
