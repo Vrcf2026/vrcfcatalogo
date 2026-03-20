@@ -154,7 +154,7 @@ const Catalogos = () => {
                   <span className="text-3xl md:text-4xl mb-2 drop-shadow-lg">{icon}</span>
                   <h3 className="font-heading text-lg md:text-xl font-bold text-white drop-shadow-md">{category}</h3>
                   <p className="text-xs text-white/70 mt-1">
-                    {catProducts.length} {catProducts.length === 1 ? "produto" : "produtos"}
+                    {productLabel}
                   </p>
                 </div>
               </button>
