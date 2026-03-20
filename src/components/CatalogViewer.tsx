@@ -463,15 +463,15 @@ export function CatalogViewer({
     <div
       ref={containerRef}
       className="h-screen flex flex-col relative overflow-hidden"
-      style={{ backgroundColor: "#2a2a2a" }}
+      style={{ background: isKilomat ? "radial-gradient(circle at 20% 20%, hsl(95 40% 16%), hsl(110 20% 8%) 55%, hsl(0 0% 4%) 100%)" : "#2a2a2a" }}
       onMouseMove={showBars}
       onTouchStart={showBars}
       onClick={showBars}
     >
       {/* Top bar */}
       <div
-        className={`absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-black/50 backdrop-blur-md z-50 transition-all duration-500 ${
-          barsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
+        className={`absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-2 bg-black/50 backdrop-blur-md z-50 ${
+          isKilomat ? "opacity-100" : `transition-all duration-500 ${barsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"}`
         }`}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
       >
@@ -480,7 +480,9 @@ export function CatalogViewer({
         </button>
         <div className="flex items-center gap-2">
           <img src={vrcfLogo} alt="VRCF" className="h-6 w-6 object-contain" />
-          <span className="font-heading font-bold text-white/90 text-sm">{category}</span>
+          <span className="font-heading font-bold text-white/90 text-sm">
+            {isKilomat ? "Catálogo Kilomat" : category}
+          </span>
         </div>
         <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 gap-1.5" onClick={toggleFullscreen}>
           {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
@@ -493,7 +495,7 @@ export function CatalogViewer({
 
       {/* Flipbook area */}
       <div
-        className="absolute inset-0 flex items-center justify-center overflow-hidden p-4"
+        className={`absolute inset-0 flex items-center justify-center overflow-hidden ${isKilomat ? "p-2 sm:p-4" : "p-4"}`}
         style={{ transform: `scale(${zoom / 100})`, transformOrigin: "center center" }}
       >
         {/* Thumbnails panel */}
