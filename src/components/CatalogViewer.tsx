@@ -591,7 +591,7 @@ export function CatalogViewer({
                                   : null;
 
                                 return (
-                                  <div key={product.id} className="group flex flex-col rounded-md overflow-hidden bg-white" style={{ border: "1px solid #eee" }}>
+                                  <div key={product.id} className={`group flex flex-col rounded-md overflow-hidden bg-white ${product.featured ? 'col-span-2 row-span-1 ring-2 ring-amber-400' : ''}`} style={{ border: "1px solid #eee" }}>
                                     <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
                                       {imgUrl ? (
                                         <>
