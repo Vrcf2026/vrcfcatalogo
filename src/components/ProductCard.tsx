@@ -44,7 +44,7 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
 
   return (
     <div
-      className="group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer"
+      className={`group product-card-shadow rounded-xl bg-card overflow-hidden cursor-pointer ${featured && !isAdmin ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-border'}`}
       onClick={isAdmin ? onEdit : onClick}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
@@ -63,7 +63,12 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
             </div>
           </div>
         )}
-        {featured && (
+        {featured && !isAdmin && (
+          <div className="absolute top-0 left-0 z-20 px-2 py-0.5 rounded-br-lg text-[9px] font-bold uppercase tracking-wider text-primary-foreground bg-primary">
+            ★ Destaque
+          </div>
+        )}
+        {featured && isAdmin && (
           <div className="absolute top-2 left-2">
             <div className="bg-amber-500 text-white rounded-full p-1">
               <Star className="h-3 w-3 fill-current" />
