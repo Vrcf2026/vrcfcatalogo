@@ -719,7 +719,7 @@ export function CatalogViewer({
                 <ContactsPage category={category} />
               </FlipPage>
             </>
-          )
+          )}
         </HTMLFlipBook>
 
         {/* Navigation arrows */}
