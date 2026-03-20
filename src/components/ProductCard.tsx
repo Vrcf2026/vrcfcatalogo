@@ -44,7 +44,7 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
 
   return (
     <div
-      className="group product-card-shadow rounded-xl bg-card overflow-hidden border border-border cursor-pointer"
+      className={`group product-card-shadow rounded-xl bg-card overflow-hidden cursor-pointer ${featured && !isAdmin ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-border'}`}
       onClick={isAdmin ? onEdit : onClick}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
