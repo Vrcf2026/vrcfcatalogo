@@ -552,8 +552,6 @@ export function CatalogViewer({
             )}
           </div>
         )}
-          </div>
-        )}
 
         {/* @ts-ignore */}
         <HTMLFlipBook
