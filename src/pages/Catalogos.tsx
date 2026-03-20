@@ -65,11 +65,17 @@ const Catalogos = () => {
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
   // Only show products marked for catalog
   const catalogProducts = products.filter((p) => p.include_in_catalog);
-  const categories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
+  const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
+  // Always include Kilomat even if no dynamic products
+  const categories = dynamicCategories.includes("Kilomat") ? dynamicCategories : [...dynamicCategories, "Kilomat"];
 
   const categoryProducts = selectedCategory
     ? catalogProducts.filter((p) => p.category === selectedCategory)
     : [];
+
+  if (selectedCategory === "Kilomat") {
+    return <KilomatCatalogViewer onBack={() => setSelectedCategory(null)} />;
+  }
 
   if (selectedCategory) {
     return (
