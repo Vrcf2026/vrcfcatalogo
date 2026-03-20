@@ -128,7 +128,9 @@ const Catalogos = () => {
       <div className="flex-1 p-3 min-h-0">
         <div className={`grid ${gridClass} gap-3 h-full`}>
           {categories.map((category) => {
-            const catProducts = catalogProducts.filter((p) => p.category === category);
+            const catProducts = category === "Kilomat" ? [] : catalogProducts.filter((p) => p.category === category);
+            const isKilomat = category === "Kilomat";
+            const productLabel = isKilomat ? "16 páginas" : `${catProducts.length} ${catProducts.length === 1 ? "produto" : "produtos"}`;
             const theme = CATEGORY_THEMES[category];
             const bgImage = theme?.bgImage || "/images/bg-outros.jpg";
             const icon = theme?.icon || "📦";
