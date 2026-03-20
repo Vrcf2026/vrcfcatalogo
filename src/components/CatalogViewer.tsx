@@ -343,6 +343,26 @@ function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, 
   return pages;
 }
 
+/* ─── Kilomat catalog page images (ordered) ─── */
+const KILOMAT_PAGES = [
+  "/kilomat/kilomat_pag_1_frente.png",
+  "/kilomat/Kilomat_pag_2.png",
+  "/kilomat/Kilomat_pag_3.png",
+  "/kilomat/Kilomat_pag_4.png",
+  "/kilomat/Kilomat_pag_5.png",
+  "/kilomat/Kilomat_pag_6.png",
+  "/kilomat/Kilomat_pag_7.png",
+  "/kilomat/Kilomat_pag_8.png",
+  "/kilomat/Kilomat_pag_9.png",
+  "/kilomat/Kilomat_pag_10.png",
+  "/kilomat/Kilomat_pag_11.png",
+  "/kilomat/Kilomat_pag_12.png",
+  "/kilomat/Kilomat_pag_13.png",
+  "/kilomat/Kilomat_pag_14.png",
+  "/kilomat/Kilomat_pag_15.png",
+  "/kilomat/Kilomat_tras.png",
+];
+
 /* ─── Main Component ─── */
 export function CatalogViewer({
   category,
