@@ -32,6 +32,7 @@ interface CatalogProduct {
   price: number | null;
   image_url: string | null;
   family_id: string | null;
+  featured?: boolean;
 }
 
 interface CatalogViewerProps {
