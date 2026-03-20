@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
+import { KilomatCatalogViewer } from "@/components/KilomatCatalogViewer";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
 const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
@@ -13,6 +14,7 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
   Informatica: { icon: "🖥️", bgImage: "/images/bg-informatica.jpg" },
   "Segurança": { icon: "🔒", bgImage: "/images/bg-seguranca.jpg" },
   Economato: { icon: "📋", bgImage: "/images/bg-economato.jpg" },
+  Kilomat: { icon: "🔧", bgImage: "/kilomat-catalog/page-01.png" },
   Outros: { icon: "🔧", bgImage: "/images/bg-outros.jpg" },
 };
 
@@ -64,11 +66,17 @@ const Catalogos = () => {
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
   // Only show products marked for catalog
   const catalogProducts = products.filter((p) => p.include_in_catalog);
-  const categories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
+  const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
+  // Always include Kilomat even if no dynamic products
+  const categories = dynamicCategories.includes("Kilomat") ? dynamicCategories : [...dynamicCategories, "Kilomat"];
 
   const categoryProducts = selectedCategory
     ? catalogProducts.filter((p) => p.category === selectedCategory)
     : [];
+
+  if (selectedCategory === "Kilomat") {
+    return <KilomatCatalogViewer onBack={() => setSelectedCategory(null)} />;
+  }
 
   if (selectedCategory) {
     return (
@@ -120,7 +128,9 @@ const Catalogos = () => {
       <div className="flex-1 p-3 min-h-0">
         <div className={`grid ${gridClass} gap-3 h-full`}>
           {categories.map((category) => {
-            const catProducts = catalogProducts.filter((p) => p.category === category);
+            const catProducts = category === "Kilomat" ? [] : catalogProducts.filter((p) => p.category === category);
+            const isKilomat = category === "Kilomat";
+            const productLabel = isKilomat ? "16 páginas" : `${catProducts.length} ${catProducts.length === 1 ? "produto" : "produtos"}`;
             const theme = CATEGORY_THEMES[category];
             const bgImage = theme?.bgImage || "/images/bg-outros.jpg";
             const icon = theme?.icon || "📦";
@@ -144,7 +154,7 @@ const Catalogos = () => {
                   <span className="text-3xl md:text-4xl mb-2 drop-shadow-lg">{icon}</span>
                   <h3 className="font-heading text-lg md:text-xl font-bold text-white drop-shadow-md">{category}</h3>
                   <p className="text-xs text-white/70 mt-1">
-                    {catProducts.length} {catProducts.length === 1 ? "produto" : "produtos"}
+                    {productLabel}
                   </p>
                 </div>
               </button>

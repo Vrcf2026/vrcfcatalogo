@@ -267,11 +267,18 @@ interface FamilyPageGroup {
 }
 
 function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, string>): FamilyPageGroup[] {
+  // Sort featured products first
+  const sorted = [...products].sort((a, b) => {
+    if (a.featured && !b.featured) return -1;
+    if (!a.featured && b.featured) return 1;
+    return 0;
+  });
+
   // Group products by family
   const familyGroups: Record<string, CatalogProduct[]> = {};
   const noFamily: CatalogProduct[] = [];
 
-  products.forEach((p) => {
+  sorted.forEach((p) => {
     if (p.family_id && familyMap[p.family_id]) {
       const fname = familyMap[p.family_id];
       if (!familyGroups[fname]) familyGroups[fname] = [];
