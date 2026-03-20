@@ -26,6 +26,7 @@ const Catalogos = () => {
       const { data, error } = await supabase
         .from("products")
         .select("*")
+        .order("featured", { ascending: false })
         .order("name", { ascending: true });
       if (error) throw error;
       return data;
