@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
+import { KilomatCatalogViewer } from "@/components/KilomatCatalogViewer";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
 const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
