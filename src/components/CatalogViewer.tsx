@@ -343,6 +343,26 @@ function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, 
   return pages;
 }
 
+/* ─── Kilomat catalog page images (ordered) ─── */
+const KILOMAT_PAGES = [
+  "/kilomat/kilomat_pag_1_frente.png",
+  "/kilomat/Kilomat_pag_2.png",
+  "/kilomat/Kilomat_pag_3.png",
+  "/kilomat/Kilomat_pag_4.png",
+  "/kilomat/Kilomat_pag_5.png",
+  "/kilomat/Kilomat_pag_6.png",
+  "/kilomat/Kilomat_pag_7.png",
+  "/kilomat/Kilomat_pag_8.png",
+  "/kilomat/Kilomat_pag_9.png",
+  "/kilomat/Kilomat_pag_10.png",
+  "/kilomat/Kilomat_pag_11.png",
+  "/kilomat/Kilomat_pag_12.png",
+  "/kilomat/Kilomat_pag_13.png",
+  "/kilomat/Kilomat_pag_14.png",
+  "/kilomat/Kilomat_pag_15.png",
+  "/kilomat/Kilomat_tras.png",
+];
+
 /* ─── Main Component ─── */
 export function CatalogViewer({
   category,
@@ -403,8 +423,10 @@ export function CatalogViewer({
 
   const pages = useMemo(() => buildFamilyPages(filteredProducts, familyMap), [filteredProducts, familyMap]);
 
-  // +2 for cover + contacts page
-  const totalPages = pages.length + 2;
+  const isKilomat = category === "Kilomat";
+
+  // +2 for cover + contacts page (non-Kilomat); Kilomat uses its own page count
+  const totalPages = isKilomat ? KILOMAT_PAGES.length : pages.length + 2;
 
   const getProductImage = (product: CatalogProduct) => {
     const imgs = imagesByProduct[product.id];
@@ -477,36 +499,57 @@ export function CatalogViewer({
         {/* Thumbnails panel */}
         {showThumbnails && (
           <div className="absolute left-0 top-0 bottom-0 w-48 bg-black/80 backdrop-blur-md z-40 overflow-y-auto p-3 space-y-2">
-            <button
-              onClick={() => { flipTo(0); setShowThumbnails(false); }}
-              className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === 0 ? "border-primary" : "border-transparent hover:border-white/30"}`}
-            >
-              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
-                <span className="font-heading text-[8px] font-bold text-gray-800 text-center">{category}</span>
-              </div>
-              <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Capa</div>
-            </button>
-            {pages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => { flipTo(i + 1); setShowThumbnails(false); }}
-                className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
-              >
-                <div className="aspect-[3/4] bg-white flex items-center justify-center p-1">
-                  <span className="text-[8px] text-gray-500">Pág. {i + 1}</span>
-                </div>
-                <div className="bg-black/60 text-white text-[10px] text-center py-0.5">{i + 1}</div>
-              </button>
-            ))}
-            <button
-              onClick={() => { flipTo(pages.length + 1); setShowThumbnails(false); }}
-              className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === pages.length + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
-            >
-              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
-                <span className="font-heading text-[8px] font-bold text-gray-800 text-center">Contactos</span>
-              </div>
-              <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Contactos</div>
-            </button>
+            {isKilomat ? (
+              /* Kilomat thumbnails: show actual page images */
+              KILOMAT_PAGES.map((src, i) => (
+                <button
+                  key={i}
+                  onClick={() => { flipTo(i); setShowThumbnails(false); }}
+                  className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                >
+                  <div className="aspect-[3/4] bg-white overflow-hidden">
+                    <img src={src} alt={`Pág. ${i + 1}`} className="w-full h-full object-contain" />
+                  </div>
+                  <div className="bg-black/60 text-white text-[10px] text-center py-0.5">
+                    {i === 0 ? "Capa" : i === KILOMAT_PAGES.length - 1 ? "Contra-capa" : `Pág. ${i}`}
+                  </div>
+                </button>
+              ))
+            ) : (
+              /* Standard thumbnails */
+              <>
+                <button
+                  onClick={() => { flipTo(0); setShowThumbnails(false); }}
+                  className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === 0 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                >
+                  <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+                    <span className="font-heading text-[8px] font-bold text-gray-800 text-center">{category}</span>
+                  </div>
+                  <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Capa</div>
+                </button>
+                {pages.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { flipTo(i + 1); setShowThumbnails(false); }}
+                    className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                  >
+                    <div className="aspect-[3/4] bg-white flex items-center justify-center p-1">
+                      <span className="text-[8px] text-gray-500">Pág. {i + 1}</span>
+                    </div>
+                    <div className="bg-black/60 text-white text-[10px] text-center py-0.5">{i + 1}</div>
+                  </button>
+                ))}
+                <button
+                  onClick={() => { flipTo(pages.length + 1); setShowThumbnails(false); }}
+                  className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === pages.length + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
+                >
+                  <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+                    <span className="font-heading text-[8px] font-bold text-gray-800 text-center">Contactos</span>
+                  </div>
+                  <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Contactos</div>
+                </button>
+              </>
+            )}
           </div>
         )}
 
@@ -539,148 +582,165 @@ export function CatalogViewer({
           clickEventForward={true}
           renderOnlyPageLengthChange={false}
         >
-          {/* Cover page */}
-          <FlipPage>
-            <CoverPage
-              category={category}
-              productCount={filteredProducts.length}
-              bgImage={pageTheme.bgImage}
-            />
-          </FlipPage>
-
-          {/* Product pages grouped by family */}
-          {pages.map((page, pageIndex) => (
-            <FlipPage key={pageIndex}>
-              <div className="h-full flex flex-col relative overflow-hidden">
-                {/* Background */}
-                {pageTheme.bgImage && (
-                  <div className="absolute inset-0 z-0">
-                    <img src={pageTheme.bgImage} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.90)" }} />
+          {isKilomat ? (
+            /* ─── Kilomat: pure image-based catalog ─── */
+            <>
+              {KILOMAT_PAGES.map((pageSrc, i) => (
+                <FlipPage key={i}>
+                  <div className="h-full w-full relative overflow-hidden bg-white">
+                    <img
+                      src={pageSrc}
+                      alt={`Kilomat página ${i + 1}`}
+                      className="w-full h-full object-contain"
+                      loading={i < 3 ? "eager" : "lazy"}
+                    />
                   </div>
-                )}
-                <div className="relative z-10 h-full flex flex-col p-4 sm:p-5">
-                  {/* Page header with logo */}
-                  <div className="flex items-center justify-between mb-2 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
-                    <div className="flex items-center gap-2">
-                      <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
-                      <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
-                    </div>
-                    <span className="text-[10px] font-medium" style={{ color: pageTheme.accent }}>
-                      VRCF
-                    </span>
-                  </div>
+                </FlipPage>
+              ))}
+            </>
+          ) : (
+            /* ─── Standard product-based catalog ─── */
+            <>
+              {/* Cover page */}
+              <FlipPage>
+                <CoverPage
+                  category={category}
+                  productCount={filteredProducts.length}
+                  bgImage={pageTheme.bgImage}
+                />
+              </FlipPage>
 
-                  {/* Family sections */}
-                  <div className="flex-1 flex flex-col gap-1 overflow-hidden">
-                    {page.families.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
-                        <Search className="h-8 w-8 mb-2 opacity-40" />
-                        <p className="text-xs">Nenhum produto encontrado</p>
+              {/* Product pages grouped by family */}
+              {pages.map((page, pageIndex) => (
+                <FlipPage key={pageIndex}>
+                  <div className="h-full flex flex-col relative overflow-hidden">
+                    {/* Background */}
+                    {pageTheme.bgImage && (
+                      <div className="absolute inset-0 z-0">
+                        <img src={pageTheme.bgImage} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.90)" }} />
                       </div>
-                    ) : (
-                      page.families.map((family, fi) => {
-                        // Calculate grid based on how many families on page
-                        const isSingleFamily = page.families.length === 1;
-                        const gridCols = isSingleFamily ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2";
-                        
-                        return (
-                          <div key={fi} className={`${isSingleFamily ? "flex-1" : ""} flex flex-col min-h-0`}>
-                            {/* Family header with background */}
-                            <FamilyHeader familyName={family.name} accent={pageTheme.accent} bgImage={pageTheme.bgImage} />
-                            
-                            {/* Products grid */}
-                            <div className={`grid ${gridCols} gap-2 content-start ${isSingleFamily ? "flex-1" : ""}`}>
-                              {family.products.map((product) => {
-                                const imgUrl = getProductImage(product);
-                                const descShort = product.description
-                                  ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
-                                  : null;
-
-                                return (
-                                  <div key={product.id} className={`group flex flex-col rounded-md overflow-hidden bg-white ${product.featured ? 'col-span-2 row-span-1 ring-2 ring-amber-400' : ''}`} style={{ border: "1px solid #eee" }}>
-                                    <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
-                                      {imgUrl ? (
-                                        <>
-                                          <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
-                                            className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
-                                          >
-                                            <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                          <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="p-1.5 flex flex-col gap-0.5 flex-1">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedProduct({
-                                            name: product.name, description: product.description,
-                                            category: product.category, price: product.price,
-                                            imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
-                                            familyName: family.name,
-                                          });
-                                        }}
-                                        className="text-left"
-                                      >
-                                        <h4 className="font-heading text-[10px] font-bold leading-tight line-clamp-2" style={{ color: "#1a1a1a" }}>
-                                          {product.name}
-                                        </h4>
-                                      </button>
-                                      {descShort && (
-                                        <p className="text-[8px] line-clamp-1 leading-snug" style={{ color: "#888" }}>{descShort}</p>
-                                      )}
-                                      <div className="mt-auto pt-1 flex items-center justify-between">
-                                        {product.price != null ? (
-                                          <span className="font-heading font-bold text-[11px]" style={{ color: "#1a1a1a" }}>
-                                            {product.price.toFixed(2).replace(".", ",")} €
-                                          </span>
-                                        ) : (
-                                          <span className="text-[8px]" style={{ color: "#aaa" }}>Consultar</span>
-                                        )}
-                                        <button
-                                          onClick={(e) => { e.stopPropagation(); handleWhatsApp(product); }}
-                                          className="rounded-full p-1 transition-colors"
-                                          style={{ backgroundColor: "#e8f5e9" }}
-                                          title="WhatsApp"
-                                        >
-                                          <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" style={{ fill: "#25D366" }} xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                                          </svg>
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })
                     )}
-                  </div>
+                    <div className="relative z-10 h-full flex flex-col p-4 sm:p-5">
+                      {/* Page header with logo */}
+                      <div className="flex items-center justify-between mb-2 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
+                        <div className="flex items-center gap-2">
+                          <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                          <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
+                        </div>
+                        <span className="text-[10px] font-medium" style={{ color: pageTheme.accent }}>
+                          VRCF
+                        </span>
+                      </div>
 
-                  {/* Page footer */}
-                  <div className="mt-2 pt-2 flex items-center justify-between text-[9px]" style={{ borderTop: "1px solid #eee", color: "#bbb" }}>
-                    <span>Catálogo {category}</span>
-                    <span>{pageIndex + 1} / {pages.length}</span>
-                  </div>
-                </div>
-              </div>
-            </FlipPage>
-          ))}
+                      {/* Family sections */}
+                      <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                        {page.families.length === 0 ? (
+                          <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
+                            <Search className="h-8 w-8 mb-2 opacity-40" />
+                            <p className="text-xs">Nenhum produto encontrado</p>
+                          </div>
+                        ) : (
+                          page.families.map((family, fi) => {
+                            const isSingleFamily = page.families.length === 1;
+                            const gridCols = isSingleFamily ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2";
+                            
+                            return (
+                              <div key={fi} className={`${isSingleFamily ? "flex-1" : ""} flex flex-col min-h-0`}>
+                                <FamilyHeader familyName={family.name} accent={pageTheme.accent} bgImage={pageTheme.bgImage} />
+                                <div className={`grid ${gridCols} gap-2 content-start ${isSingleFamily ? "flex-1" : ""}`}>
+                                  {family.products.map((product) => {
+                                    const imgUrl = getProductImage(product);
+                                    const descShort = product.description
+                                      ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
+                                      : null;
 
-          {/* Contacts last page */}
-          <FlipPage>
-            <ContactsPage category={category} />
-          </FlipPage>
+                                    return (
+                                      <div key={product.id} className={`group flex flex-col rounded-md overflow-hidden bg-white ${product.featured ? 'col-span-2 row-span-1 ring-2 ring-amber-400' : ''}`} style={{ border: "1px solid #eee" }}>
+                                        <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
+                                          {imgUrl ? (
+                                            <>
+                                              <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                                              <button
+                                                onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
+                                                className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
+                                              >
+                                                <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
+                                              </button>
+                                            </>
+                                          ) : (
+                                            <div className="flex items-center justify-center h-full">
+                                              <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
+                                            </div>
+                                          )}
+                                        </div>
+                                        <div className="p-1.5 flex flex-col gap-0.5 flex-1">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedProduct({
+                                                name: product.name, description: product.description,
+                                                category: product.category, price: product.price,
+                                                imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
+                                                familyName: family.name,
+                                              });
+                                            }}
+                                            className="text-left"
+                                          >
+                                            <h4 className="font-heading text-[10px] font-bold leading-tight line-clamp-2" style={{ color: "#1a1a1a" }}>
+                                              {product.name}
+                                            </h4>
+                                          </button>
+                                          {descShort && (
+                                            <p className="text-[8px] line-clamp-1 leading-snug" style={{ color: "#888" }}>{descShort}</p>
+                                          )}
+                                          <div className="mt-auto pt-1 flex items-center justify-between">
+                                            {product.price != null ? (
+                                              <span className="font-heading font-bold text-[11px]" style={{ color: "#1a1a1a" }}>
+                                                {product.price.toFixed(2).replace(".", ",")} €
+                                              </span>
+                                            ) : (
+                                              <span className="text-[8px]" style={{ color: "#aaa" }}>Consultar</span>
+                                            )}
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); handleWhatsApp(product); }}
+                                              className="rounded-full p-1 transition-colors"
+                                              style={{ backgroundColor: "#e8f5e9" }}
+                                              title="WhatsApp"
+                                            >
+                                              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" style={{ fill: "#25D366" }} xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                                              </svg>
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+
+                      {/* Page footer */}
+                      <div className="mt-2 pt-2 flex items-center justify-between text-[9px]" style={{ borderTop: "1px solid #eee", color: "#bbb" }}>
+                        <span>Catálogo {category}</span>
+                        <span>{pageIndex + 1} / {pages.length}</span>
+                      </div>
+                    </div>
+                  </div>
+                </FlipPage>
+              ))}
+
+              {/* Contacts last page */}
+              <FlipPage>
+                <ContactsPage category={category} />
+              </FlipPage>
+            </>
+          )}
         </HTMLFlipBook>
 
         {/* Navigation arrows */}
