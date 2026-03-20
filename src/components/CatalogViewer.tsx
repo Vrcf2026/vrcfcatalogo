@@ -591,7 +591,12 @@ export function CatalogViewer({
                                   : null;
 
                                 return (
-                                  <div key={product.id} className={`group flex flex-col rounded-md overflow-hidden bg-white ${product.featured ? 'col-span-2 row-span-1 ring-2 ring-amber-400' : ''}`} style={{ border: "1px solid #eee" }}>
+                                  <div key={product.id} className="group flex flex-col rounded-md overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
+                                    {product.featured && (
+                                      <div className="absolute top-0 left-0 z-20 px-1.5 py-0.5 rounded-br-md text-[7px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: pageTheme.accent }}>
+                                        ★ Destaque
+                                      </div>
+                                    )}
                                     <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
                                       {imgUrl ? (
                                         <>
