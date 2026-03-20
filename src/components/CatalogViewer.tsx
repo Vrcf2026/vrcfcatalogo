@@ -423,8 +423,10 @@ export function CatalogViewer({
 
   const pages = useMemo(() => buildFamilyPages(filteredProducts, familyMap), [filteredProducts, familyMap]);
 
-  // +2 for cover + contacts page
-  const totalPages = pages.length + 2;
+  const isKilomat = category === "Kilomat";
+
+  // +2 for cover + contacts page (non-Kilomat); Kilomat uses its own page count
+  const totalPages = isKilomat ? KILOMAT_PAGES.length : pages.length + 2;
 
   const getProductImage = (product: CatalogProduct) => {
     const imgs = imagesByProduct[product.id];
