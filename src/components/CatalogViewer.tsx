@@ -558,21 +558,21 @@ export function CatalogViewer({
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
-          width={isTablet ? 700 : 550}
-          height={isTablet ? 950 : 750}
+          width={isKilomat ? (isTablet ? 900 : 650) : isTablet ? 700 : 550}
+          height={isKilomat ? (isTablet ? 1200 : 920) : isTablet ? 950 : 750}
           size="stretch"
-          minWidth={isTablet ? 500 : 300}
-          maxWidth={isTablet ? 900 : 1400}
-          minHeight={isTablet ? 650 : 400}
-          maxHeight={isTablet ? 1200 : 1800}
-          showCover={true}
+          minWidth={isKilomat ? (isTablet ? 650 : 420) : isTablet ? 500 : 300}
+          maxWidth={isKilomat ? (isTablet ? 1200 : 920) : isTablet ? 900 : 1400}
+          minHeight={isKilomat ? (isTablet ? 900 : 640) : isTablet ? 650 : 400}
+          maxHeight={isKilomat ? (isTablet ? 1600 : 1300) : isTablet ? 1200 : 1800}
+          showCover={!isKilomat}
           mobileScrollSupport={true}
           onFlip={onFlip}
           className=""
           style={{ margin: "0 auto" }}
           startPage={0}
           drawShadow={true}
-          flippingTime={800}
+          flippingTime={isKilomat ? 650 : 800}
           usePortrait={true}
           startZIndex={0}
           autoSize={true}
@@ -589,13 +589,15 @@ export function CatalogViewer({
             <>
               {KILOMAT_PAGES.map((pageSrc, i) => (
                 <FlipPage key={i}>
-                  <div className="h-full w-full relative overflow-hidden bg-white">
-                    <img
-                      src={pageSrc}
-                      alt={`Kilomat página ${i + 1}`}
-                      className="w-full h-full object-contain"
-                      loading={i < 3 ? "eager" : "lazy"}
-                    />
+                  <div className="h-full w-full relative overflow-hidden bg-transparent p-2">
+                    <div className="h-full w-full rounded-md overflow-hidden shadow-2xl bg-white">
+                      <img
+                        src={pageSrc}
+                        alt={`Kilomat página ${i + 1}`}
+                        className="w-full h-full object-contain"
+                        loading={i < 3 ? "eager" : "lazy"}
+                      />
+                    </div>
                   </div>
                 </FlipPage>
               ))}
