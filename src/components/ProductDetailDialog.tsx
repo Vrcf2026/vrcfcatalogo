@@ -45,12 +45,12 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-full p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl w-full p-0 gap-0 overflow-hidden max-h-[90vh]">
         <DialogTitle className="sr-only">{product.name}</DialogTitle>
 
-        <div className="flex flex-col md:flex-row">
+        <div className="flex flex-col md:flex-row max-h-[90vh]">
           {/* Image section */}
-          <div className="relative w-full md:w-1/2 aspect-square bg-secondary flex items-center justify-center">
+          <div className="relative w-full md:w-1/2 aspect-square bg-secondary flex items-center justify-center flex-shrink-0">
             {currentImage ? (
               <img
                 src={currentImage}
@@ -101,7 +101,7 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
           </div>
 
           {/* Info section */}
-          <div className="w-full md:w-1/2 p-6 flex flex-col gap-4">
+          <div className="w-full md:w-1/2 p-6 flex flex-col gap-3 overflow-y-auto min-h-0">
             <div className="flex items-center gap-2 flex-wrap">
               {product.category && (
                 <span className="inline-block text-[11px] font-medium uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-1 rounded-full">
@@ -115,7 +115,39 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
               )}
             </div>
 
-            <h2 className="font-heading text-2xl font-bold text-foreground">{product.name}</h2>
+            <div className="flex items-start justify-between gap-3">
+              <h2 className="font-heading text-2xl font-bold text-foreground">{product.name}</h2>
+
+              {/* Compact cart control */}
+              {product.id && (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={handleAddToCart}
+                    className="p-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                    title="Adicionar ao orçamento"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                  </button>
+                  <div className="flex flex-col items-center">
+                    <button
+                      onClick={() => setQuantity((q) => q + 1)}
+                      className="h-5 w-5 flex items-center justify-center rounded-t-md border border-border hover:bg-muted transition-colors"
+                    >
+                      <Plus className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                    <span className="h-6 w-5 flex items-center justify-center text-xs font-semibold border-x border-border text-foreground">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      className="h-5 w-5 flex items-center justify-center rounded-b-md border border-border hover:bg-muted transition-colors"
+                    >
+                      <Minus className="h-3 w-3 text-muted-foreground" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {product.price != null && (
               <p className="font-heading text-3xl font-bold text-primary">
@@ -124,30 +156,9 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
             )}
 
             {product.description && (
-              <div className="flex-1 overflow-y-auto">
-                <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
-            )}
-
-            {/* Add to quote */}
-            {product.id && (
-              <div className="flex items-center gap-3 pt-2 border-t border-border">
-                <div className="flex items-center border border-border rounded-md">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-r-none" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-10 text-center text-sm font-medium">{quantity}</span>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-l-none" onClick={() => setQuantity((q) => q + 1)}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <Button className="gap-2 flex-1" onClick={handleAddToCart}>
-                  <ShoppingCart className="h-4 w-4" />
-                  Adicionar ao Orçamento
-                </Button>
-              </div>
+              <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                {product.description}
+              </p>
             )}
           </div>
         </div>
