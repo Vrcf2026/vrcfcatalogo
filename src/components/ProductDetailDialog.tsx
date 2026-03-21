@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { ImageOff, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ImageOff, ChevronLeft, ChevronRight, ShoppingCart, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
 
 interface ProductDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: {
+    id?: string;
     name: string;
     description: string | null;
     category: string | null;
@@ -18,6 +21,8 @@ interface ProductDetailDialogProps {
 }
 
 export function ProductDetailDialog({ open, onOpenChange, product }: ProductDetailDialogProps) {
+  const { addItem } = useCart();
+  const [quantity, setQuantity] = useState(1);
   const allImages = product.images.length > 0
     ? product.images.sort((a, b) => a.position - b.position).map(i => i.image_url)
     : product.imageUrl ? [product.imageUrl] : [];
@@ -27,6 +32,16 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
 
   const goNext = () => setSelectedIndex((i) => (i + 1) % allImages.length);
   const goPrev = () => setSelectedIndex((i) => (i - 1 + allImages.length) % allImages.length);
+
+  const handleAddToCart = () => {
+    if (!product.id) return;
+    addItem(
+      { id: product.id, name: product.name, price: product.price, imageUrl: allImages[0] || product.imageUrl, category: product.category },
+      quantity
+    );
+    toast.success(`${quantity}x ${product.name} adicionado ao orçamento`);
+    setQuantity(1);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -70,7 +85,6 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
               </>
             )}
 
-            {/* Thumbnails */}
             {allImages.length > 1 && (
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5 bg-background/70 backdrop-blur-sm rounded-full px-2 py-1">
                 {allImages.map((_, idx) => (
@@ -114,6 +128,25 @@ export function ProductDetailDialog({ open, onOpenChange, product }: ProductDeta
                 <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
                   {product.description}
                 </p>
+              </div>
+            )}
+
+            {/* Add to quote */}
+            {product.id && (
+              <div className="flex items-center gap-3 pt-2 border-t border-border">
+                <div className="flex items-center border border-border rounded-md">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-r-none" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-10 text-center text-sm font-medium">{quantity}</span>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-l-none" onClick={() => setQuantity((q) => q + 1)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button className="gap-2 flex-1" onClick={handleAddToCart}>
+                  <ShoppingCart className="h-4 w-4" />
+                  Adicionar ao Orçamento
+                </Button>
               </div>
             )}
           </div>

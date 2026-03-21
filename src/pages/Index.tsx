@@ -171,6 +171,7 @@ const Index = () => {
                   familyName={product.family_id ? familyMap[product.family_id] || null : null}
                   featured={product.featured}
                   onClick={() => setSelectedProduct({
+                    id: product.id,
                     name: product.name,
                     description: product.description,
                     category: product.category,
