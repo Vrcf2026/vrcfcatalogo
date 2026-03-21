@@ -169,6 +169,7 @@ const Index = () => {
                   imageUrl={product.image_url}
                   images={imagesByProduct[product.id] || []}
                   familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                  featured={product.featured}
                   onClick={() => setSelectedProduct({
                     name: product.name,
                     description: product.description,
