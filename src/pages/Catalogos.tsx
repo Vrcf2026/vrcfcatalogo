@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
 import { KilomatCatalogViewer } from "@/components/KilomatCatalogViewer";
@@ -19,7 +19,14 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
 };
 
 const Catalogos = () => {
+  const [searchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Handle deep link from shared URL
+  useEffect(() => {
+    const cat = searchParams.get("category");
+    if (cat) setSelectedCategory(cat);
+  }, [searchParams]);
 
   const { data: products = [] } = useQuery({
     queryKey: ["products"],
