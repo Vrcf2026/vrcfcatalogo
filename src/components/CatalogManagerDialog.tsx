@@ -14,6 +14,7 @@ interface CatalogProduct {
   image_url: string | null;
   family_id: string | null;
   featured?: boolean;
+  include_in_catalog?: boolean;
 }
 
 interface CatalogManagerDialogProps {
