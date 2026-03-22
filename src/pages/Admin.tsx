@@ -111,6 +111,12 @@ const Admin = () => {
             <ManageCategoriesDialog categories={dbCategories} />
             <ManageFamiliesDialog families={families} categories={categoryNames} />
             <ImportProductsDialog families={families} categories={categoryNames} />
+            <CatalogManagerDialog
+              products={products || []}
+              imagesByProduct={imagesByProduct}
+              familyMap={familyMap}
+              categories={categoryNames}
+            />
             <AddProductDialog families={families} categories={categoryNames} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
