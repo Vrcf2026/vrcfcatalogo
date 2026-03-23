@@ -216,7 +216,7 @@ const Catalogos = () => {
           })}
         </div>
 
-        {categories.length === 0 && (
+        {totalItems === 0 && (
           <div className="h-full flex flex-col items-center justify-center">
             <BookOpen className="h-16 w-16 text-muted-foreground/40" />
             <h3 className="mt-4 font-heading text-lg font-semibold text-foreground">Sem catálogos disponíveis</h3>
