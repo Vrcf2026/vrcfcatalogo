@@ -63,8 +63,12 @@ const Index = () => {
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
 
   const filtered = products?.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description?.toLowerCase().includes(search.toLowerCase());
+    const searchTerms = search.toLowerCase().split(/\s+/).filter(Boolean);
+    const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) => {
+      const nameMatch = p.name.toLowerCase().includes(term);
+      const descMatch = p.description?.toLowerCase().includes(term);
+      return nameMatch || descMatch;
+    });
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
     const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
     return matchesSearch && matchesCategory && matchesFamily;
