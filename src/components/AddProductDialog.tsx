@@ -14,14 +14,16 @@ import { ImageSlotPicker, type ImageSlot } from "@/components/ImageSlotPicker";
 interface AddProductDialogProps {
   families: { id: string; name: string; category: string }[];
   categories: string[];
+  brands: { id: string; name: string }[];
 }
 
-export function AddProductDialog({ families, categories }: AddProductDialogProps) {
+export function AddProductDialog({ families, categories, brands }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
+  const [brandId, setBrandId] = useState("none");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
@@ -53,7 +55,6 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
   };
 
   const saveSlotImage = async (productId: string, slot: ImageSlot, position: number): Promise<string | null> => {
-    // For uploaded files, upload to storage
     if (slot.source === "upload" && slot.file) {
       const ext = slot.file.name.split(".").pop() || "png";
       const fileName = `${productId}_upload_${position}.${ext}`;
@@ -70,7 +71,6 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
       return imageUrl;
     }
 
-    // For search/AI URLs, store the URL directly
     const imageUrl = slot.url;
     if (imageUrl && imageUrl.startsWith("http")) {
       await supabase.from("product_images").insert({ product_id: productId, image_url: imageUrl, position });
@@ -98,13 +98,13 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
           category: category || null,
           price: price ? parseFloat(price) : null,
           family_id: familyId === "none" ? null : familyId,
+          brand_id: brandId === "none" ? null : brandId,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Save selected slots only (sem geração automática por IA)
       const allSlots = imageSlots;
 
       if (allSlots.length > 0) {
@@ -137,6 +137,7 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
     setCategory("");
     setPrice("");
     setFamilyId("none");
+    setBrandId("none");
     setImageSlots([]);
   };
 
@@ -197,17 +198,31 @@ export function AddProductDialog({ families, categories }: AddProductDialogProps
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Família</Label>
-            <Select value={familyId} onValueChange={setFamilyId}>
-              <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem família</SelectItem>
-                {filteredFamilies.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Família</Label>
+              <Select value={familyId} onValueChange={setFamilyId}>
+                <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem família</SelectItem>
+                  {filteredFamilies.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Marca</Label>
+              <Select value={brandId} onValueChange={setBrandId}>
+                <SelectTrigger><SelectValue placeholder="Sem marca" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem marca</SelectItem>
+                  {brands.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <ImageSlotPicker

@@ -22,16 +22,19 @@ interface EditProductDialogProps {
     price: number | null;
     image_url: string | null;
     family_id: string | null;
+    brand_id: string | null;
   };
   families: { id: string; name: string; category: string }[];
   categories: string[];
+  brands: { id: string; name: string }[];
 }
 
-export function EditProductDialog({ open, onOpenChange, product, families, categories }: EditProductDialogProps) {
+export function EditProductDialog({ open, onOpenChange, product, families, categories, brands }: EditProductDialogProps) {
   const [name, setName] = useState(product.name);
   const [description, setDescription] = useState(product.description || "");
   const [category, setCategory] = useState(product.category || "");
   const [familyId, setFamilyId] = useState(product.family_id || "none");
+  const [brandId, setBrandId] = useState(product.brand_id || "none");
   const [price, setPrice] = useState(product.price?.toString() || "");
   const [loading, setLoading] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
@@ -131,6 +134,7 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
           category: category || null,
           price: price ? parseFloat(price) : null,
           family_id: familyId === "none" ? null : familyId,
+          brand_id: brandId === "none" ? null : brandId,
         })
         .eq("id", product.id);
       if (error) throw error;
@@ -236,21 +240,39 @@ export function EditProductDialog({ open, onOpenChange, product, families, categ
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Família</Label>
-            <Select value={familyId} onValueChange={setFamilyId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sem família" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem família</SelectItem>
-                {filteredFamilies.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Família</Label>
+              <Select value={familyId} onValueChange={setFamilyId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem família" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem família</SelectItem>
+                  {filteredFamilies.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Marca</Label>
+              <Select value={brandId} onValueChange={setBrandId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sem marca" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem marca</SelectItem>
+                  {brands.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <ImageSlotPicker slots={imageSlots} onSlotsChange={setImageSlots} productName={name} disabled={loading} />
