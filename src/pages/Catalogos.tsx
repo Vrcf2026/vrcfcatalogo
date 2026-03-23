@@ -183,25 +183,33 @@ const Catalogos = () => {
 
             return (
               <button
-                key={category}
+                key={`cat-${category}`}
                 onClick={() => setSelectedCategory(category)}
                 className="group relative rounded-xl overflow-hidden border border-border hover:ring-2 hover:ring-primary/40 transition-all"
               >
-                {/* Background image */}
-                <img
-                  src={bgImage}
-                  alt={category}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
+                <img src={bgImage} alt={category} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10 group-hover:from-black/80 transition-all" />
-
-                {/* Content */}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
                   <span className="text-3xl md:text-4xl mb-2 drop-shadow-lg">{icon}</span>
                   <h3 className="font-heading text-lg md:text-xl font-bold text-white drop-shadow-md">{category}</h3>
-                  <p className="text-xs text-white/70 mt-1">
-                    {productLabel}
-                  </p>
+                  <p className="text-xs text-white/70 mt-1">{productLabel}</p>
+                </div>
+              </button>
+            );
+          })}
+          {catalogBrands.map((brand) => {
+            const brandProducts = catalogProducts.filter((p) => p.brand_id === brand.id);
+            return (
+              <button
+                key={`brand-${brand.id}`}
+                onClick={() => setSelectedBrand(brand.name)}
+                className="group relative rounded-xl overflow-hidden border border-border hover:ring-2 hover:ring-primary/40 transition-all"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
+                <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
+                  <span className="text-3xl md:text-4xl mb-2">🏷️</span>
+                  <h3 className="font-heading text-lg md:text-xl font-bold text-foreground drop-shadow-md">{brand.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{brandProducts.length} {brandProducts.length === 1 ? "produto" : "produtos"}</p>
                 </div>
               </button>
             );
