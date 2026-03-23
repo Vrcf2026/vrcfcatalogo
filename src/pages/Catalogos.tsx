@@ -21,11 +21,14 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
 const Catalogos = () => {
   const [searchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
 
   // Handle deep link from shared URL
   useEffect(() => {
     const cat = searchParams.get("category");
+    const brand = searchParams.get("brand");
     if (cat) setSelectedCategory(cat);
+    else if (brand) setSelectedBrand(brand);
   }, [searchParams]);
 
   const { data: products = [] } = useQuery({
