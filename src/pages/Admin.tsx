@@ -5,6 +5,7 @@ import { AddProductDialog } from "@/components/AddProductDialog";
 import { EditProductDialog } from "@/components/EditProductDialog";
 import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
 import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
+import { ManageBrandsDialog } from "@/components/ManageBrandsDialog";
 import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { CatalogManagerDialog } from "@/components/CatalogManagerDialog";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ const Admin = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
@@ -64,6 +66,18 @@ const Admin = () => {
     },
   });
 
+  const { data: brands = [] } = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: productImages = [] } = useQuery({
     queryKey: ["product_images"],
     queryFn: async () => {
@@ -83,13 +97,21 @@ const Admin = () => {
   }, {});
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
+  const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
+
+  const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const filtered = products?.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description?.toLowerCase().includes(search.toLowerCase());
+    const searchTerms = normalize(search).split(/\s+/).filter(Boolean);
+    const nameNorm = normalize(p.name);
+    const descNorm = normalize(p.description || "");
+    const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) =>
+      nameNorm.includes(term) || descNorm.includes(term)
+    );
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
     const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
-    return matchesSearch && matchesCategory && matchesFamily;
+    const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
+    return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
   });
 
   const categoryNames = dbCategories.map((c) => c.name);
@@ -107,17 +129,20 @@ const Admin = () => {
             </div>
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Admin</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             <ManageCategoriesDialog categories={dbCategories} />
             <ManageFamiliesDialog families={families} categories={categoryNames} />
+            <ManageBrandsDialog brands={brands} />
             <ImportProductsDialog families={families} categories={categoryNames} />
             <CatalogManagerDialog
               products={products || []}
               imagesByProduct={imagesByProduct}
               familyMap={familyMap}
               categories={categoryNames}
+              brands={brands}
+              brandMap={brandMap}
             />
-            <AddProductDialog families={families} categories={categoryNames} />
+            <AddProductDialog families={families} categories={categoryNames} brands={brands} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
             </Button>
@@ -126,8 +151,8 @@ const Admin = () => {
       </header>
 
       <section className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
-          <div className="relative flex-1">
+        <div className="flex flex-col sm:flex-row gap-3 max-w-3xl mx-auto flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
@@ -151,6 +176,19 @@ const Admin = () => {
                 <SelectItem value="all">Famílias</SelectItem>
                 {visibleFamilies.map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {brands.length > 0 && (
+            <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Marcas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Marcas</SelectItem>
+                {brands.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -199,6 +237,7 @@ const Admin = () => {
           product={editingProduct}
           families={families}
           categories={categoryNames}
+          brands={brands}
         />
       )}
     </div>

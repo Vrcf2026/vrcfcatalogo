@@ -21,11 +21,14 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
 const Catalogos = () => {
   const [searchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
 
   // Handle deep link from shared URL
   useEffect(() => {
     const cat = searchParams.get("category");
+    const brand = searchParams.get("brand");
     if (cat) setSelectedCategory(cat);
+    else if (brand) setSelectedBrand(brand);
   }, [searchParams]);
 
   const { data: products = [] } = useQuery({
@@ -64,6 +67,18 @@ const Catalogos = () => {
     },
   });
 
+  const { data: brands = [] } = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
     if (!acc[img.product_id]) acc[img.product_id] = [];
     acc[img.product_id].push(img);
@@ -71,18 +86,41 @@ const Catalogos = () => {
   }, {});
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
-  // Only show products marked for catalog
+  const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
+
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
-  // Always include Kilomat even if no dynamic products
   const categories = dynamicCategories.includes("Kilomat") ? dynamicCategories : [...dynamicCategories, "Kilomat"];
+  const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
+
+  const handleBack = () => {
+    setSelectedCategory(null);
+    setSelectedBrand(null);
+  };
+
+  // Brand-based catalog view
+  if (selectedBrand) {
+    const brandProducts = catalogProducts.filter((p) => {
+      const brandName = p.brand_id ? brandMap[p.brand_id] : null;
+      return brandName === selectedBrand;
+    });
+    return (
+      <CatalogViewer
+        category={selectedBrand}
+        products={brandProducts}
+        imagesByProduct={imagesByProduct}
+        familyMap={familyMap}
+        onBack={handleBack}
+      />
+    );
+  }
 
   const categoryProducts = selectedCategory
     ? catalogProducts.filter((p) => p.category === selectedCategory)
     : [];
 
   if (selectedCategory === "Kilomat") {
-    return <KilomatCatalogViewer onBack={() => setSelectedCategory(null)} />;
+    return <KilomatCatalogViewer onBack={handleBack} />;
   }
 
   if (selectedCategory) {
@@ -92,13 +130,14 @@ const Catalogos = () => {
         products={categoryProducts}
         imagesByProduct={imagesByProduct}
         familyMap={familyMap}
-        onBack={() => setSelectedCategory(null)}
+        onBack={handleBack}
       />
     );
   }
 
   // Dynamic grid: adapt to number of categories to fill screen without scroll
-  const count = categories.length;
+  const totalItems = categories.length + catalogBrands.length;
+  const count = totalItems;
   // For 1-2: single row; 3-4: 2x2; 5-6: 2x3 or 3x2; 7+: 3x3
   const gridClass =
     count <= 2
@@ -144,32 +183,40 @@ const Catalogos = () => {
 
             return (
               <button
-                key={category}
+                key={`cat-${category}`}
                 onClick={() => setSelectedCategory(category)}
                 className="group relative rounded-xl overflow-hidden border border-border hover:ring-2 hover:ring-primary/40 transition-all"
               >
-                {/* Background image */}
-                <img
-                  src={bgImage}
-                  alt={category}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
+                <img src={bgImage} alt={category} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10 group-hover:from-black/80 transition-all" />
-
-                {/* Content */}
                 <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
                   <span className="text-3xl md:text-4xl mb-2 drop-shadow-lg">{icon}</span>
                   <h3 className="font-heading text-lg md:text-xl font-bold text-white drop-shadow-md">{category}</h3>
-                  <p className="text-xs text-white/70 mt-1">
-                    {productLabel}
-                  </p>
+                  <p className="text-xs text-white/70 mt-1">{productLabel}</p>
+                </div>
+              </button>
+            );
+          })}
+          {catalogBrands.map((brand) => {
+            const brandProducts = catalogProducts.filter((p) => p.brand_id === brand.id);
+            return (
+              <button
+                key={`brand-${brand.id}`}
+                onClick={() => setSelectedBrand(brand.name)}
+                className="group relative rounded-xl overflow-hidden border border-border hover:ring-2 hover:ring-primary/40 transition-all"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
+                <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
+                  <span className="text-3xl md:text-4xl mb-2">🏷️</span>
+                  <h3 className="font-heading text-lg md:text-xl font-bold text-foreground drop-shadow-md">{brand.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">{brandProducts.length} {brandProducts.length === 1 ? "produto" : "produtos"}</p>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {categories.length === 0 && (
+        {totalItems === 0 && (
           <div className="h-full flex flex-col items-center justify-center">
             <BookOpen className="h-16 w-16 text-muted-foreground/40" />
             <h3 className="mt-4 font-heading text-lg font-semibold text-foreground">Sem catálogos disponíveis</h3>

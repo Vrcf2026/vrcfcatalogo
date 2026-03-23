@@ -15,6 +15,7 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { totalItems, setIsOpen } = useCart();
 
@@ -37,6 +38,18 @@ const Index = () => {
         .from("product_families")
         .select("*")
         .order("category", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: brands = [] } = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -73,7 +86,8 @@ const Index = () => {
     );
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
     const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
-    return matchesSearch && matchesCategory && matchesFamily;
+    const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
+    return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
   })?.sort((a, b) => {
     if (a.featured && !b.featured) return -1;
     if (!a.featured && b.featured) return 1;
@@ -82,6 +96,7 @@ const Index = () => {
 
   const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id));
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,8 +140,8 @@ const Index = () => {
       </section>
 
       <section className="container mx-auto px-4 pb-8">
-        <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
-          <div className="relative flex-1">
+        <div className="flex flex-col sm:flex-row gap-3 max-w-3xl mx-auto flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
@@ -150,6 +165,19 @@ const Index = () => {
                 <SelectItem value="all">Famílias</SelectItem>
                 {visibleFamilies.map((f) => (
                   <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {visibleBrands.length > 0 && (
+            <Select value={brandFilter} onValueChange={setBrandFilter}>
+              <SelectTrigger className="w-full sm:w-[160px]">
+                <SelectValue placeholder="Marcas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Marcas</SelectItem>
+                {visibleBrands.map((b) => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
