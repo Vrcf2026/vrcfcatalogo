@@ -67,6 +67,18 @@ const Catalogos = () => {
     },
   });
 
+  const { data: brands = [] } = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("*")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
     if (!acc[img.product_id]) acc[img.product_id] = [];
     acc[img.product_id].push(img);
@@ -74,18 +86,41 @@ const Catalogos = () => {
   }, {});
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
-  // Only show products marked for catalog
+  const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
+
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
-  // Always include Kilomat even if no dynamic products
   const categories = dynamicCategories.includes("Kilomat") ? dynamicCategories : [...dynamicCategories, "Kilomat"];
+  const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
+
+  const handleBack = () => {
+    setSelectedCategory(null);
+    setSelectedBrand(null);
+  };
+
+  // Brand-based catalog view
+  if (selectedBrand) {
+    const brandProducts = catalogProducts.filter((p) => {
+      const brandName = p.brand_id ? brandMap[p.brand_id] : null;
+      return brandName === selectedBrand;
+    });
+    return (
+      <CatalogViewer
+        category={selectedBrand}
+        products={brandProducts}
+        imagesByProduct={imagesByProduct}
+        familyMap={familyMap}
+        onBack={handleBack}
+      />
+    );
+  }
 
   const categoryProducts = selectedCategory
     ? catalogProducts.filter((p) => p.category === selectedCategory)
     : [];
 
   if (selectedCategory === "Kilomat") {
-    return <KilomatCatalogViewer onBack={() => setSelectedCategory(null)} />;
+    return <KilomatCatalogViewer onBack={handleBack} />;
   }
 
   if (selectedCategory) {
@@ -95,7 +130,7 @@ const Catalogos = () => {
         products={categoryProducts}
         imagesByProduct={imagesByProduct}
         familyMap={familyMap}
-        onBack={() => setSelectedCategory(null)}
+        onBack={handleBack}
       />
     );
   }
