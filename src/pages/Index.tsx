@@ -62,13 +62,15 @@ const Index = () => {
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
 
+  const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const filtered = products?.filter((p) => {
-    const searchTerms = search.toLowerCase().split(/\s+/).filter(Boolean);
-    const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) => {
-      const nameMatch = p.name.toLowerCase().includes(term);
-      const descMatch = p.description?.toLowerCase().includes(term);
-      return nameMatch || descMatch;
-    });
+    const searchTerms = normalize(search).split(/\s+/).filter(Boolean);
+    const nameNorm = normalize(p.name);
+    const descNorm = normalize(p.description || "");
+    const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) =>
+      nameNorm.includes(term) || descNorm.includes(term)
+    );
     const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
     const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
     return matchesSearch && matchesCategory && matchesFamily;
