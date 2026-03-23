@@ -136,7 +136,8 @@ const Catalogos = () => {
   }
 
   // Dynamic grid: adapt to number of categories to fill screen without scroll
-  const count = categories.length;
+  const totalItems = categories.length + catalogBrands.length;
+  const count = totalItems;
   // For 1-2: single row; 3-4: 2x2; 5-6: 2x3 or 3x2; 7+: 3x3
   const gridClass =
     count <= 2
