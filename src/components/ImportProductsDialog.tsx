@@ -10,8 +10,10 @@ import * as XLSX from "xlsx";
 
 interface ImportRow {
   nome: string;
+  descricao?: string;
   categoria?: string;
   familia?: string;
+  marca?: string;
   preco?: number;
 }
 
@@ -24,23 +26,34 @@ interface ImportStatus {
 interface ImportProductsDialogProps {
   families: { id: string; name: string; category: string }[];
   categories: string[];
+  brands?: { id: string; name: string }[];
 }
 
-export function ImportProductsDialog({ families: initialFamilies, categories }: ImportProductsDialogProps) {
+const stripHtml = (html: string): string => {
+  let text = html.replace(/<li[^>]*>/gi, "• ").replace(/<\/li>/gi, "\n");
+  text = text.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "");
+  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/Â®/g, "®").replace(/Ã©/g, "é").replace(/Ã¡/g, "á").replace(/Ã£/g, "ã")
+    .replace(/Ã§/g, "ç").replace(/Ã³/g, "ó").replace(/Ãº/g, "ú").replace(/Ã­/g, "í")
+    .replace(/Ã¢/g, "â").replace(/Ãª/g, "ê").replace(/Ã´/g, "ô").replace(/Ã /g, "à")
+    .replace(/Ã¼/g, "ü").replace(/Ã±/g, "ñ").replace(/Ð/g, "D");
+  text = text.replace(/\n{3,}/g, "\n\n").replace(/[ \t]+/g, " ").trim();
+  return text;
+};
+
+export function ImportProductsDialog({ families: initialFamilies, categories, brands: initialBrands = [] }: ImportProductsDialogProps) {
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ImportStatus[]>([]);
   const [importing, setImporting] = useState(false);
   const [done, setDone] = useState(false);
   const [localFamilies, setLocalFamilies] = useState(initialFamilies);
+  const [localBrands, setLocalBrands] = useState(initialBrands);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
   const normalizeHeader = (value: string) =>
-    value
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
+    value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
   const pickRandomImages = (images: string[], maxCount: number) => {
     const unique = Array.from(new Set(images.filter(Boolean)));
@@ -79,10 +92,19 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
               return match ? row[match.key] : undefined;
             };
 
+            const rawDesc = find(["descricao", "descrição", "description", "desc"]);
+            let descricao: string | undefined;
+            if (rawDesc != null && String(rawDesc).trim()) {
+              const raw = String(rawDesc).trim();
+              descricao = raw.includes("<") ? stripHtml(raw) : raw;
+            }
+
             return {
               nome: String(find(["nome", "name", "produto", "product", "artigo", "designacao"]) || "").trim(),
+              descricao,
               categoria: String(find(["categ", "categoria", "category", "departamento", "setor"]) || "").trim() || undefined,
               familia: String(find(["famil", "familia", "family", "subcategoria", "sub-categoria", "linha"]) || "").trim() || undefined,
+              marca: String(find(["marca", "brand", "fabricante", "manufacturer"]) || "").trim() || undefined,
               preco: (() => {
                 const v = find(["prec", "preco", "preco", "price", "valor", "pvp"]);
                 if (v == null) return undefined;
@@ -102,6 +124,7 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
         setRows(parsed.map((row) => ({ row, status: "pending" })));
         setDone(false);
         setLocalFamilies(initialFamilies);
+        setLocalBrands(initialBrands);
         toast.success(`${parsed.length} produto(s) encontrado(s) no ficheiro`);
       } catch {
         toast.error("Erro ao ler o ficheiro Excel");
@@ -113,37 +136,46 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
 
   const findOrCreateFamily = async (familyName?: string, categoryName?: string): Promise<string | null> => {
     if (!familyName) return null;
-
     const normalizedFamily = familyName.trim().toLowerCase();
     const normalizedCategory = (categoryName || "").trim().toLowerCase();
-
     const existing = localFamilies.find(
-      (f) =>
-        f.name.trim().toLowerCase() === normalizedFamily &&
+      (f) => f.name.trim().toLowerCase() === normalizedFamily &&
         (!normalizedCategory || f.category.trim().toLowerCase() === normalizedCategory)
     );
     if (existing) return existing.id;
-
     const cat = categoryName?.trim() || "Outros";
     try {
-      const { data, error } = await supabase
-        .from("product_families")
-        .insert({ name: familyName.trim(), category: cat })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating family:", error);
-        return null;
-      }
-
+      const { data, error } = await supabase.from("product_families").insert({ name: familyName.trim(), category: cat }).select().single();
+      if (error) { console.error("Error creating family:", error); return null; }
       const newFamily = { id: data.id, name: data.name, category: data.category };
       setLocalFamilies((prev) => [...prev, newFamily]);
       return data.id;
-    } catch (e) {
-      console.error("Error creating family:", e);
-      return null;
-    }
+    } catch (e) { console.error("Error creating family:", e); return null; }
+  };
+
+  const findOrCreateBrand = async (brandName?: string): Promise<string | null> => {
+    if (!brandName) return null;
+    const normalized = brandName.trim().toLowerCase();
+    const existing = localBrands.find((b) => b.name.trim().toLowerCase() === normalized);
+    if (existing) return existing.id;
+    try {
+      const { data, error } = await supabase.from("brands").insert({ name: brandName.trim() }).select().single();
+      if (error) { console.error("Error creating brand:", error); return null; }
+      const newBrand = { id: data.id, name: data.name };
+      setLocalBrands((prev) => [...prev, newBrand]);
+      return data.id;
+    } catch (e) { console.error("Error creating brand:", e); return null; }
+  };
+
+  const findOrCreateCategory = async (categoryName?: string): Promise<void> => {
+    if (!categoryName) return;
+    const normalized = categoryName.trim().toLowerCase();
+    try {
+      const { data: existing } = await supabase.from("categories").select("id").ilike("name", normalized).maybeSingle();
+      if (!existing) {
+        await supabase.from("categories").insert({ name: categoryName.trim() });
+      }
+    } catch (e) { console.error("Error creating category:", e); }
   };
 
   const searchAndSaveImages = async (productName: string, productId: string) => {
@@ -152,34 +184,18 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
         body: { query: productName, count: 24 },
       });
       if (error) throw error;
-
       const images: string[] = Array.isArray(data?.images) ? data.images : [];
       const safeExternal = images.filter((url) => {
         const lower = String(url || "").toLowerCase();
-        return (
-          lower.startsWith("http") &&
-          !lower.includes("supabase.co") &&
-          !lower.includes("lovable.app") &&
-          !lower.includes("lovableproject.com") &&
-          !lower.includes("/product-images/")
-        );
+        return lower.startsWith("http") && !lower.includes("supabase.co") && !lower.includes("lovable.app") && !lower.includes("lovableproject.com") && !lower.includes("/product-images/");
       });
-
       const selected = pickRandomImages(safeExternal, 3);
       if (selected.length === 0) return;
-
       for (let i = 0; i < selected.length; i++) {
-        await supabase.from("product_images").insert({
-          product_id: productId,
-          image_url: selected[i],
-          position: i,
-        });
+        await supabase.from("product_images").insert({ product_id: productId, image_url: selected[i], position: i });
       }
-
       await supabase.from("products").update({ image_url: selected[0] }).eq("id", productId);
-    } catch (e) {
-      console.error("Image search failed for:", productName, e);
-    }
+    } catch (e) { console.error("Image search failed for:", productName, e); }
   };
 
   const handleImport = async () => {
@@ -187,53 +203,46 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
 
     for (let i = 0; i < rows.length; i++) {
       const { row } = rows[i];
-
       setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "creating" } : r)));
 
       try {
-        // 1. Find or create family
         const familyId = await findOrCreateFamily(row.familia, row.categoria);
+        const brandId = await findOrCreateBrand(row.marca);
+        await findOrCreateCategory(row.categoria);
 
-        // 2. Insert product
         const { data: product, error } = await supabase
           .from("products")
           .insert({
             name: row.nome,
+            description: row.descricao || null,
             category: row.categoria || null,
             price: row.preco ?? null,
             family_id: familyId,
+            brand_id: brandId,
           })
           .select()
           .single();
-
         if (error) throw error;
 
-        // 3. Generate description
-        setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "description" } : r)));
-
-        try {
-          const { data: descData } = await supabase.functions.invoke("generate-description", {
-            body: { productName: row.nome, category: row.categoria || null },
-          });
-          if (descData?.description) {
-            await supabase.from("products").update({ description: descData.description }).eq("id", product.id);
-          }
-        } catch (e) {
-          console.error("Description generation failed for:", row.nome, e);
+        // Generate description via AI only if not provided
+        if (!row.descricao) {
+          setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "description" } : r)));
+          try {
+            const { data: descData } = await supabase.functions.invoke("generate-description", {
+              body: { productName: row.nome, category: row.categoria || null },
+            });
+            if (descData?.description) {
+              await supabase.from("products").update({ description: descData.description }).eq("id", product.id);
+            }
+          } catch (e) { console.error("Description generation failed for:", row.nome, e); }
         }
 
-        // 4. Search web images (instead of AI generation)
         setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "images" } : r)));
         await searchAndSaveImages(row.nome, product.id);
-
         setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, status: "done" } : r)));
       } catch (e: any) {
         console.error("Import error for:", row.nome, e);
-        setRows((prev) =>
-          prev.map((r, idx) =>
-            idx === i ? { ...r, status: "error", error: e.message || "Erro desconhecido" } : r
-          )
-        );
+        setRows((prev) => prev.map((r, idx) => idx === i ? { ...r, status: "error", error: e.message || "Erro desconhecido" } : r));
       }
     }
 
@@ -242,6 +251,8 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
     queryClient.invalidateQueries({ queryKey: ["products"] });
     queryClient.invalidateQueries({ queryKey: ["product_images"] });
     queryClient.invalidateQueries({ queryKey: ["families"] });
+    queryClient.invalidateQueries({ queryKey: ["brands"] });
+    queryClient.invalidateQueries({ queryKey: ["categories"] });
     toast.success("Importação concluída!");
   };
 
@@ -274,10 +285,7 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
   const handleClose = (isOpen: boolean) => {
     if (!importing) {
       setOpen(isOpen);
-      if (!isOpen) {
-        setRows([]);
-        setDone(false);
-      }
+      if (!isOpen) { setRows([]); setDone(false); }
     }
   };
 
@@ -302,26 +310,18 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
               </p>
               <div className="bg-secondary rounded-lg p-3 text-sm space-y-1">
                 <p><strong>Nome</strong> — nome do produto (obrigatório)</p>
-                <p><strong>Categoria</strong> — categoria do produto</p>
-                <p><strong>Família</strong> — família do produto (criada automaticamente se não existir)</p>
+                <p><strong>Descrição</strong> — descrição do produto (se vazio, gera por IA)</p>
+                <p><strong>Categoria</strong> — categoria (criada automaticamente se não existir)</p>
+                <p><strong>Família</strong> — família do produto (criada automaticamente)</p>
+                <p><strong>Marca</strong> — marca do produto (criada automaticamente)</p>
                 <p><strong>Preço</strong> — preço em euros</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Para cada produto, a descrição será gerada por IA e as imagens pesquisadas na web automaticamente.
+                Descrições em HTML são automaticamente limpas. Categorias, famílias e marcas são criadas se não existirem.
               </p>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full gap-2"
-              >
+              <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleFileSelect} className="hidden" />
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="w-full gap-2">
                 <Upload className="h-4 w-4" />
                 Selecionar ficheiro Excel
               </Button>
@@ -347,7 +347,7 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{item.row.nome}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {[item.row.categoria, item.row.familia, item.row.preco != null ? `${item.row.preco}€` : null]
+                        {[item.row.categoria, item.row.familia, item.row.marca, item.row.preco != null ? `${item.row.preco}€` : null]
                           .filter(Boolean)
                           .join(" · ") || "Sem detalhes adicionais"}
                       </p>
@@ -361,9 +361,7 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
 
               {!importing && !done && (
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setRows([])} className="flex-1">
-                    Cancelar
-                  </Button>
+                  <Button variant="outline" onClick={() => setRows([])} className="flex-1">Cancelar</Button>
                   <Button onClick={handleImport} className="flex-1 gap-2">
                     <FileSpreadsheet className="h-4 w-4" />
                     Importar {rows.length} produto(s)
@@ -376,9 +374,7 @@ export function ImportProductsDialog({ families: initialFamilies, categories }: 
                   <p className="text-sm font-medium text-green-600">
                     ✅ {completedCount} importado(s){errorCount > 0 ? `, ${errorCount} com erro` : ""}
                   </p>
-                  <Button variant="outline" onClick={() => handleClose(false)}>
-                    Fechar
-                  </Button>
+                  <Button variant="outline" onClick={() => handleClose(false)}>Fechar</Button>
                 </div>
               )}
             </>
