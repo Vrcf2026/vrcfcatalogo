@@ -133,7 +133,7 @@ const Admin = () => {
             <ManageCategoriesDialog categories={dbCategories} />
             <ManageFamiliesDialog families={families} categories={categoryNames} />
             <ManageBrandsDialog brands={brands} />
-            <ImportProductsDialog families={families} categories={categoryNames} />
+            <ImportProductsDialog families={families} categories={categoryNames} brands={brands} />
             <CatalogManagerDialog
               products={products || []}
               imagesByProduct={imagesByProduct}
