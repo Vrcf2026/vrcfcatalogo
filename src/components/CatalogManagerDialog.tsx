@@ -24,7 +24,7 @@ interface CatalogManagerDialogProps {
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
   familyMap: Record<string, string>;
   categories: string[];
-  brands: { id: string; name: string }[];
+  brands: { id: string; name: string; logo_url?: string | null }[];
   brandMap: Record<string, string>;
 }
 
@@ -32,7 +32,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [renderConfig, setRenderConfig] = useState<{ label: string; products: CatalogProduct[] } | null>(null);
+  const [renderConfig, setRenderConfig] = useState<{ label: string; products: CatalogProduct[]; brandLogo?: string | null } | null>(null);
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
@@ -50,9 +50,9 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const handleDownloadPdf = (label: string, filteredProducts: CatalogProduct[]) => {
+  const handleDownloadPdf = (label: string, filteredProducts: CatalogProduct[], brandLogo?: string | null) => {
     setDownloading(label);
-    setRenderConfig({ label, products: filteredProducts });
+    setRenderConfig({ label, products: filteredProducts, brandLogo });
   };
 
   const handlePdfReady = () => {
@@ -71,7 +71,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   };
 
   const renderList = (
-    items: { key: string; label: string; count: number; products: CatalogProduct[] }[],
+    items: { key: string; label: string; count: number; products: CatalogProduct[]; brandLogo?: string | null }[],
     type: "category" | "brand"
   ) => (
     <div className="space-y-2">
@@ -94,7 +94,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                 {isCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
               </Button>
-              <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf(item.key, item.products)} disabled={isDownloading}>
+              <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf(item.key, item.products, item.brandLogo)} disabled={isDownloading}>
                 {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">PDF</span>
               </Button>
@@ -115,7 +115,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
   const brandItems = allBrands.map((b) => {
     const prods = catalogProducts.filter((p) => p.brand_id === b.id);
-    return { key: b.id, label: b.name, count: prods.length, products: prods };
+    return { key: b.id, label: b.name, count: prods.length, products: prods, brandLogo: b.logo_url };
   });
 
   return (
@@ -172,6 +172,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
           imagesByProduct={imagesByProduct}
           familyMap={familyMap}
           onComplete={handlePdfReady}
+          brandLogo={renderConfig.brandLogo}
         />
       )}
     </>

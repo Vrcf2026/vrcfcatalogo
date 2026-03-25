@@ -90,8 +90,9 @@ const Catalogos = () => {
       const brandName = p.brand_id ? brandMap[p.brand_id] : null;
       return brandName === selectedBrand;
     });
+    const brandObj = brands.find((b) => b.name === selectedBrand);
     return (
-      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} />
+      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} />
     );
   }
 
@@ -182,11 +183,17 @@ const Catalogos = () => {
                   onClick={() => setSelectedBrand(brand.name)}
                   className="group relative rounded-xl overflow-hidden border border-border hover:ring-2 hover:ring-primary/40 transition-all"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700" />
                   <div className="relative z-10 h-full flex flex-col items-center justify-center p-4">
-                    <span className="text-3xl md:text-4xl mb-2">🏷️</span>
-                    <h3 className="font-heading text-lg md:text-xl font-bold text-foreground drop-shadow-md">{brand.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">{brandProducts.length} {brandProducts.length === 1 ? "produto" : "produtos"}</p>
+                    {brand.logo_url ? (
+                      <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center p-2 mb-2 shadow-lg">
+                        <img src={brand.logo_url} alt={brand.name} className="max-w-full max-h-full object-contain" />
+                      </div>
+                    ) : (
+                      <span className="text-3xl md:text-4xl mb-2">🏷️</span>
+                    )}
+                    <h3 className="font-heading text-lg md:text-xl font-bold text-white drop-shadow-md">{brand.name}</h3>
+                    <p className="text-xs text-white/70 mt-1">{brandProducts.length} {brandProducts.length === 1 ? "produto" : "produtos"}</p>
                   </div>
                 </button>
               );

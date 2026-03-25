@@ -22,6 +22,7 @@ interface Props {
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
   familyMap: Record<string, string>;
   onComplete: () => void;
+  brandLogo?: string | null;
 }
 
 const CATEGORY_THEMES: Record<string, { gradient: string; accent: string; icon: string; bgImage: string }> = {
@@ -91,7 +92,7 @@ function getProductImage(product: CatalogProduct, imagesByProduct: Record<string
   return product.image_url;
 }
 
-export function CatalogPdfRenderer({ category, products, imagesByProduct, familyMap, onComplete }: Props) {
+export function CatalogPdfRenderer({ category, products, imagesByProduct, familyMap, onComplete, brandLogo }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -144,6 +145,7 @@ export function CatalogPdfRenderer({ category, products, imagesByProduct, family
   }, [category, onComplete]);
 
   const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const isBrand = !CATEGORY_THEMES[category];
   const pages = buildPages(products, familyMap);
 
   return (
@@ -164,8 +166,18 @@ export function CatalogPdfRenderer({ category, products, imagesByProduct, family
         <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 40px" }}>
           <img src={vrcfLogo} alt="VRCF" style={{ height: 60, width: 60, objectFit: "contain", marginBottom: 8 }} crossOrigin="anonymous" />
           <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 8, letterSpacing: "0.4em", textTransform: "uppercase", marginBottom: 30 }}>Informática & Segurança</p>
-          <div style={{ fontSize: 56, marginBottom: 20 }}>{theme.icon}</div>
-          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, letterSpacing: "0.5em", textTransform: "uppercase", marginBottom: 12 }}>Catálogo</p>
+          
+          {isBrand && brandLogo ? (
+            <div style={{ width: 120, height: 120, borderRadius: 16, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, marginBottom: 20 }}>
+              <img src={brandLogo} alt={category} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} crossOrigin="anonymous" />
+            </div>
+          ) : (
+            <div style={{ fontSize: 56, marginBottom: 20 }}>{theme.icon}</div>
+          )}
+          
+          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 10, letterSpacing: "0.5em", textTransform: "uppercase", marginBottom: 12 }}>
+            {isBrand ? "Catálogo de Marca" : "Catálogo"}
+          </p>
           <h1 style={{ fontFamily: "sans-serif", fontSize: 42, fontWeight: "bold", color: "#fff", textAlign: "center", margin: 0 }}>{category}</h1>
           <div style={{ width: 80, height: 4, borderRadius: 2, backgroundColor: theme.accent, margin: "16px auto" }} />
           <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14 }}>{products.length} {products.length === 1 ? "produto" : "produtos"}</p>
@@ -247,8 +259,15 @@ export function CatalogPdfRenderer({ category, products, imagesByProduct, family
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: theme.accent }} />
         <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 40px" }}>
           <img src={vrcfLogo} alt="VRCF" style={{ height: 80, width: 80, objectFit: "contain", marginBottom: 24 }} crossOrigin="anonymous" />
-          <h2 style={{ fontWeight: "bold", fontSize: 24, color: "#fff", margin: "0 0 4px" }}>VRCF</h2>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 32 }}>Informática & Segurança</p>
+          
+          {isBrand && brandLogo ? (
+            <div style={{ width: 100, height: 100, borderRadius: 12, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12, marginBottom: 16 }}>
+              <img src={brandLogo} alt={category} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} crossOrigin="anonymous" />
+            </div>
+          ) : null}
+          
+          <h2 style={{ fontWeight: "bold", fontSize: 24, color: "#fff", margin: "0 0 4px" }}>{isBrand ? category : "VRCF"}</h2>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 32 }}>{isBrand ? "Catálogo de Marca • VRCF" : "Informática & Segurança"}</p>
           <div style={{ width: 64, height: 1, backgroundColor: `${theme.accent}80`, marginBottom: 32 }} />
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 16 }}>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>📞 +351 912 345 678</p>

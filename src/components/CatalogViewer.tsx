@@ -42,6 +42,7 @@ interface CatalogViewerProps {
   familyMap: Record<string, string>;
   onBack: () => void;
   productsPerPage?: number;
+  brandLogo?: string | null;
 }
 
 // Flipbook page wrapper
@@ -116,8 +117,9 @@ const DEFAULT_THEME = {
 };
 
 /* ─── Cover Page ─── */
-function CoverPage({ category, productCount, bgImage }: { category: string; productCount: number; bgImage: string }) {
+function CoverPage({ category, productCount, bgImage, brandLogo }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null }) {
   const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const isBrand = !CATEGORY_THEMES[category];
 
   return (
     <div className="h-full w-full relative overflow-hidden">
@@ -143,14 +145,22 @@ function CoverPage({ category, productCount, bgImage }: { category: string; prod
           <p className="text-white/60 text-[8px] tracking-[0.4em] uppercase mt-1 font-medium">Informática & Segurança</p>
         </div>
 
-        {/* Category icon */}
-        <div className="text-6xl mb-5 drop-shadow-2xl">{theme.icon}</div>
+        {/* Brand logo or Category icon */}
+        {isBrand && brandLogo ? (
+          <div className="mb-5 w-32 h-32 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center p-4 shadow-2xl">
+            <img src={brandLogo} alt={category} className="max-w-full max-h-full object-contain drop-shadow-lg" />
+          </div>
+        ) : (
+          <div className="text-6xl mb-5 drop-shadow-2xl">{theme.icon}</div>
+        )}
 
         {/* Category title */}
         <div className="text-center space-y-3">
           <div className="flex items-center gap-3 justify-center">
             <div className="w-10 h-px" style={{ backgroundColor: `${theme.accent}80` }} />
-            <p className="text-white/60 text-[10px] font-semibold tracking-[0.5em] uppercase">Catálogo</p>
+            <p className="text-white/60 text-[10px] font-semibold tracking-[0.5em] uppercase">
+              {isBrand ? "Catálogo de Marca" : "Catálogo"}
+            </p>
             <div className="w-10 h-px" style={{ backgroundColor: `${theme.accent}80` }} />
           </div>
 
@@ -181,8 +191,9 @@ function CoverPage({ category, productCount, bgImage }: { category: string; prod
 }
 
 /* ─── Contacts Last Page ─── */
-function ContactsPage({ category }: { category: string }) {
+function ContactsPage({ category, brandLogo }: { category: string; brandLogo?: string | null }) {
   const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const isBrand = !CATEGORY_THEMES[category];
 
   return (
     <div className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
@@ -191,10 +202,16 @@ function ContactsPage({ category }: { category: string }) {
 
       <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
         {/* Logo */}
-        <img src={vrcfLogo} alt="VRCF" className="h-20 w-20 object-contain drop-shadow-lg mb-6" />
+        {isBrand && brandLogo ? (
+          <div className="mb-4 w-24 h-24 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center p-3 shadow-xl">
+            <img src={brandLogo} alt={category} className="max-w-full max-h-full object-contain" />
+          </div>
+        ) : (
+          <img src={vrcfLogo} alt="VRCF" className="h-20 w-20 object-contain drop-shadow-lg mb-6" />
+        )}
 
-        <h2 className="font-heading text-2xl font-bold text-white mb-1">VRCF</h2>
-        <p className="text-white/50 text-xs tracking-[0.3em] uppercase mb-8">Informática & Segurança</p>
+        <h2 className="font-heading text-2xl font-bold text-white mb-1">{isBrand ? category : "VRCF"}</h2>
+        <p className="text-white/50 text-xs tracking-[0.3em] uppercase mb-8">{isBrand ? "Catálogo de Marca • VRCF" : "Informática & Segurança"}</p>
 
         <div className="w-16 h-px mb-8" style={{ backgroundColor: `${theme.accent}80` }} />
 
@@ -350,6 +367,7 @@ export function CatalogViewer({
   imagesByProduct,
   familyMap,
   onBack,
+  brandLogo,
 }: CatalogViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -545,6 +563,7 @@ export function CatalogViewer({
               category={category}
               productCount={filteredProducts.length}
               bgImage={pageTheme.bgImage}
+              brandLogo={brandLogo}
             />
           </FlipPage>
 
@@ -674,7 +693,7 @@ export function CatalogViewer({
 
           {/* Contacts last page */}
           <FlipPage>
-            <ContactsPage category={category} />
+            <ContactsPage category={category} brandLogo={brandLogo} />
           </FlipPage>
         </HTMLFlipBook>
 
