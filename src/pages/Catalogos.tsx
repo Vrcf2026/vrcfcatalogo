@@ -90,8 +90,9 @@ const Catalogos = () => {
       const brandName = p.brand_id ? brandMap[p.brand_id] : null;
       return brandName === selectedBrand;
     });
+    const brandObj = brands.find((b) => b.name === selectedBrand);
     return (
-      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} />
+      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} />
     );
   }
 
