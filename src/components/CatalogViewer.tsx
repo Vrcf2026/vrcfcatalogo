@@ -563,6 +563,7 @@ export function CatalogViewer({
               category={category}
               productCount={filteredProducts.length}
               bgImage={pageTheme.bgImage}
+              brandLogo={brandLogo}
             />
           </FlipPage>
 
