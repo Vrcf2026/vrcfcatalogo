@@ -92,7 +92,7 @@ function getProductImage(product: CatalogProduct, imagesByProduct: Record<string
   return product.image_url;
 }
 
-export function CatalogPdfRenderer({ category, products, imagesByProduct, familyMap, onComplete }: Props) {
+export function CatalogPdfRenderer({ category, products, imagesByProduct, familyMap, onComplete, brandLogo }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
