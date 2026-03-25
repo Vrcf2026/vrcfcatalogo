@@ -439,7 +439,21 @@ export function CatalogViewer({
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
   };
 
-  const pageTheme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const pageTheme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme, bgImage: DEFAULT_THEME.bgImage } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
+
+  // For brands, use the first product image as cover background
+  const coverBgImage = useMemo(() => {
+    if (CATEGORY_THEMES[category]) return pageTheme.bgImage;
+    // Find a featured product image, or first product image
+    const featured = products.find(p => p.featured);
+    const firstProduct = featured || products[0];
+    if (firstProduct) {
+      const imgs = imagesByProduct[firstProduct.id];
+      if (imgs && imgs.length > 0) return imgs.sort((a, b) => a.position - b.position)[0].image_url;
+      if (firstProduct.image_url) return firstProduct.image_url;
+    }
+    return pageTheme.bgImage;
+  }, [category, products, imagesByProduct, pageTheme.bgImage]);
 
   const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
