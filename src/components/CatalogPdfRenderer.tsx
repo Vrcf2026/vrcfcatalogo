@@ -259,8 +259,15 @@ export function CatalogPdfRenderer({ category, products, imagesByProduct, family
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 6, background: theme.accent }} />
         <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 40px" }}>
           <img src={vrcfLogo} alt="VRCF" style={{ height: 80, width: 80, objectFit: "contain", marginBottom: 24 }} crossOrigin="anonymous" />
-          <h2 style={{ fontWeight: "bold", fontSize: 24, color: "#fff", margin: "0 0 4px" }}>VRCF</h2>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 32 }}>Informática & Segurança</p>
+          
+          {isBrand && brandLogo ? (
+            <div style={{ width: 100, height: 100, borderRadius: 12, background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12, marginBottom: 16 }}>
+              <img src={brandLogo} alt={category} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} crossOrigin="anonymous" />
+            </div>
+          ) : null}
+          
+          <h2 style={{ fontWeight: "bold", fontSize: 24, color: "#fff", margin: "0 0 4px" }}>{isBrand ? category : "VRCF"}</h2>
+          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 32 }}>{isBrand ? "Catálogo de Marca • VRCF" : "Informática & Segurança"}</p>
           <div style={{ width: 64, height: 1, backgroundColor: `${theme.accent}80`, marginBottom: 32 }} />
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 16 }}>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>📞 +351 912 345 678</p>
