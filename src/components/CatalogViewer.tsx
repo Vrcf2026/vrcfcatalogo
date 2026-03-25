@@ -43,6 +43,7 @@ interface CatalogViewerProps {
   onBack: () => void;
   productsPerPage?: number;
   brandLogo?: string | null;
+  brandTheme?: { gradient: string; accent: string; pattern: string } | null;
 }
 
 // Flipbook page wrapper
