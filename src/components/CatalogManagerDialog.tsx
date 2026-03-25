@@ -24,7 +24,7 @@ interface CatalogManagerDialogProps {
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
   familyMap: Record<string, string>;
   categories: string[];
-  brands: { id: string; name: string }[];
+  brands: { id: string; name: string; logo_url?: string | null }[];
   brandMap: Record<string, string>;
 }
 
