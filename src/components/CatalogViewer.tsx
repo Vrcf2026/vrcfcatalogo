@@ -118,8 +118,8 @@ const DEFAULT_THEME = {
 };
 
 /* ─── Cover Page ─── */
-function CoverPage({ category, productCount, bgImage, brandLogo }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null }) {
-  const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+function CoverPage({ category, productCount, bgImage, brandLogo, brandTheme }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null; brandTheme?: { gradient: string; accent: string; pattern: string } | null }) {
+  const theme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
   const isBrand = !CATEGORY_THEMES[category];
 
   return (
