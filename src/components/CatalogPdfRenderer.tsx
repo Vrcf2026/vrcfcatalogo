@@ -22,6 +22,7 @@ interface Props {
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
   familyMap: Record<string, string>;
   onComplete: () => void;
+  brandLogo?: string | null;
 }
 
 const CATEGORY_THEMES: Record<string, { gradient: string; accent: string; icon: string; bgImage: string }> = {
