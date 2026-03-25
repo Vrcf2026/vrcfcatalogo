@@ -117,8 +117,9 @@ const DEFAULT_THEME = {
 };
 
 /* ─── Cover Page ─── */
-function CoverPage({ category, productCount, bgImage }: { category: string; productCount: number; bgImage: string }) {
+function CoverPage({ category, productCount, bgImage, brandLogo }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null }) {
   const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const isBrand = !CATEGORY_THEMES[category];
 
   return (
     <div className="h-full w-full relative overflow-hidden">
@@ -144,14 +145,22 @@ function CoverPage({ category, productCount, bgImage }: { category: string; prod
           <p className="text-white/60 text-[8px] tracking-[0.4em] uppercase mt-1 font-medium">Informática & Segurança</p>
         </div>
 
-        {/* Category icon */}
-        <div className="text-6xl mb-5 drop-shadow-2xl">{theme.icon}</div>
+        {/* Brand logo or Category icon */}
+        {isBrand && brandLogo ? (
+          <div className="mb-5 w-32 h-32 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center p-4 shadow-2xl">
+            <img src={brandLogo} alt={category} className="max-w-full max-h-full object-contain drop-shadow-lg" />
+          </div>
+        ) : (
+          <div className="text-6xl mb-5 drop-shadow-2xl">{theme.icon}</div>
+        )}
 
         {/* Category title */}
         <div className="text-center space-y-3">
           <div className="flex items-center gap-3 justify-center">
             <div className="w-10 h-px" style={{ backgroundColor: `${theme.accent}80` }} />
-            <p className="text-white/60 text-[10px] font-semibold tracking-[0.5em] uppercase">Catálogo</p>
+            <p className="text-white/60 text-[10px] font-semibold tracking-[0.5em] uppercase">
+              {isBrand ? "Catálogo de Marca" : "Catálogo"}
+            </p>
             <div className="w-10 h-px" style={{ backgroundColor: `${theme.accent}80` }} />
           </div>
 
