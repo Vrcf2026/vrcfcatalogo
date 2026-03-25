@@ -50,9 +50,9 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const handleDownloadPdf = (label: string, filteredProducts: CatalogProduct[]) => {
+  const handleDownloadPdf = (label: string, filteredProducts: CatalogProduct[], brandLogo?: string | null) => {
     setDownloading(label);
-    setRenderConfig({ label, products: filteredProducts });
+    setRenderConfig({ label, products: filteredProducts, brandLogo });
   };
 
   const handlePdfReady = () => {
