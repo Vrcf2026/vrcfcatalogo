@@ -191,8 +191,9 @@ function CoverPage({ category, productCount, bgImage, brandLogo }: { category: s
 }
 
 /* ─── Contacts Last Page ─── */
-function ContactsPage({ category }: { category: string }) {
+function ContactsPage({ category, brandLogo }: { category: string; brandLogo?: string | null }) {
   const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const isBrand = !CATEGORY_THEMES[category];
 
   return (
     <div className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
