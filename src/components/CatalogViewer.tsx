@@ -369,6 +369,7 @@ export function CatalogViewer({
   familyMap,
   onBack,
   brandLogo,
+  brandTheme,
 }: CatalogViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
