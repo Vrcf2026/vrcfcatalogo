@@ -693,7 +693,7 @@ export function CatalogViewer({
 
           {/* Contacts last page */}
           <FlipPage>
-            <ContactsPage category={category} />
+            <ContactsPage category={category} brandLogo={brandLogo} />
           </FlipPage>
         </HTMLFlipBook>
 
