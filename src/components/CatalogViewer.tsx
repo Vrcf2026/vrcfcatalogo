@@ -599,7 +599,11 @@ export function CatalogViewer({
                   {/* Page header with logo */}
                   <div className="flex items-center justify-between mb-2 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
                     <div className="flex items-center gap-2">
-                      <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                      {brandLogo ? (
+                        <img src={brandLogo} alt={category} className="h-5 object-contain" />
+                      ) : (
+                        <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                      )}
                       <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
                     </div>
                     <span className="text-[10px] font-medium" style={{ color: pageTheme.accent }}>
