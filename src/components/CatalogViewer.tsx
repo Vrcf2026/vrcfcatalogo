@@ -42,6 +42,7 @@ interface CatalogViewerProps {
   familyMap: Record<string, string>;
   onBack: () => void;
   productsPerPage?: number;
+  brandLogo?: string | null;
 }
 
 // Flipbook page wrapper
