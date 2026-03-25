@@ -43,6 +43,7 @@ interface CatalogViewerProps {
   onBack: () => void;
   productsPerPage?: number;
   brandLogo?: string | null;
+  brandTheme?: { gradient: string; accent: string; pattern: string } | null;
 }
 
 // Flipbook page wrapper
@@ -117,8 +118,8 @@ const DEFAULT_THEME = {
 };
 
 /* ─── Cover Page ─── */
-function CoverPage({ category, productCount, bgImage, brandLogo }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null }) {
-  const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+function CoverPage({ category, productCount, bgImage, brandLogo, brandTheme }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null; brandTheme?: { gradient: string; accent: string; pattern: string } | null }) {
+  const theme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
   const isBrand = !CATEGORY_THEMES[category];
 
   return (
@@ -191,8 +192,8 @@ function CoverPage({ category, productCount, bgImage, brandLogo }: { category: s
 }
 
 /* ─── Contacts Last Page ─── */
-function ContactsPage({ category, brandLogo }: { category: string; brandLogo?: string | null }) {
-  const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+function ContactsPage({ category, brandLogo, brandTheme }: { category: string; brandLogo?: string | null; brandTheme?: { gradient: string; accent: string; pattern: string } | null }) {
+  const theme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
   const isBrand = !CATEGORY_THEMES[category];
 
   return (
@@ -368,6 +369,7 @@ export function CatalogViewer({
   familyMap,
   onBack,
   brandLogo,
+  brandTheme,
 }: CatalogViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -437,7 +439,21 @@ export function CatalogViewer({
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, "_blank");
   };
 
-  const pageTheme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+  const pageTheme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme, bgImage: DEFAULT_THEME.bgImage } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
+
+  // For brands, use the first product image as cover background
+  const coverBgImage = useMemo(() => {
+    if (CATEGORY_THEMES[category]) return pageTheme.bgImage;
+    // Find a featured product image, or first product image
+    const featured = products.find(p => p.featured);
+    const firstProduct = featured || products[0];
+    if (firstProduct) {
+      const imgs = imagesByProduct[firstProduct.id];
+      if (imgs && imgs.length > 0) return imgs.sort((a, b) => a.position - b.position)[0].image_url;
+      if (firstProduct.image_url) return firstProduct.image_url;
+    }
+    return pageTheme.bgImage;
+  }, [category, products, imagesByProduct, pageTheme.bgImage]);
 
   const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
@@ -562,8 +578,9 @@ export function CatalogViewer({
             <CoverPage
               category={category}
               productCount={filteredProducts.length}
-              bgImage={pageTheme.bgImage}
+              bgImage={coverBgImage}
               brandLogo={brandLogo}
+              brandTheme={brandTheme}
             />
           </FlipPage>
 
@@ -582,7 +599,11 @@ export function CatalogViewer({
                   {/* Page header with logo */}
                   <div className="flex items-center justify-between mb-2 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
                     <div className="flex items-center gap-2">
-                      <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                      {brandLogo ? (
+                        <img src={brandLogo} alt={category} className="h-5 object-contain" />
+                      ) : (
+                        <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                      )}
                       <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
                     </div>
                     <span className="text-[10px] font-medium" style={{ color: pageTheme.accent }}>
@@ -693,7 +714,7 @@ export function CatalogViewer({
 
           {/* Contacts last page */}
           <FlipPage>
-            <ContactsPage category={category} brandLogo={brandLogo} />
+            <ContactsPage category={category} brandLogo={brandLogo} brandTheme={brandTheme} />
           </FlipPage>
         </HTMLFlipBook>
 

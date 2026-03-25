@@ -84,6 +84,20 @@ const Catalogos = () => {
 
   const handleBack = () => { setSelectedCategory(null); setSelectedBrand(null); };
 
+  // Known brand color themes
+  const BRAND_THEMES: Record<string, { gradient: string; accent: string; pattern: string }> = {
+    Dahua: {
+      gradient: "linear-gradient(135deg, #1a0505 0%, #3d0c0c 50%, #6b1515 100%)",
+      accent: "#c41230",
+      pattern: "radial-gradient(circle at 30% 70%, rgba(196,18,48,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(196,18,48,0.1) 0%, transparent 50%)",
+    },
+    Ajax: {
+      gradient: "linear-gradient(135deg, #0a1a2e 0%, #122a46 50%, #1a3b5c 100%)",
+      accent: "#00b894",
+      pattern: "radial-gradient(circle at 30% 70%, rgba(0,184,148,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0,184,148,0.1) 0%, transparent 50%)",
+    },
+  };
+
   // Brand-based catalog view
   if (selectedBrand) {
     const brandProducts = catalogProducts.filter((p) => {
@@ -91,8 +105,9 @@ const Catalogos = () => {
       return brandName === selectedBrand;
     });
     const brandObj = brands.find((b) => b.name === selectedBrand);
+    const brandTheme = BRAND_THEMES[selectedBrand] || null;
     return (
-      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} />
+      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} brandTheme={brandTheme} />
     );
   }
 
