@@ -192,8 +192,8 @@ function CoverPage({ category, productCount, bgImage, brandLogo, brandTheme }: {
 }
 
 /* ─── Contacts Last Page ─── */
-function ContactsPage({ category, brandLogo }: { category: string; brandLogo?: string | null }) {
-  const theme = CATEGORY_THEMES[category] || DEFAULT_THEME;
+function ContactsPage({ category, brandLogo, brandTheme }: { category: string; brandLogo?: string | null; brandTheme?: { gradient: string; accent: string; pattern: string } | null }) {
+  const theme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
   const isBrand = !CATEGORY_THEMES[category];
 
   return (
