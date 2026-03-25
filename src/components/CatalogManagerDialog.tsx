@@ -172,6 +172,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
           imagesByProduct={imagesByProduct}
           familyMap={familyMap}
           onComplete={handlePdfReady}
+          brandLogo={renderConfig.brandLogo}
         />
       )}
     </>
