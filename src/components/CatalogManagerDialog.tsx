@@ -115,7 +115,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
   const brandItems = allBrands.map((b) => {
     const prods = catalogProducts.filter((p) => p.brand_id === b.id);
-    return { key: b.id, label: b.name, count: prods.length, products: prods };
+    return { key: b.id, label: b.name, count: prods.length, products: prods, brandLogo: b.logo_url };
   });
 
   return (
