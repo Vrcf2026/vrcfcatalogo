@@ -32,7 +32,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [renderConfig, setRenderConfig] = useState<{ label: string; products: CatalogProduct[] } | null>(null);
+  const [renderConfig, setRenderConfig] = useState<{ label: string; products: CatalogProduct[]; brandLogo?: string | null } | null>(null);
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
