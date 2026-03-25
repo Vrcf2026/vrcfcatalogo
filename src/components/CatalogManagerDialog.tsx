@@ -71,7 +71,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   };
 
   const renderList = (
-    items: { key: string; label: string; count: number; products: CatalogProduct[] }[],
+    items: { key: string; label: string; count: number; products: CatalogProduct[]; brandLogo?: string | null }[],
     type: "category" | "brand"
   ) => (
     <div className="space-y-2">
