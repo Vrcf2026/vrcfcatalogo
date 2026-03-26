@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
@@ -68,6 +68,18 @@ const Catalogos = () => {
     },
   });
 
+  const { data: customizations = [] } = useQuery({
+    queryKey: ["catalog_customizations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("catalog_customizations").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const getCustom = (type: string, name: string) =>
+    customizations.find((c: any) => c.type === type && c.reference_name === name);
+
   const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
     if (!acc[img.product_id]) acc[img.product_id] = [];
     acc[img.product_id].push(img);
@@ -106,8 +118,9 @@ const Catalogos = () => {
     });
     const brandObj = brands.find((b) => b.name === selectedBrand);
     const brandTheme = BRAND_THEMES[selectedBrand] || null;
+    const brandCustom = getCustom("brand", selectedBrand);
     return (
-      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} brandTheme={brandTheme} />
+      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} brandTheme={brandTheme} customLogoUrl={brandCustom?.logo_url} customCoverUrl={brandCustom?.cover_image_url} />
     );
   }
 
@@ -115,8 +128,9 @@ const Catalogos = () => {
 
   if (selectedCategory) {
     const categoryProducts = catalogProducts.filter((p) => p.category === selectedCategory);
+    const catCustom = getCustom("category", selectedCategory);
     return (
-      <CatalogViewer category={selectedCategory} products={categoryProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} />
+      <CatalogViewer category={selectedCategory} products={categoryProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} customLogoUrl={catCustom?.logo_url} customCoverUrl={catCustom?.cover_image_url} />
     );
   }
 

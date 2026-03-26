@@ -44,6 +44,8 @@ interface CatalogViewerProps {
   productsPerPage?: number;
   brandLogo?: string | null;
   brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+  customLogoUrl?: string | null;
+  customCoverUrl?: string | null;
 }
 
 // Flipbook page wrapper
@@ -370,6 +372,8 @@ export function CatalogViewer({
   onBack,
   brandLogo,
   brandTheme,
+  customLogoUrl,
+  customCoverUrl,
 }: CatalogViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -441,8 +445,9 @@ export function CatalogViewer({
 
   const pageTheme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme, bgImage: DEFAULT_THEME.bgImage } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
 
-  // For brands, use the first product image as cover background
+  // For brands, use the first product image as cover background (custom override takes priority)
   const coverBgImage = useMemo(() => {
+    if (customCoverUrl) return customCoverUrl;
     if (CATEGORY_THEMES[category]) return pageTheme.bgImage;
     // Find a featured product image, or first product image
     const featured = products.find(p => p.featured);
@@ -453,7 +458,10 @@ export function CatalogViewer({
       if (firstProduct.image_url) return firstProduct.image_url;
     }
     return pageTheme.bgImage;
-  }, [category, products, imagesByProduct, pageTheme.bgImage]);
+  }, [category, products, imagesByProduct, pageTheme.bgImage, customCoverUrl]);
+
+  // Use custom logo if available
+  const effectiveBrandLogo = customLogoUrl || brandLogo;
 
   const onFlip = useCallback((e: any) => {
     setCurrentPage(e.data);
@@ -579,7 +587,7 @@ export function CatalogViewer({
               category={category}
               productCount={filteredProducts.length}
               bgImage={coverBgImage}
-              brandLogo={brandLogo}
+              brandLogo={effectiveBrandLogo}
               brandTheme={brandTheme}
             />
           </FlipPage>
