@@ -68,6 +68,18 @@ const Catalogos = () => {
     },
   });
 
+  const { data: customizations = [] } = useQuery({
+    queryKey: ["catalog_customizations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("catalog_customizations").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const getCustom = (type: string, name: string) =>
+    customizations.find((c: any) => c.type === type && c.reference_name === name);
+
   const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
     if (!acc[img.product_id]) acc[img.product_id] = [];
     acc[img.product_id].push(img);
