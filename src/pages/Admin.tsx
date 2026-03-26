@@ -8,6 +8,7 @@ import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
 import { ManageBrandsDialog } from "@/components/ManageBrandsDialog";
 import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { CatalogManagerDialog } from "@/components/CatalogManagerDialog";
+import { CatalogCustomizationDialog } from "@/components/CatalogCustomizationDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
