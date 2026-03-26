@@ -44,6 +44,8 @@ interface CatalogViewerProps {
   productsPerPage?: number;
   brandLogo?: string | null;
   brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+  customLogoUrl?: string | null;
+  customCoverUrl?: string | null;
 }
 
 // Flipbook page wrapper
