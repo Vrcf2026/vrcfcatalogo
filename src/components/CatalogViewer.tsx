@@ -222,19 +222,19 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
         <div className="space-y-4 text-center">
           <div className="flex items-center gap-3 justify-center">
             <Phone className="h-4 w-4" style={{ color: theme.accent }} />
-            <span className="text-white/80 text-sm">+351 912 345 678</span>
+            <span className="text-white/80 text-sm">+351 911 564 243</span>
           </div>
           <div className="flex items-center gap-3 justify-center">
             <Mail className="h-4 w-4" style={{ color: theme.accent }} />
-            <span className="text-white/80 text-sm">info@vrcf.pt</span>
+            <span className="text-white/80 text-sm">geral@vrcf.pt</span>
           </div>
           <div className="flex items-center gap-3 justify-center">
             <MapPin className="h-4 w-4" style={{ color: theme.accent }} />
-            <span className="text-white/80 text-sm">Rua Exemplo, 123 — Lisboa</span>
+            <span className="text-white/80 text-sm">Rua Luis Calado Nunes 15 LJB — 2870-350 Montijo</span>
           </div>
           <div className="flex items-center gap-3 justify-center">
             <Globe className="h-4 w-4" style={{ color: theme.accent }} />
-            <span className="text-white/80 text-sm">www.vrcf.pt</span>
+            <a href="https://www.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-white/80 text-sm hover:text-white underline">www.vrcf.pt</a>
           </div>
         </div>
 
