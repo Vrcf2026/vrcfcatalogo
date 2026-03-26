@@ -35,6 +35,36 @@ export type Database = {
         }
         Relationships: []
       }
+      catalog_customizations: {
+        Row: {
+          cover_image_url: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          reference_name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          reference_name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          cover_image_url?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          reference_name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
