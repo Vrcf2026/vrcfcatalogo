@@ -372,6 +372,8 @@ export function CatalogViewer({
   onBack,
   brandLogo,
   brandTheme,
+  customLogoUrl,
+  customCoverUrl,
 }: CatalogViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
