@@ -128,8 +128,9 @@ const Catalogos = () => {
 
   if (selectedCategory) {
     const categoryProducts = catalogProducts.filter((p) => p.category === selectedCategory);
+    const catCustom = getCustom("category", selectedCategory);
     return (
-      <CatalogViewer category={selectedCategory} products={categoryProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} />
+      <CatalogViewer category={selectedCategory} products={categoryProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} customLogoUrl={catCustom?.logo_url} customCoverUrl={catCustom?.cover_image_url} />
     );
   }
 
