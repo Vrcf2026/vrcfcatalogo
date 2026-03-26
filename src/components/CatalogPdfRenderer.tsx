@@ -270,9 +270,9 @@ export function CatalogPdfRenderer({ category, products, imagesByProduct, family
           <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 12, letterSpacing: "0.3em", textTransform: "uppercase", marginBottom: 32 }}>{isBrand ? "Catálogo de Marca • VRCF" : "Informática & Segurança"}</p>
           <div style={{ width: 64, height: 1, backgroundColor: `${theme.accent}80`, marginBottom: 32 }} />
           <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 16 }}>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>📞 +351 912 345 678</p>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>✉️ info@vrcf.pt</p>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>📍 Rua Exemplo, 123 — Lisboa</p>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>📞 +351 911 564 243</p>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>✉️ geral@vrcf.pt</p>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>📍 Rua Luis Calado Nunes 15 LJB — 2870-350 Montijo</p>
             <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 14, margin: 0 }}>🌐 www.vrcf.pt</p>
           </div>
           <p style={{ position: "absolute", bottom: 24, color: "rgba(255,255,255,0.15)", fontSize: 9, letterSpacing: "0.1em" }}>
