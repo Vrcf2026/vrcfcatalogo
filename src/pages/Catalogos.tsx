@@ -118,8 +118,9 @@ const Catalogos = () => {
     });
     const brandObj = brands.find((b) => b.name === selectedBrand);
     const brandTheme = BRAND_THEMES[selectedBrand] || null;
+    const brandCustom = getCustom("brand", selectedBrand);
     return (
-      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} brandTheme={brandTheme} />
+      <CatalogViewer category={selectedBrand} products={brandProducts} imagesByProduct={imagesByProduct} familyMap={familyMap} onBack={handleBack} brandLogo={brandObj?.logo_url} brandTheme={brandTheme} customLogoUrl={brandCustom?.logo_url} customCoverUrl={brandCustom?.cover_image_url} />
     );
   }
 
