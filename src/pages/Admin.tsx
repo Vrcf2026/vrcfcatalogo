@@ -116,8 +116,8 @@ const Admin = () => {
   });
 
   const categoryNames = dbCategories.map((c) => c.name);
-  const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter)));
+  const visibleFamilies = families.filter((f) => (categoryFilter === "all" || f.category === categoryFilter) && (brandFilter === "all" || products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter)));
+  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter) && (familyFilter === "all" || p.family_id === familyFilter)));
 
   return (
     <div className="min-h-screen bg-background">
