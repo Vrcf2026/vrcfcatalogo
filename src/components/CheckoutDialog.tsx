@@ -7,11 +7,17 @@ import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Send, CheckCircle } from "lucide-react";
+import { Loader2, Send, CheckCircle, Plus, Trash2 } from "lucide-react";
 
 interface CheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface CustomItem {
+  id: string;
+  description: string;
+  quantity: number;
 }
 
 export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
@@ -22,6 +28,19 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [customItems, setCustomItems] = useState<CustomItem[]>([]);
+
+  const addCustomItem = () => {
+    setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
+  };
+
+  const updateCustomItem = (id: string, field: "description" | "quantity", value: string | number) => {
+    setCustomItems((prev) => prev.map((ci) => ci.id === id ? { ...ci, [field]: value } : ci));
+  };
+
+  const removeCustomItem = (id: string) => {
+    setCustomItems((prev) => prev.filter((ci) => ci.id !== id));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,17 +49,27 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       return;
     }
 
+    const validCustomItems = customItems.filter((ci) => ci.description.trim());
+
     setLoading(true);
     try {
-      const quoteItems = items.map((i) => ({
-        id: i.id,
-        name: i.name,
-        price: i.price,
-        category: i.category,
-        quantity: i.quantity,
-      }));
+      const quoteItems = [
+        ...items.map((i) => ({
+          id: i.id,
+          name: i.name,
+          price: i.price,
+          category: i.category,
+          quantity: i.quantity,
+        })),
+        ...validCustomItems.map((ci) => ({
+          id: ci.id,
+          name: ci.description.trim(),
+          price: null,
+          category: "Pedido personalizado",
+          quantity: ci.quantity,
+        })),
+      ];
 
-      // Store in DB
       const { error: dbError } = await supabase.from("quote_requests").insert({
         customer_name: name.trim(),
         customer_email: email.trim(),
@@ -49,7 +78,6 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       });
       if (dbError) throw dbError;
 
-      // Send email notification
       const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
         body: {
           customerName: name.trim(),
@@ -70,6 +98,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         setEmail("");
         setPhone("");
         setNotes("");
+        setCustomItems([]);
       }, 3000);
     } catch (err) {
       console.error(err);
@@ -106,13 +135,47 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         </DialogHeader>
 
         {/* Items summary */}
-        <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2 max-h-40 overflow-y-auto">
-          {items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <span className="text-foreground">{item.quantity}x {item.name}</span>
-              {item.price != null && (
-                <span className="text-muted-foreground">{(item.price * item.quantity).toFixed(2).replace(".", ",")} €</span>
-              )}
+        {items.length > 0 && (
+          <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2 max-h-40 overflow-y-auto">
+            {items.map((item) => (
+              <div key={item.id} className="flex justify-between text-sm">
+                <span className="text-foreground">{item.quantity}x {item.name}</span>
+                {item.price != null && (
+                  <span className="text-muted-foreground">{(item.price * item.quantity).toFixed(2).replace(".", ",")} €</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Custom items section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-medium">Produtos adicionais (texto livre)</Label>
+            <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={addCustomItem}>
+              <Plus className="h-3 w-3" />
+              Adicionar
+            </Button>
+          </div>
+          {customItems.map((ci) => (
+            <div key={ci.id} className="flex gap-2 items-start">
+              <Input
+                placeholder="Descreva o produto..."
+                value={ci.description}
+                onChange={(e) => updateCustomItem(ci.id, "description", e.target.value)}
+                className="flex-1"
+                maxLength={200}
+              />
+              <Input
+                type="number"
+                min={1}
+                value={ci.quantity}
+                onChange={(e) => updateCustomItem(ci.id, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-16 text-center"
+              />
+              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-destructive flex-shrink-0" onClick={() => removeCustomItem(ci.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>

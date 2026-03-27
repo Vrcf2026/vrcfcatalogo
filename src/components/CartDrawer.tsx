@@ -1,13 +1,15 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { Minus, Plus, Trash2, ShoppingCart, Send } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart, Send, XCircle } from "lucide-react";
 import { useState } from "react";
 import { CheckoutDialog } from "./CheckoutDialog";
 
 export function CartDrawer() {
-  const { items, isOpen, setIsOpen, updateQuantity, removeItem } = useCart();
+  const { items, isOpen, setIsOpen, updateQuantity, removeItem, clearCart } = useCart();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+
+  const totalValue = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
 
   return (
     <>
@@ -27,7 +29,13 @@ export function CartDrawer() {
             </div>
           ) : (
             <>
-              <div className="flex-1 overflow-y-auto space-y-3 py-4">
+              <div className="flex justify-end">
+                <Button variant="ghost" size="sm" className="text-destructive gap-1 text-xs" onClick={clearCart}>
+                  <XCircle className="h-3.5 w-3.5" />
+                  Limpar tudo
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-3 py-2">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-3 p-3 rounded-lg border border-border bg-card">
                     {item.imageUrl ? (
@@ -67,6 +75,12 @@ export function CartDrawer() {
                   <span className="text-muted-foreground">Total de artigos:</span>
                   <span className="font-semibold">{items.reduce((s, i) => s + i.quantity, 0)}</span>
                 </div>
+                {totalValue > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Valor total estimado:</span>
+                    <span className="font-semibold">{totalValue.toFixed(2).replace(".", ",")} €</span>
+                  </div>
+                )}
                 <Button className="w-full gap-2" size="lg" onClick={() => { setIsOpen(false); setCheckoutOpen(true); }}>
                   <Send className="h-4 w-4" />
                   Pedir Orçamento
