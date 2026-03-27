@@ -182,14 +182,14 @@ const Admin = () => {
               </SelectContent>
             </Select>
           )}
-          {brands.length > 0 && (
+          {visibleBrands.length > 0 && (
             <Select value={brandFilter} onValueChange={setBrandFilter}>
               <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Marcas" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Marcas</SelectItem>
-                {brands.map((b) => (
+                {visibleBrands.map((b) => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
