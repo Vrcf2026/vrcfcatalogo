@@ -96,7 +96,7 @@ const Index = () => {
 
   const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id));
+  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter)));
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,7 +145,7 @@ const Index = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
-          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setBrandFilter("all"); }}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Categorias" />
             </SelectTrigger>

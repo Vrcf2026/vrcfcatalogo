@@ -117,6 +117,7 @@ const Admin = () => {
 
   const categoryNames = dbCategories.map((c) => c.name);
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter)));
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,7 +159,7 @@ const Admin = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
           </div>
-          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setBrandFilter("all"); }}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Categorias" />
             </SelectTrigger>
@@ -182,14 +183,14 @@ const Admin = () => {
               </SelectContent>
             </Select>
           )}
-          {brands.length > 0 && (
+          {visibleBrands.length > 0 && (
             <Select value={brandFilter} onValueChange={setBrandFilter}>
               <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Marcas" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Marcas</SelectItem>
-                {brands.map((b) => (
+                {visibleBrands.map((b) => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
