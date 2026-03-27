@@ -96,7 +96,7 @@ const Index = () => {
 
   const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id));
+  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter)));
 
   return (
     <div className="min-h-screen bg-background">
