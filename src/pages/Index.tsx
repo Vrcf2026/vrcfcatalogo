@@ -104,11 +104,8 @@ const Index = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="h-7 w-7 text-primary" />
-            <div>
-              <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
-              <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
-            </div>
+            <img src={vrcfLogo} alt="VRCF Logo" className="h-10 w-auto" />
+          </div>
           </div>
           <div className="flex items-center gap-3">
             <Link to="/catalogos" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
