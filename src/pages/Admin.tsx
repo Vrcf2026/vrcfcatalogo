@@ -117,6 +117,7 @@ const Admin = () => {
 
   const categoryNames = dbCategories.map((c) => c.name);
   const visibleFamilies = families.filter((f) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter)));
 
   return (
     <div className="min-h-screen bg-background">
