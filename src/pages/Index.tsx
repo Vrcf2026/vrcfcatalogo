@@ -106,7 +106,6 @@ const Index = () => {
           <div className="flex items-center gap-3">
             <img src={vrcfLogo} alt="VRCF Logo" className="h-10 w-auto" />
           </div>
-          </div>
           <div className="flex items-center gap-3">
             <Link to="/catalogos" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
               <BookOpen className="h-4 w-4" />
