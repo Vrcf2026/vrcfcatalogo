@@ -5,7 +5,8 @@ import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { Search, ShieldCheck, Package, Loader2, BookOpen, ShoppingCart } from "lucide-react";
+import { Search, Package, Loader2, BookOpen, ShoppingCart } from "lucide-react";
+import vrcfLogo from "@/assets/vrcf-logo.png";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -103,11 +104,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="h-7 w-7 text-primary" />
-            <div>
-              <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
-              <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
-            </div>
+            <img src={vrcfLogo} alt="VRCF Logo" className="h-10 w-auto" />
           </div>
           <div className="flex items-center gap-3">
             <Link to="/catalogos" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
@@ -230,7 +227,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <ShieldCheck className="h-6 w-6 text-primary" />
+              <img src={vrcfLogo} alt="VRCF Logo" className="h-8 w-auto" />
               <div>
                 <p className="font-heading font-bold text-sm">VRCF - Informática & Segurança</p>
                 <p className="text-xs text-accent-foreground/70">Tecnologia e Segurança ao Seu Alcance</p>
