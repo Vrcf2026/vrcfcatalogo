@@ -204,17 +204,11 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
       <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.accent }} />
 
       <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
-        {/* Logo */}
-        {isBrand && brandLogo ? (
-          <div className="mb-4 w-24 h-24 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center p-3 shadow-xl">
-            <img src={brandLogo} alt={category} className="max-w-full max-h-full object-contain" />
-          </div>
-        ) : (
-          <img src={vrcfLogo} alt="VRCF" className="h-40 w-40 object-contain drop-shadow-lg mb-6" />
-        )}
+        {/* Always show VRCF logo on contacts page */}
+        <img src={vrcfLogo} alt="VRCF" className="h-40 w-40 object-contain drop-shadow-lg mb-6" />
 
-        <h2 className="font-heading text-2xl font-bold text-white mb-1">{isBrand ? category : "VRCF"}</h2>
-        <p className="text-white/50 text-xs tracking-[0.3em] uppercase mb-8">{isBrand ? "Catálogo de Marca • VRCF" : "Informática & Segurança"}</p>
+        <h2 className="font-heading text-2xl font-bold text-white mb-1">VRCF</h2>
+        <p className="text-white/50 text-xs tracking-[0.3em] uppercase mb-8">Informática & Segurança</p>
 
         <div className="w-16 h-px mb-8" style={{ backgroundColor: `${theme.accent}80` }} />
 
