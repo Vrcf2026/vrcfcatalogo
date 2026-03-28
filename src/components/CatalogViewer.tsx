@@ -210,7 +210,7 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
             <img src={brandLogo} alt={category} className="max-w-full max-h-full object-contain" />
           </div>
         ) : (
-          <img src={vrcfLogo} alt="VRCF" className="h-20 w-20 object-contain drop-shadow-lg mb-6" />
+          <img src={vrcfLogo} alt="VRCF" className="h-40 w-40 object-contain drop-shadow-lg mb-6" />
         )}
 
         <h2 className="font-heading text-2xl font-bold text-white mb-1">{isBrand ? category : "VRCF"}</h2>
