@@ -225,27 +225,27 @@ const Index = () => {
 
       <footer className="border-t border-border bg-accent text-accent-foreground py-8">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center gap-4">
-            <div className="flex flex-col md:flex-row items-center justify-between w-full gap-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <img src={vrcfLogo} alt="VRCF Logo" className="h-10 w-auto" />
               <div>
                 <p className="font-heading font-bold text-sm">VRCF - Informática & Segurança</p>
                 <p className="text-xs text-accent-foreground/70">Tecnologia e Segurança ao Seu Alcance</p>
               </div>
-              <div className="text-center md:text-right space-y-1">
-                <p className="text-xs text-accent-foreground/70">
-                  <a href="https://vrcf.pt" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-                    vrcf.pt
-                  </a>
-                </p>
-                <p className="text-xs text-accent-foreground/70">
-                  Todos os preços apresentados incluem IVA à taxa legal em vigor.
-                </p>
-                <p className="text-xs text-accent-foreground/70">
-                  As imagens apresentadas são meramente ilustrativas.
-                </p>
-              </div>
             </div>
-            <img src={vrcfLogo} alt="VRCF Logo" className="h-12 w-auto mt-2" />
+            <div className="text-center md:text-right space-y-1">
+              <p className="text-xs text-accent-foreground/70">
+                <a href="https://vrcf.pt" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+                  vrcf.pt
+                </a>
+              </p>
+              <p className="text-xs text-accent-foreground/70">
+                Todos os preços apresentados incluem IVA à taxa legal em vigor.
+              </p>
+              <p className="text-xs text-accent-foreground/70">
+                As imagens apresentadas são meramente ilustrativas.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
