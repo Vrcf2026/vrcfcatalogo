@@ -22,7 +22,7 @@ import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
-const WHATSAPP_NUMBER = "351999999999";
+const WHATSAPP_NUMBER = "351911564243";
 
 interface CatalogProduct {
   id: string;
