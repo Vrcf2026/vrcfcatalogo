@@ -144,7 +144,7 @@ function CoverPage({ category, productCount, bgImage, brandLogo, brandTheme }: {
       <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
         {/* Logo at top */}
         <div className="absolute top-6 left-0 right-0 flex flex-col items-center">
-          <img src={vrcfLogo} alt="VRCF" className="h-14 w-14 object-contain drop-shadow-lg" />
+          <img src={vrcfLogo} alt="VRCF" className="h-28 w-28 object-contain drop-shadow-lg" />
           <p className="text-white/60 text-[8px] tracking-[0.4em] uppercase mt-1 font-medium">Informática & Segurança</p>
         </div>
 
