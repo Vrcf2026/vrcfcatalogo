@@ -610,7 +610,7 @@ export function CatalogViewer({
                       {brandLogo ? (
                         <img src={brandLogo} alt={category} className="h-5 object-contain" />
                       ) : (
-                        <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                        <img src={vrcfLogo} alt="VRCF" className="h-8 w-8 object-contain" />
                       )}
                       <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
                     </div>
