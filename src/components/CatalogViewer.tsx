@@ -144,7 +144,7 @@ function CoverPage({ category, productCount, bgImage, brandLogo, brandTheme }: {
       <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
         {/* Logo at top */}
         <div className="absolute top-6 left-0 right-0 flex flex-col items-center">
-          <img src={vrcfLogo} alt="VRCF" className="h-14 w-14 object-contain drop-shadow-lg" />
+          <img src={vrcfLogo} alt="VRCF" className="h-28 w-28 object-contain drop-shadow-lg" />
           <p className="text-white/60 text-[8px] tracking-[0.4em] uppercase mt-1 font-medium">Informática & Segurança</p>
         </div>
 
@@ -210,7 +210,7 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
             <img src={brandLogo} alt={category} className="max-w-full max-h-full object-contain" />
           </div>
         ) : (
-          <img src={vrcfLogo} alt="VRCF" className="h-20 w-20 object-contain drop-shadow-lg mb-6" />
+          <img src={vrcfLogo} alt="VRCF" className="h-40 w-40 object-contain drop-shadow-lg mb-6" />
         )}
 
         <h2 className="font-heading text-2xl font-bold text-white mb-1">{isBrand ? category : "VRCF"}</h2>
@@ -499,7 +499,7 @@ export function CatalogViewer({
           <ChevronLeft className="h-4 w-4" /> Voltar
         </button>
         <div className="flex items-center gap-2">
-          <img src={vrcfLogo} alt="VRCF" className="h-6 w-6 object-contain" />
+          <img src={vrcfLogo} alt="VRCF" className="h-10 w-10 object-contain" />
           <span className="font-heading font-bold text-white/90 text-sm">{category}</span>
         </div>
         <Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/10 gap-1.5" onClick={toggleFullscreen}>
@@ -610,7 +610,7 @@ export function CatalogViewer({
                       {brandLogo ? (
                         <img src={brandLogo} alt={category} className="h-5 object-contain" />
                       ) : (
-                        <img src={vrcfLogo} alt="VRCF" className="h-5 w-5 object-contain" />
+                        <img src={vrcfLogo} alt="VRCF" className="h-8 w-8 object-contain" />
                       )}
                       <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
                     </div>
