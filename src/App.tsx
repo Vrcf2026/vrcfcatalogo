@@ -41,6 +41,7 @@ const App = () => (
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CookieConsentBanner />
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
