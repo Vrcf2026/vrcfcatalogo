@@ -50,6 +50,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       toast.error("Por favor preencha todos os campos obrigatórios.");
       return;
     }
+    if (!acceptedTerms) {
+      toast.error("Deve aceitar os Termos e Condições para continuar.");
+      return;
+    }
 
     const validCustomItems = customItems.filter((ci) => ci.description.trim());
 
