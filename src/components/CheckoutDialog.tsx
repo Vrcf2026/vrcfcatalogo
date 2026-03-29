@@ -106,6 +106,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         setNotes("");
         setCustomItems([]);
         setAcceptedTerms(false);
+      }, 3000);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao enviar pedido. Tente novamente.");
