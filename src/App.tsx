@@ -10,6 +10,7 @@ import Login from "./pages/Login.tsx";
 import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Catalogos from "./pages/Catalogos.tsx";
+import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
