@@ -245,9 +245,12 @@ const Index = () => {
               <p className="text-xs text-accent-foreground/70">
                 As imagens apresentadas são meramente ilustrativas.
               </p>
-              <p className="text-xs mt-2">
+              <p className="text-xs mt-2 space-x-3">
                 <Link to="/termos-e-condicoes" className="text-primary hover:underline transition-colors">
                   Termos e Condições
+                </Link>
+                <Link to="/politica-de-cookies" className="text-primary hover:underline transition-colors">
+                  Política de Cookies
                 </Link>
               </p>
             </div>
