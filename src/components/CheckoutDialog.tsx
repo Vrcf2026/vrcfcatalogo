@@ -30,6 +30,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
