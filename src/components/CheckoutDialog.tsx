@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useCart } from "@/contexts/CartContext";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
@@ -46,6 +48,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !phone.trim()) {
       toast.error("Por favor preencha todos os campos obrigatórios.");
+      return;
+    }
+    if (!acceptedTerms) {
+      toast.error("Deve aceitar os Termos e Condições para continuar.");
       return;
     }
 
@@ -99,6 +105,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         setPhone("");
         setNotes("");
         setCustomItems([]);
+        setAcceptedTerms(false);
       }, 3000);
     } catch (err) {
       console.error(err);
@@ -197,7 +204,24 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <Label htmlFor="notes">Observações</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Informações adicionais..." maxLength={1000} rows={3} />
           </div>
-          <Button type="submit" className="w-full gap-2" size="lg" disabled={loading}>
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="terms"
+              checked={acceptedTerms}
+              onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+            />
+            <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+              Li e aceito os{" "}
+              <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">
+                Termos e Condições
+              </a>{" "}
+              e a{" "}
+              <a href="/termos-e-condicoes#6" target="_blank" className="text-primary hover:underline">
+                Política de Privacidade
+              </a>.
+            </label>
+          </div>
+          <Button type="submit" className="w-full gap-2" size="lg" disabled={loading || !acceptedTerms}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Enviar Pedido de Orçamento
           </Button>
