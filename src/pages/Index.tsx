@@ -243,6 +243,9 @@ const Index = () => {
                 Todos os preços apresentados incluem IVA à taxa legal em vigor.
               </p>
               <p className="text-xs text-accent-foreground/70">
+                Os preços são meramente indicativos e podem sofrer alterações sem aviso prévio.
+              </p>
+              <p className="text-xs text-accent-foreground/70">
                 As imagens apresentadas são meramente ilustrativas.
               </p>
               <p className="text-xs mt-2 space-x-3">
