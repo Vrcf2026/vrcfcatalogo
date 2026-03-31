@@ -4,19 +4,23 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { Search, Package, Loader2, BookOpen, ShoppingCart } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, Package, Loader2, BookOpen, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
 
+const PRODUCTS_PER_PAGE = 12;
+
 const Index = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("featured");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { totalItems, setIsOpen } = useCart();
 
@@ -78,22 +82,56 @@ const Index = () => {
 
   const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  const filtered = products?.filter((p) => {
-    const searchTerms = normalize(search).split(/\s+/).filter(Boolean);
-    const nameNorm = normalize(p.name);
-    const descNorm = normalize(p.description || "");
-    const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) =>
-      nameNorm.includes(term) || descNorm.includes(term)
-    );
-    const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
-    const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
-    const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
-    return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
-  })?.sort((a, b) => {
-    if (a.featured && !b.featured) return -1;
-    if (!a.featured && b.featured) return 1;
-    return 0;
-  });
+  const filtered = useMemo(() => {
+    const result = products?.filter((p) => {
+      const searchTerms = normalize(search).split(/\s+/).filter(Boolean);
+      const nameNorm = normalize(p.name);
+      const descNorm = normalize(p.description || "");
+      const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) =>
+        nameNorm.includes(term) || descNorm.includes(term)
+      );
+      const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
+      const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
+      const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
+      return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
+    });
+
+    if (!result) return [];
+
+    return result.sort((a, b) => {
+      // Featured always first
+      if (a.featured && !b.featured) return -1;
+      if (!a.featured && b.featured) return 1;
+
+      switch (sortBy) {
+        case "price-asc":
+          return (a.price ?? 0) - (b.price ?? 0);
+        case "price-desc":
+          return (b.price ?? 0) - (a.price ?? 0);
+        case "name-asc":
+          return a.name.localeCompare(b.name, "pt");
+        case "name-desc":
+          return b.name.localeCompare(a.name, "pt");
+        case "newest":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [products, search, categoryFilter, familyFilter, brandFilter, sortBy]);
+
+  const totalPages = Math.ceil(filtered.length / PRODUCTS_PER_PAGE);
+  const paginatedProducts = filtered.slice(
+    (currentPage - 1) * PRODUCTS_PER_PAGE,
+    currentPage * PRODUCTS_PER_PAGE
+  );
+
+  // Reset page when filters/sort change
+  const handleFilterChange = (setter: (v: string) => void, value: string, resetDependents?: () => void) => {
+    setter(value);
+    setCurrentPage(1);
+    resetDependents?.();
+  };
 
   const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
   const visibleFamilies = families.filter((f) => (categoryFilter === "all" || f.category === categoryFilter) && (brandFilter === "all" || products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter)));
@@ -137,12 +175,12 @@ const Index = () => {
       </section>
 
       <section className="container mx-auto px-4 pb-8">
-        <div className="flex flex-col sm:flex-row gap-3 max-w-3xl mx-auto flex-wrap">
+        <div className="flex flex-col sm:flex-row gap-3 max-w-4xl mx-auto flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+            <Input placeholder="Pesquisar produtos..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="pl-10" />
           </div>
-          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setBrandFilter("all"); }}>
+          <Select value={categoryFilter} onValueChange={(v) => handleFilterChange(setCategoryFilter, v, () => { setFamilyFilter("all"); setBrandFilter("all"); })}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Categorias" />
             </SelectTrigger>
@@ -154,7 +192,7 @@ const Index = () => {
             </SelectContent>
           </Select>
           {visibleFamilies.length > 0 && (
-            <Select value={familyFilter} onValueChange={setFamilyFilter}>
+            <Select value={familyFilter} onValueChange={(v) => handleFilterChange(setFamilyFilter, v)}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Famílias" />
               </SelectTrigger>
@@ -167,7 +205,7 @@ const Index = () => {
             </Select>
           )}
           {visibleBrands.length > 0 && (
-            <Select value={brandFilter} onValueChange={setBrandFilter}>
+            <Select value={brandFilter} onValueChange={(v) => handleFilterChange(setBrandFilter, v)}>
               <SelectTrigger className="w-full sm:w-[160px]">
                 <SelectValue placeholder="Marcas" />
               </SelectTrigger>
@@ -179,40 +217,62 @@ const Index = () => {
               </SelectContent>
             </Select>
           )}
+          <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="featured">Destaques</SelectItem>
+              <SelectItem value="newest">Mais recentes</SelectItem>
+              <SelectItem value="name-asc">Nome (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Nome (Z-A)</SelectItem>
+              <SelectItem value="price-asc">Preço (menor)</SelectItem>
+              <SelectItem value="price-desc">Preço (maior)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </section>
 
-      <section className="container mx-auto px-4 pb-16">
+      <section className="container mx-auto px-4 pb-4">
+        {!isLoading && filtered.length > 0 && (
+          <p className="text-sm text-muted-foreground text-center">
+            {filtered.length} produto{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
+            {totalPages > 1 && ` — Página ${currentPage} de ${totalPages}`}
+          </p>
+        )}
+      </section>
+
+      <section className="container mx-auto px-4 pb-8">
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : filtered && filtered.length > 0 ? (
+        ) : paginatedProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {filtered.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  description={product.description}
-                  category={product.category}
-                  price={product.price}
-                  imageUrl={product.image_url}
-                  images={imagesByProduct[product.id] || []}
-                  familyName={product.family_id ? familyMap[product.family_id] || null : null}
-                  featured={product.featured}
-                  onClick={() => setSelectedProduct({
-                    id: product.id,
-                    name: product.name,
-                    description: product.description,
-                    category: product.category,
-                    price: product.price,
-                    imageUrl: product.image_url,
-                    images: imagesByProduct[product.id] || [],
-                    familyName: product.family_id ? familyMap[product.family_id] || null : null,
-                  })}
-                />
-              ))}
+            {paginatedProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                description={product.description}
+                category={product.category}
+                price={product.price}
+                imageUrl={product.image_url}
+                images={imagesByProduct[product.id] || []}
+                familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                featured={product.featured}
+                onClick={() => setSelectedProduct({
+                  id: product.id,
+                  name: product.name,
+                  description: product.description,
+                  category: product.category,
+                  price: product.price,
+                  imageUrl: product.image_url,
+                  images: imagesByProduct[product.id] || [],
+                  familyName: product.family_id ? familyMap[product.family_id] || null : null,
+                })}
+              />
+            ))}
           </div>
         ) : (
           <div className="text-center py-20">
@@ -222,6 +282,53 @@ const Index = () => {
           </div>
         )}
       </section>
+
+      {totalPages > 1 && (
+        <section className="container mx-auto px-4 pb-16">
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((page) => {
+                if (totalPages <= 7) return true;
+                if (page === 1 || page === totalPages) return true;
+                if (Math.abs(page - currentPage) <= 1) return true;
+                return false;
+              })
+              .map((page, idx, arr) => {
+                const prev = arr[idx - 1];
+                const showEllipsis = prev && page - prev > 1;
+                return (
+                  <span key={page} className="flex items-center gap-1">
+                    {showEllipsis && <span className="px-1 text-muted-foreground">…</span>}
+                    <Button
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      className="min-w-[36px]"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  </span>
+                );
+              })}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </section>
+      )}
 
       <footer className="border-t border-border bg-accent text-accent-foreground py-8">
         <div className="container mx-auto px-4">
