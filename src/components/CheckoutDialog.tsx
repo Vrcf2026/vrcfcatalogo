@@ -60,6 +60,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       return;
     }
 
+    // Rate limiting: max 3 submits per minute
+    const now = Date.now();
+    submitTimestamps.current = submitTimestamps.current.filter(t => now - t < RATE_WINDOW_MS);
+    if (submitTimestamps.current.length >= MAX_SUBMITS) {
+      toast.error("Demasiados pedidos. Aguarde um momento antes de tentar novamente.");
+      return;
+    }
+    submitTimestamps.current.push(now);
+
     const validCustomItems = customItems.filter((ci) => ci.description.trim());
 
     setLoading(true);
