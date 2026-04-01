@@ -32,6 +32,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [sendCopy, setSendCopy] = useState(true);
+  const submitTimestamps = useRef<number[]>([]);
+
+  const MAX_SUBMITS = 3;
+  const RATE_WINDOW_MS = 60_000; // 1 minute
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
