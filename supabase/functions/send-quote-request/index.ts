@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { customerName, customerEmail, customerPhone, notes, items } = await req.json();
+    const { customerName, customerEmail, customerPhone, notes, items, sendCopyToCustomer } = await req.json();
 
     const itemsHtml = items
       .map(
@@ -55,10 +55,10 @@ serve(async (req) => {
       </div>
     `;
 
-    // Use Lovable API to send email
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (LOVABLE_API_KEY) {
+      // Send to VRCF
       const emailRes = await fetch("https://api.lovable.dev/api/v1/send-email", {
         method: "POST",
         headers: {
@@ -77,8 +77,56 @@ serve(async (req) => {
         const errText = await emailRes.text();
         console.error("Email send failed:", errText);
       }
+
+      // Send copy to customer if requested
+      if (sendCopyToCustomer && customerEmail) {
+        const customerHtml = `
+          <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <h2 style="color:#1a1a2e;border-bottom:2px solid #0066cc;padding-bottom:10px;">
+              📋 Cópia do Seu Pedido de Orçamento - VRCF
+            </h2>
+            <p style="color:#333;">Olá ${customerName},</p>
+            <p style="color:#333;">Segue a cópia do seu pedido de orçamento. Entraremos em contacto brevemente.</p>
+            <h3 style="color:#333;">Produtos Solicitados</h3>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+              <thead>
+                <tr style="background:#f5f5f5;">
+                  <th style="padding:8px;border:1px solid #ddd;text-align:left;">Produto</th>
+                  <th style="padding:8px;border:1px solid #ddd;">Categoria</th>
+                  <th style="padding:8px;border:1px solid #ddd;">Qtd</th>
+                  <th style="padding:8px;border:1px solid #ddd;text-align:right;">Preço Unit.</th>
+                </tr>
+              </thead>
+              <tbody>${itemsHtml}</tbody>
+            </table>
+            ${notes ? `<p style="color:#333;"><strong>Observações:</strong> ${notes}</p>` : ""}
+            <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
+            <p style="color:#666;font-size:12px;">VRCF - VALTER ROBERTO CRUZ FRANCISCO UNI. LDA</p>
+            <p style="color:#666;font-size:12px;">📞 +351 911 564 243 | ✉️ geral@vrcf.pt</p>
+            <p style="color:#666;font-size:12px;">📍 Rua Luis Calado Nunes 15 LJB, 2870-350 Montijo</p>
+          </div>
+        `;
+
+        const copyRes = await fetch("https://api.lovable.dev/api/v1/send-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          },
+          body: JSON.stringify({
+            to: customerEmail,
+            subject: `Cópia do Pedido de Orçamento - VRCF`,
+            html: customerHtml,
+          }),
+        });
+
+        if (!copyRes.ok) {
+          const errText = await copyRes.text();
+          console.error("Customer copy email failed:", errText);
+        }
+      }
     } else {
-      console.warn("LOVABLE_API_KEY not set, email not sent. Quote stored in DB.");
+      console.warn("LOVABLE_API_KEY not set, email not sent.");
     }
 
     return new Response(JSON.stringify({ success: true }), {
