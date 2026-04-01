@@ -31,6 +31,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [success, setSuccess] = useState(false);
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [sendCopy, setSendCopy] = useState(true);
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
@@ -76,14 +77,6 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         })),
       ];
 
-      const { error: dbError } = await supabase.from("quote_requests").insert({
-        customer_name: name.trim(),
-        customer_email: email.trim(),
-        customer_phone: phone.trim(),
-        items: quoteItems,
-      });
-      if (dbError) throw dbError;
-
       const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
         body: {
           customerName: name.trim(),
@@ -91,9 +84,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           customerPhone: phone.trim(),
           notes: notes.trim(),
           items: quoteItems,
+          sendCopyToCustomer: sendCopy,
         },
       });
-      if (fnError) console.warn("Email notification failed:", fnError);
+      if (fnError) throw fnError;
 
       setSuccess(true);
       clearCart();
@@ -106,6 +100,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         setNotes("");
         setCustomItems([]);
         setAcceptedTerms(false);
+        setSendCopy(true);
       }, 3000);
     } catch (err) {
       console.error(err);
@@ -203,6 +198,16 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Informações adicionais..." maxLength={1000} rows={3} />
+          </div>
+          <div className="flex items-start space-x-2">
+            <Checkbox
+              id="sendCopy"
+              checked={sendCopy}
+              onCheckedChange={(checked) => setSendCopy(checked === true)}
+            />
+            <label htmlFor="sendCopy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+              Enviar uma cópia do pedido para o meu email
+            </label>
           </div>
           <div className="flex items-start space-x-2">
             <Checkbox
