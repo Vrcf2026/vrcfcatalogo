@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCart } from "@/contexts/CartContext";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Send, CheckCircle, Plus, Trash2 } from "lucide-react";
@@ -32,6 +32,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [customItems, setCustomItems] = useState<CustomItem[]>([]);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [sendCopy, setSendCopy] = useState(true);
+  const submitTimestamps = useRef<number[]>([]);
+
+  const MAX_SUBMITS = 3;
+  const RATE_WINDOW_MS = 60_000; // 1 minute
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
@@ -55,6 +59,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       toast.error("Deve aceitar os Termos e Condições para continuar.");
       return;
     }
+
+    // Rate limiting: max 3 submits per minute
+    const now = Date.now();
+    submitTimestamps.current = submitTimestamps.current.filter(t => now - t < RATE_WINDOW_MS);
+    if (submitTimestamps.current.length >= MAX_SUBMITS) {
+      toast.error("Demasiados pedidos. Aguarde um momento antes de tentar novamente.");
+      return;
+    }
+    submitTimestamps.current.push(now);
 
     const validCustomItems = customItems.filter((ci) => ci.description.trim());
 
