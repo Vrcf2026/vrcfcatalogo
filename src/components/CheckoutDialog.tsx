@@ -100,6 +100,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         setNotes("");
         setCustomItems([]);
         setAcceptedTerms(false);
+        setSendCopy(true);
       }, 3000);
     } catch (err) {
       console.error(err);
