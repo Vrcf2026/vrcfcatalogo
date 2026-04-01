@@ -201,6 +201,16 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           </div>
           <div className="flex items-start space-x-2">
             <Checkbox
+              id="sendCopy"
+              checked={sendCopy}
+              onCheckedChange={(checked) => setSendCopy(checked === true)}
+            />
+            <label htmlFor="sendCopy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+              Enviar uma cópia do pedido para o meu email
+            </label>
+          </div>
+          <div className="flex items-start space-x-2">
+            <Checkbox
               id="terms"
               checked={acceptedTerms}
               onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
