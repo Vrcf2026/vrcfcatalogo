@@ -77,14 +77,6 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         })),
       ];
 
-      const { error: dbError } = await supabase.from("quote_requests").insert({
-        customer_name: name.trim(),
-        customer_email: email.trim(),
-        customer_phone: phone.trim(),
-        items: quoteItems,
-      });
-      if (dbError) throw dbError;
-
       const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
         body: {
           customerName: name.trim(),
@@ -92,9 +84,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           customerPhone: phone.trim(),
           notes: notes.trim(),
           items: quoteItems,
+          sendCopyToCustomer: sendCopy,
         },
       });
-      if (fnError) console.warn("Email notification failed:", fnError);
+      if (fnError) throw fnError;
 
       setSuccess(true);
       clearCart();
