@@ -21,6 +21,7 @@ const Index = () => {
   const [brandFilter, setBrandFilter] = useState("all");
   const [sortBy, setSortBy] = useState("featured");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { totalItems, setIsOpen } = useCart();
 
