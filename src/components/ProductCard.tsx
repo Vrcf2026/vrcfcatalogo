@@ -7,6 +7,37 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 
+function ProductImage({ src, alt }: { src: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center gap-2 text-muted-foreground w-full h-full justify-center">
+        <ImageOff className="h-10 w-10" />
+        <span className="text-xs">Erro ao carregar</span>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {!loaded && (
+        <div className="absolute inset-0 bg-secondary animate-pulse" />
+      )}
+      <img
+        src={src}
+        alt={alt}
+        className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setError(true)}
+      />
+    </>
+  );
+}
+
 interface ProductCardProps {
   id: string;
   name: string;
