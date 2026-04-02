@@ -146,6 +146,7 @@ const Admin = () => {
               brandMap={brandMap}
             />
             <CatalogCustomizationDialog categories={categoryNames} brands={brands} />
+            <ImageHealthCheckDialog products={products || []} productImages={productImages} />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
