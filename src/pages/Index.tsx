@@ -2,10 +2,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useMemo } from "react";
-import { Search, Package, Loader2, BookOpen, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Package, Loader2, BookOpen, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { ProductFilters } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -175,64 +174,21 @@ const Index = () => {
         </p>
       </section>
 
-      <section className="container mx-auto px-4 pb-8">
-        <div className="flex flex-col sm:flex-row gap-3 max-w-4xl mx-auto flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar produtos..." value={search} onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} className="pl-10" />
-          </div>
-          <Select value={categoryFilter} onValueChange={(v) => handleFilterChange(setCategoryFilter, v, () => { setFamilyFilter("all"); setBrandFilter("all"); })}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Categorias" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Categorias</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat!} value={cat!}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {visibleFamilies.length > 0 && (
-            <Select value={familyFilter} onValueChange={(v) => handleFilterChange(setFamilyFilter, v)}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Famílias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Famílias</SelectItem>
-                {visibleFamilies.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {visibleBrands.length > 0 && (
-            <Select value={brandFilter} onValueChange={(v) => handleFilterChange(setBrandFilter, v)}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="Marcas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Marcas</SelectItem>
-                {visibleBrands.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          <Select value={sortBy} onValueChange={(v) => { setSortBy(v); setCurrentPage(1); }}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Ordenar por" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="featured">Destaques</SelectItem>
-              <SelectItem value="newest">Mais recentes</SelectItem>
-              <SelectItem value="name-asc">Nome (A-Z)</SelectItem>
-              <SelectItem value="name-desc">Nome (Z-A)</SelectItem>
-              <SelectItem value="price-asc">Preço (menor)</SelectItem>
-              <SelectItem value="price-desc">Preço (maior)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </section>
+      <ProductFilters
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setCurrentPage(1); }}
+        categoryFilter={categoryFilter}
+        onCategoryChange={(v) => handleFilterChange(setCategoryFilter, v, () => { setFamilyFilter("all"); setBrandFilter("all"); })}
+        familyFilter={familyFilter}
+        onFamilyChange={(v) => handleFilterChange(setFamilyFilter, v)}
+        brandFilter={brandFilter}
+        onBrandChange={(v) => handleFilterChange(setBrandFilter, v)}
+        sortBy={sortBy}
+        onSortChange={(v) => { setSortBy(v); setCurrentPage(1); }}
+        categories={categories}
+        visibleFamilies={visibleFamilies}
+        visibleBrands={visibleBrands}
+      />
 
       <section className="container mx-auto px-4 pb-4">
         {!isLoading && filtered.length > 0 && (
