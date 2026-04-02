@@ -284,49 +284,67 @@ const Index = () => {
         )}
       </section>
 
-      {totalPages > 1 && (
+      {(totalPages > 1 || filtered.length > 12) && (
         <section className="container mx-auto px-4 pb-16">
-          <div className="flex items-center justify-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => p - 1)}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((page) => {
-                if (totalPages <= 7) return true;
-                if (page === 1 || page === totalPages) return true;
-                if (Math.abs(page - currentPage) <= 1) return true;
-                return false;
-              })
-              .map((page, idx, arr) => {
-                const prev = arr[idx - 1];
-                const showEllipsis = prev && page - prev > 1;
-                return (
-                  <span key={page} className="flex items-center gap-1">
-                    {showEllipsis && <span className="px-1 text-muted-foreground">…</span>}
-                    <Button
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      className="min-w-[36px]"
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </Button>
-                  </span>
-                );
-              })}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => p + 1)}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((page) => {
+                    if (totalPages <= 7) return true;
+                    if (page === 1 || page === totalPages) return true;
+                    if (Math.abs(page - currentPage) <= 1) return true;
+                    return false;
+                  })
+                  .map((page, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && page - prev > 1;
+                    return (
+                      <span key={page} className="flex items-center gap-1">
+                        {showEllipsis && <span className="px-1 text-muted-foreground">…</span>}
+                        <Button
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          className="min-w-[36px]"
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      </span>
+                    );
+                  })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Mostrar:</span>
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <Button
+                  key={size}
+                  variant={pageSize === size ? "default" : "outline"}
+                  size="sm"
+                  className="min-w-[36px]"
+                  onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                >
+                  {size}
+                </Button>
+              ))}
+            </div>
           </div>
         </section>
       )}
