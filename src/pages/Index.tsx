@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { useState, useMemo } from "react";
-import { useState, useMemo } from "react";
 import { Package, Loader2, BookOpen, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductFilters } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
