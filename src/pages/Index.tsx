@@ -121,10 +121,10 @@ const Index = () => {
     });
   }, [products, search, categoryFilter, familyFilter, brandFilter, sortBy]);
 
-  const totalPages = Math.ceil(filtered.length / PRODUCTS_PER_PAGE);
+  const totalPages = Math.ceil(filtered.length / pageSize);
   const paginatedProducts = filtered.slice(
-    (currentPage - 1) * PRODUCTS_PER_PAGE,
-    currentPage * PRODUCTS_PER_PAGE
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   // Reset page when filters/sort change
