@@ -87,7 +87,7 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
                 idx === selectedIndex ? 'border-primary ring-1 ring-primary' : 'border-transparent opacity-60 hover:opacity-100'
               }`}
             >
-              <img src={img} alt={`${name} ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+              <img src={img} alt={`${name} ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </button>
           ))}
         </div>
