@@ -12,7 +12,7 @@ import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
 
-const PRODUCTS_PER_PAGE = 12;
+const PAGE_SIZE_OPTIONS = [12, 24, 48];
 
 const Index = () => {
   const [search, setSearch] = useState("");
