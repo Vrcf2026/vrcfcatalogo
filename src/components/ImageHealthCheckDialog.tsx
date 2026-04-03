@@ -108,6 +108,37 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
     setChecking(false);
   };
 
+  const handleRemoveAllBroken = async () => {
+    if (!confirm(`Tens a certeza que queres remover ${broken.length} imagem(ns) quebrada(s)? Esta ação não pode ser revertida.`)) return;
+    
+    setRemoving(true);
+    try {
+      // Separate principal images and gallery images
+      const principalBroken = broken.filter(r => r.source === "principal");
+      const galleryBroken = broken.filter(r => r.source === "galeria");
+
+      // Clear principal image_url (set to null)
+      for (const item of principalBroken) {
+        await supabase.from("products").update({ image_url: null }).eq("id", item.productId);
+      }
+
+      // Delete gallery images
+      if (galleryBroken.length > 0) {
+        const galleryUrls = galleryBroken.map(r => r.imageUrl);
+        await supabase.from("product_images").delete().in("image_url", galleryUrls);
+      }
+
+      // Remove broken from results
+      setResults(prev => prev.filter(r => r.status !== "broken"));
+      toast.success(`${broken.length} imagem(ns) quebrada(s) removida(s) com sucesso`);
+      onImagesRemoved?.();
+    } catch (error) {
+      toast.error("Erro ao remover imagens quebradas");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   const broken = results.filter((r) => r.status === "broken");
   const slow = results.filter((r) => r.status === "slow");
   const ok = results.filter((r) => r.status === "ok");
