@@ -203,4 +203,4 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onCli
       </div>
     </div>
   );
-}
+});
