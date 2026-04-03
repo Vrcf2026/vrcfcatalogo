@@ -26,6 +26,7 @@ const Admin = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     await signOut();
