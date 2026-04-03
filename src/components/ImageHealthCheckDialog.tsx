@@ -224,7 +224,19 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct 
                 </div>
               )}
 
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-2">
+                {broken.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRemoveAllBroken}
+                    disabled={removing}
+                    className="gap-1.5"
+                  >
+                    {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    Remover {broken.length} quebrada{broken.length !== 1 ? "s" : ""}
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={runCheck} className="gap-1.5">
                   <ScanSearch className="h-3.5 w-3.5" />
                   Verificar novamente
