@@ -33,6 +33,7 @@ interface ImageHealthCheckDialogProps {
   products: Product[];
   productImages: ProductImage[];
   onEditProduct?: (productId: string) => void;
+  onImagesRemoved?: () => void;
 }
 
 export function ImageHealthCheckDialog({ products, productImages, onEditProduct }: ImageHealthCheckDialogProps) {
