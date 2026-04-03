@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScanSearch, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { ScanSearch, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
