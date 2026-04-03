@@ -153,6 +153,10 @@ const Admin = () => {
                 const product = products?.find(p => p.id === productId);
                 if (product) setEditingProduct(product);
               }}
+              onImagesRemoved={() => {
+                queryClient.invalidateQueries({ queryKey: ["products"] });
+                queryClient.invalidateQueries({ queryKey: ["product_images"] });
+              }}
             />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
