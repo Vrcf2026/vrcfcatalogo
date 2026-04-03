@@ -36,9 +36,10 @@ interface ImageHealthCheckDialogProps {
   onImagesRemoved?: () => void;
 }
 
-export function ImageHealthCheckDialog({ products, productImages, onEditProduct }: ImageHealthCheckDialogProps) {
+export function ImageHealthCheckDialog({ products, productImages, onEditProduct, onImagesRemoved }: ImageHealthCheckDialogProps) {
   const [open, setOpen] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [results, setResults] = useState<CheckResult[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
