@@ -75,6 +75,7 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onCli
 
   return (
     <div
+      ref={ref}
       className={`group product-card-shadow rounded-xl bg-card overflow-hidden cursor-pointer ${featured && !isAdmin ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-border'}`}
       onClick={isAdmin ? onEdit : onClick}
     >
