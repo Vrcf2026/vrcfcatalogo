@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, forwardRef } from "react";
 import { Package, ImageOff, Pencil, ShoppingCart, Minus, Plus, Star, BookOpen } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ interface ProductCardProps {
   isAdmin?: boolean;
 }
 
-export function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick, featured, includeInCatalog }: ProductCardProps & { onClick?: () => void }) {
+export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onClick?: () => void }>(function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick, featured, includeInCatalog }, ref) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const queryClient = useQueryClient();
@@ -75,6 +75,7 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
 
   return (
     <div
+      ref={ref}
       className={`group product-card-shadow rounded-xl bg-card overflow-hidden cursor-pointer ${featured && !isAdmin ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-border'}`}
       onClick={isAdmin ? onEdit : onClick}
     >
@@ -202,4 +203,4 @@ export function ProductCard({ id, name, description, category, price, imageUrl, 
       </div>
     </div>
   );
-}
+});
