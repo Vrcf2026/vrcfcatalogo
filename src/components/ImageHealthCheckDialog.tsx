@@ -182,7 +182,17 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct 
                           <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                         )}
                         <div className="flex-1 min-w-0 space-y-1">
-                          <p className="text-sm font-medium truncate">{r.productName}</p>
+                          <button
+                            className="text-sm font-medium truncate text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                            onClick={() => {
+                              if (onEditProduct) {
+                                setOpen(false);
+                                onEditProduct(r.productId);
+                              }
+                            }}
+                          >
+                            {r.productName}
+                          </button>
                           <p className="text-xs text-muted-foreground">
                             {r.source === "principal" ? "Imagem principal" : "Galeria"} —{" "}
                             {r.status === "broken" ? "Inacessível" : `Lenta (${(r.timeMs! / 1000).toFixed(1)}s)`}
