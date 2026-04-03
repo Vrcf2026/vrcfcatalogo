@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScanSearch, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink } from "lucide-react";
+import { ScanSearch, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -31,11 +33,13 @@ interface ImageHealthCheckDialogProps {
   products: Product[];
   productImages: ProductImage[];
   onEditProduct?: (productId: string) => void;
+  onImagesRemoved?: () => void;
 }
 
-export function ImageHealthCheckDialog({ products, productImages, onEditProduct }: ImageHealthCheckDialogProps) {
+export function ImageHealthCheckDialog({ products, productImages, onEditProduct, onImagesRemoved }: ImageHealthCheckDialogProps) {
   const [open, setOpen] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [results, setResults] = useState<CheckResult[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
@@ -102,6 +106,37 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct 
     }
 
     setChecking(false);
+  };
+
+  const handleRemoveAllBroken = async () => {
+    if (!confirm(`Tens a certeza que queres remover ${broken.length} imagem(ns) quebrada(s)? Esta ação não pode ser revertida.`)) return;
+    
+    setRemoving(true);
+    try {
+      // Separate principal images and gallery images
+      const principalBroken = broken.filter(r => r.source === "principal");
+      const galleryBroken = broken.filter(r => r.source === "galeria");
+
+      // Clear principal image_url (set to null)
+      for (const item of principalBroken) {
+        await supabase.from("products").update({ image_url: null }).eq("id", item.productId);
+      }
+
+      // Delete gallery images
+      if (galleryBroken.length > 0) {
+        const galleryUrls = galleryBroken.map(r => r.imageUrl);
+        await supabase.from("product_images").delete().in("image_url", galleryUrls);
+      }
+
+      // Remove broken from results
+      setResults(prev => prev.filter(r => r.status !== "broken"));
+      toast.success(`${broken.length} imagem(ns) quebrada(s) removida(s) com sucesso`);
+      onImagesRemoved?.();
+    } catch (error) {
+      toast.error("Erro ao remover imagens quebradas");
+    } finally {
+      setRemoving(false);
+    }
   };
 
   const broken = results.filter((r) => r.status === "broken");
@@ -221,7 +256,19 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct 
                 </div>
               )}
 
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-2">
+                {broken.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleRemoveAllBroken}
+                    disabled={removing}
+                    className="gap-1.5"
+                  >
+                    {removing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    Remover {broken.length} quebrada{broken.length !== 1 ? "s" : ""}
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={runCheck} className="gap-1.5">
                   <ScanSearch className="h-3.5 w-3.5" />
                   Verificar novamente

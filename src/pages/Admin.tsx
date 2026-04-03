@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { AddProductDialog } from "@/components/AddProductDialog";
@@ -26,6 +26,7 @@ const Admin = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const handleLogout = async () => {
     await signOut();
@@ -152,6 +153,10 @@ const Admin = () => {
               onEditProduct={(productId) => {
                 const product = products?.find(p => p.id === productId);
                 if (product) setEditingProduct(product);
+              }}
+              onImagesRemoved={() => {
+                queryClient.invalidateQueries({ queryKey: ["products"] });
+                queryClient.invalidateQueries({ queryKey: ["product_images"] });
               }}
             />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
