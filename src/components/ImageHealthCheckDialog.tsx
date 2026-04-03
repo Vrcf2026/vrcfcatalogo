@@ -33,7 +33,7 @@ interface ImageHealthCheckDialogProps {
   onEditProduct?: (productId: string) => void;
 }
 
-export function ImageHealthCheckDialog({ products, productImages }: ImageHealthCheckDialogProps) {
+export function ImageHealthCheckDialog({ products, productImages, onEditProduct }: ImageHealthCheckDialogProps) {
   const [open, setOpen] = useState(false);
   const [checking, setChecking] = useState(false);
   const [results, setResults] = useState<CheckResult[]>([]);
