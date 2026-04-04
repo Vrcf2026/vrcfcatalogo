@@ -142,10 +142,10 @@ const Catalogos = () => {
       <header className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="flex items-center justify-between px-4 py-2">
           <Link to="/" className="flex items-center gap-2">
-            <img src={vrcfLogo} alt="VRCF" className="h-10 w-auto object-contain drop-shadow-md" />
+            <img src={vrcfLogo} alt="VRCF" className="h-20 w-auto object-contain drop-shadow-md" />
             <div>
-              <h1 className="font-heading text-lg font-bold text-foreground leading-tight">VRCF</h1>
-              <p className="text-[9px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
+              <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
+              <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
             </div>
           </Link>
           <div className="text-center">
