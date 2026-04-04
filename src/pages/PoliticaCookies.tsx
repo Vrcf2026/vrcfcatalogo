@@ -9,7 +9,7 @@ const PoliticaCookies = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img src={vrcfLogo} alt="VRCF Logo" className="h-14 w-auto" />
+            <img src={vrcfLogo} alt="VRCF Logo" className="h-16 w-auto drop-shadow-md" />
           </div>
           <Link to="/">
             <Button variant="outline" size="sm" className="gap-1.5">

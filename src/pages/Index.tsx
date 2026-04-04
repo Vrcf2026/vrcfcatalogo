@@ -310,7 +310,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <img src={vrcfLogo} alt="VRCF Logo" className="h-14 w-auto" />
+              <img src={vrcfShield} alt="VRCF" className="h-12 w-auto" />
               <div>
                 <p className="font-heading font-bold text-sm">VRCF - Informática & Segurança</p>
                 <p className="text-xs text-accent-foreground/70">Tecnologia e Segurança ao Seu Alcance</p>
