@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import vrcfShield from "@/assets/vrcf-shield.png";
 
 const WHATSAPP_NUMBER = "351911564243";
 
