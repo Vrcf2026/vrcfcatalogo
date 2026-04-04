@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import { Package, Loader2, BookOpen, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductFilters } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import vrcfShield from "@/assets/vrcf-shield.png";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
