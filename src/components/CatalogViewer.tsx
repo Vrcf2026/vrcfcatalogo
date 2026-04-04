@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import vrcfShield from "@/assets/vrcf-shield.png";
 
 const WHATSAPP_NUMBER = "351911564243";
 
@@ -204,8 +205,8 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
       <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.accent }} />
 
       <div className="h-full flex flex-col items-center justify-center relative z-10 px-8">
-        {/* Always show VRCF logo on contacts page */}
-        <img src={vrcfLogo} alt="VRCF" className="h-40 w-40 object-contain drop-shadow-lg mb-6" />
+        {/* Shield icon on contacts page */}
+        <img src={vrcfShield} alt="VRCF" className="h-40 w-40 object-contain drop-shadow-lg mb-6" />
 
         <h2 className="font-heading text-2xl font-bold text-white mb-1">VRCF</h2>
         <p className="text-white/50 text-xs tracking-[0.3em] uppercase mb-8">Informática & Segurança</p>
