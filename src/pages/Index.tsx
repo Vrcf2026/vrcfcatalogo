@@ -143,11 +143,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img src={vrcfLogo} alt="VRCF Logo" className="h-12 w-auto drop-shadow-md" />
-            <div className="hidden sm:block">
-              <p className="font-heading font-bold text-sm text-foreground leading-tight">VRCF</p>
-              <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
-            </div>
+            <img src={vrcfLogo} alt="VRCF Logo" className="h-14 sm:h-20 w-auto drop-shadow-md" />
           </div>
           <div className="flex items-center gap-3">
             <Link to="/catalogos" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
