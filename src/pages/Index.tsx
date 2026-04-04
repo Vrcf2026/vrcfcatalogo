@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import { Package, Loader2, BookOpen, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductFilters } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import vrcfShield from "@/assets/vrcf-shield.png";
 import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -142,7 +143,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
-            <img src={vrcfLogo} alt="VRCF Logo" className="h-14 w-auto" />
+            <img src={vrcfLogo} alt="VRCF Logo" className="h-16 w-auto drop-shadow-md" />
           </div>
           <div className="flex items-center gap-3">
             <Link to="/catalogos" className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors">
@@ -309,7 +310,7 @@ const Index = () => {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <img src={vrcfLogo} alt="VRCF Logo" className="h-14 w-auto" />
+              <img src={vrcfShield} alt="VRCF" className="h-12 w-auto" />
               <div>
                 <p className="font-heading font-bold text-sm">VRCF - Informática & Segurança</p>
                 <p className="text-xs text-accent-foreground/70">Tecnologia e Segurança ao Seu Alcance</p>
