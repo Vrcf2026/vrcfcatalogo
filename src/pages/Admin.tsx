@@ -13,8 +13,10 @@ import { ImageHealthCheckDialog } from "@/components/ImageHealthCheckDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Search, ShieldCheck, Package, Loader2, LogOut } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, ShieldCheck, Package, Loader2, LogOut, Trash2, CheckSquare, Square, XSquare } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
