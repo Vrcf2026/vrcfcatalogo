@@ -29,6 +29,12 @@ interface CheckResult {
   timeMs?: number;
 }
 
+interface IncompleteProduct {
+  productId: string;
+  productName: string;
+  imageCount: number;
+}
+
 interface ImageHealthCheckDialogProps {
   products: Product[];
   productImages: ProductImage[];
