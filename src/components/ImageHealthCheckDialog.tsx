@@ -47,6 +47,7 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
   const [checking, setChecking] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [results, setResults] = useState<CheckResult[]>([]);
+  const [incompleteProducts, setIncompleteProducts] = useState<IncompleteProduct[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
   const checkImage = (url: string): Promise<{ status: "ok" | "broken" | "slow"; timeMs: number }> => {
