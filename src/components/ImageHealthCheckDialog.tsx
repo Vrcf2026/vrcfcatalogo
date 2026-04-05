@@ -75,6 +75,7 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
   const runCheck = async () => {
     setChecking(true);
     setResults([]);
+    setIncompleteProducts([]);
 
     const productMap = Object.fromEntries(products.map((p) => [p.id, p.name]));
 
