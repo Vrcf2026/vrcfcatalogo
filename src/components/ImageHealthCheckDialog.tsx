@@ -113,6 +113,16 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
       setProgress({ done: Math.min(i + 5, toCheck.length), total: toCheck.length });
     }
 
+    // Detect products with fewer than 3 gallery images
+    const imageCountByProduct: Record<string, number> = {};
+    for (const img of productImages) {
+      imageCountByProduct[img.product_id] = (imageCountByProduct[img.product_id] || 0) + 1;
+    }
+    const incomplete: IncompleteProduct[] = products
+      .filter((p) => (imageCountByProduct[p.id] || 0) < 3)
+      .map((p) => ({ productId: p.id, productName: p.name, imageCount: imageCountByProduct[p.id] || 0 }));
+    setIncompleteProducts(incomplete);
+
     setChecking(false);
   };
 
