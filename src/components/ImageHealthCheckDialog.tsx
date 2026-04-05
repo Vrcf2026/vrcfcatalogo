@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScanSearch, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Trash2 } from "lucide-react";
+import { ScanSearch, Loader2, CheckCircle2, XCircle, AlertTriangle, ExternalLink, Trash2, ImageOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -29,6 +29,12 @@ interface CheckResult {
   timeMs?: number;
 }
 
+interface IncompleteProduct {
+  productId: string;
+  productName: string;
+  imageCount: number;
+}
+
 interface ImageHealthCheckDialogProps {
   products: Product[];
   productImages: ProductImage[];
@@ -41,6 +47,7 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
   const [checking, setChecking] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [results, setResults] = useState<CheckResult[]>([]);
+  const [incompleteProducts, setIncompleteProducts] = useState<IncompleteProduct[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
   const checkImage = (url: string): Promise<{ status: "ok" | "broken" | "slow"; timeMs: number }> => {
@@ -68,6 +75,7 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
   const runCheck = async () => {
     setChecking(true);
     setResults([]);
+    setIncompleteProducts([]);
 
     const productMap = Object.fromEntries(products.map((p) => [p.id, p.name]));
 
@@ -104,6 +112,16 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
       setResults([...allResults]);
       setProgress({ done: Math.min(i + 5, toCheck.length), total: toCheck.length });
     }
+
+    // Detect products with fewer than 3 gallery images
+    const imageCountByProduct: Record<string, number> = {};
+    for (const img of productImages) {
+      imageCountByProduct[img.product_id] = (imageCountByProduct[img.product_id] || 0) + 1;
+    }
+    const incomplete: IncompleteProduct[] = products
+      .filter((p) => (imageCountByProduct[p.id] || 0) < 3)
+      .map((p) => ({ productId: p.id, productName: p.name, imageCount: imageCountByProduct[p.id] || 0 }));
+    setIncompleteProducts(incomplete);
 
     setChecking(false);
   };
@@ -190,7 +208,7 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
           {!checking && results.length > 0 && (
             <>
               {/* Summary */}
-              <div className="flex gap-3 justify-center">
+               <div className="flex gap-3 justify-center flex-wrap">
                 <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                   {ok.length} OK
@@ -202,6 +220,10 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
                 <Badge variant={broken.length > 0 ? "destructive" : "outline"} className="gap-1.5 py-1.5 px-3">
                   <XCircle className="h-3.5 w-3.5" />
                   {broken.length} Quebradas
+                </Badge>
+                <Badge variant={incompleteProducts.length > 0 ? "secondary" : "outline"} className="gap-1.5 py-1.5 px-3">
+                  <ImageOff className="h-3.5 w-3.5 text-blue-500" />
+                  {incompleteProducts.length} Incompletas
                 </Badge>
               </div>
 
@@ -249,10 +271,42 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
                 </ScrollArea>
               )}
 
-              {broken.length === 0 && slow.length === 0 && (
+              {/* Incomplete images list */}
+              {incompleteProducts.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <ImageOff className="h-3.5 w-3.5 text-blue-500" />
+                    Produtos com menos de 3 imagens na galeria
+                  </p>
+                  <ScrollArea className="max-h-[200px]">
+                    <div className="space-y-1.5">
+                      {incompleteProducts.map((p) => (
+                        <div key={p.productId} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 border border-border">
+                          <button
+                            className="text-sm font-medium truncate text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                            onClick={() => {
+                              if (onEditProduct) {
+                                setOpen(false);
+                                onEditProduct(p.productId);
+                              }
+                            }}
+                          >
+                            {p.productName}
+                          </button>
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            {p.imageCount}/3
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {broken.length === 0 && slow.length === 0 && incompleteProducts.length === 0 && (
                 <div className="text-center py-4">
                   <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Todas as imagens estão OK!</p>
+                  <p className="text-sm font-medium text-foreground">Todas as imagens estão OK e completas!</p>
                 </div>
               )}
 
