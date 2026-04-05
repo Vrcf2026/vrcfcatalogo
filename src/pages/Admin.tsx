@@ -121,6 +121,59 @@ const Admin = () => {
     const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
     return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
   });
+  const filteredIds = useMemo(() => new Set(filtered?.map(p => p.id) || []), [filtered]);
+  
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!filtered) return;
+    const allSelected = filtered.every(p => selectedIds.has(p.id));
+    if (allSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        filtered.forEach(p => next.delete(p.id));
+        return next;
+      });
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        filtered.forEach(p => next.add(p.id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (!count) return;
+    if (!confirm(`Tens a certeza que queres apagar ${count} produto(s)? Esta ação não pode ser revertida.`)) return;
+    
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      // Delete gallery images first
+      await supabase.from("product_images").delete().in("product_id", ids);
+      // Delete products
+      const { error } = await supabase.from("products").delete().in("id", ids);
+      if (error) throw error;
+      
+      toast.success(`${count} produto(s) apagado(s) com sucesso`);
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product_images"] });
+    } catch (error) {
+      toast.error("Erro ao apagar produtos");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const categoryNames = dbCategories.map((c) => c.name);
   const visibleFamilies = families.filter((f) => (categoryFilter === "all" || f.category === categoryFilter) && (brandFilter === "all" || products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter)));
