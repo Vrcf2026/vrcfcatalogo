@@ -13,8 +13,10 @@ import { ImageHealthCheckDialog } from "@/components/ImageHealthCheckDialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { Search, ShieldCheck, Package, Loader2, LogOut } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Search, ShieldCheck, Package, Loader2, LogOut, Trash2, CheckSquare, Square, XSquare } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
@@ -24,6 +26,9 @@ const Admin = () => {
   const [familyFilter, setFamilyFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -116,6 +121,59 @@ const Admin = () => {
     const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
     return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
   });
+  const filteredIds = useMemo(() => new Set(filtered?.map(p => p.id) || []), [filtered]);
+  
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!filtered) return;
+    const allSelected = filtered.every(p => selectedIds.has(p.id));
+    if (allSelected) {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        filtered.forEach(p => next.delete(p.id));
+        return next;
+      });
+    } else {
+      setSelectedIds(prev => {
+        const next = new Set(prev);
+        filtered.forEach(p => next.add(p.id));
+        return next;
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const count = selectedIds.size;
+    if (!count) return;
+    if (!confirm(`Tens a certeza que queres apagar ${count} produto(s)? Esta ação não pode ser revertida.`)) return;
+    
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      // Delete gallery images first
+      await supabase.from("product_images").delete().in("product_id", ids);
+      // Delete products
+      const { error } = await supabase.from("products").delete().in("id", ids);
+      if (error) throw error;
+      
+      toast.success(`${count} produto(s) apagado(s) com sucesso`);
+      setSelectedIds(new Set());
+      setSelectionMode(false);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product_images"] });
+    } catch (error) {
+      toast.error("Erro ao apagar produtos");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const categoryNames = dbCategories.map((c) => c.name);
   const visibleFamilies = families.filter((f) => (categoryFilter === "all" || f.category === categoryFilter) && (brandFilter === "all" || products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter)));
@@ -214,6 +272,38 @@ const Admin = () => {
       </section>
 
       <section className="container mx-auto px-4 pb-16">
+        {/* Selection toolbar */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Button
+            variant={selectionMode ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              setSelectionMode(!selectionMode);
+              if (selectionMode) setSelectedIds(new Set());
+            }}
+          >
+            {selectionMode ? <XSquare className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            {selectionMode ? "Cancelar" : "Selecionar"}
+          </Button>
+          {selectionMode && (
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={toggleSelectAll}>
+                {filtered && filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))
+                  ? <><Square className="h-4 w-4" /> Desselecionar todos</>
+                  : <><CheckSquare className="h-4 w-4" /> Selecionar todos ({filtered?.length || 0})</>
+                }
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={handleBulkDelete} disabled={deleting}>
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Apagar {selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -221,21 +311,35 @@ const Admin = () => {
         ) : filtered && filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filtered.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                description={product.description}
-                category={product.category}
-                price={product.price}
-                imageUrl={product.image_url}
-                images={imagesByProduct[product.id] || []}
-                familyName={product.family_id ? familyMap[product.family_id] || null : null}
-                featured={product.featured}
-                includeInCatalog={product.include_in_catalog}
-                onEdit={() => setEditingProduct(product)}
-                isAdmin
-              />
+              <div key={product.id} className="relative">
+                {selectionMode && (
+                  <div
+                    className="absolute top-2 left-2 z-20 cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(product.id); }}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(product.id)}
+                      className="h-5 w-5 bg-background/80 backdrop-blur-sm border-2"
+                    />
+                  </div>
+                )}
+                <div className={selectionMode && selectedIds.has(product.id) ? "ring-2 ring-primary rounded-lg" : ""}>
+                  <ProductCard
+                    id={product.id}
+                    name={product.name}
+                    description={product.description}
+                    category={product.category}
+                    price={product.price}
+                    imageUrl={product.image_url}
+                    images={imagesByProduct[product.id] || []}
+                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                    featured={product.featured}
+                    includeInCatalog={product.include_in_catalog}
+                    onEdit={() => !selectionMode && setEditingProduct(product)}
+                    isAdmin
+                  />
+                </div>
+              </div>
             ))}
           </div>
         ) : (
