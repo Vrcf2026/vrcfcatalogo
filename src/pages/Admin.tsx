@@ -26,6 +26,9 @@ const Admin = () => {
   const [familyFilter, setFamilyFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { signOut, user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
