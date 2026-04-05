@@ -272,6 +272,38 @@ const Admin = () => {
       </section>
 
       <section className="container mx-auto px-4 pb-16">
+        {/* Selection toolbar */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Button
+            variant={selectionMode ? "default" : "outline"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => {
+              setSelectionMode(!selectionMode);
+              if (selectionMode) setSelectedIds(new Set());
+            }}
+          >
+            {selectionMode ? <XSquare className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            {selectionMode ? "Cancelar" : "Selecionar"}
+          </Button>
+          {selectionMode && (
+            <>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={toggleSelectAll}>
+                {filtered && filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))
+                  ? <><Square className="h-4 w-4" /> Desselecionar todos</>
+                  : <><CheckSquare className="h-4 w-4" /> Selecionar todos ({filtered?.length || 0})</>
+                }
+              </Button>
+              {selectedIds.size > 0 && (
+                <Button variant="destructive" size="sm" className="gap-1.5" onClick={handleBulkDelete} disabled={deleting}>
+                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  Apagar {selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+
         {isLoading ? (
           <div className="flex justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -279,21 +311,35 @@ const Admin = () => {
         ) : filtered && filtered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filtered.map((product) => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                description={product.description}
-                category={product.category}
-                price={product.price}
-                imageUrl={product.image_url}
-                images={imagesByProduct[product.id] || []}
-                familyName={product.family_id ? familyMap[product.family_id] || null : null}
-                featured={product.featured}
-                includeInCatalog={product.include_in_catalog}
-                onEdit={() => setEditingProduct(product)}
-                isAdmin
-              />
+              <div key={product.id} className="relative">
+                {selectionMode && (
+                  <div
+                    className="absolute top-2 left-2 z-20 cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(product.id); }}
+                  >
+                    <Checkbox
+                      checked={selectedIds.has(product.id)}
+                      className="h-5 w-5 bg-background/80 backdrop-blur-sm border-2"
+                    />
+                  </div>
+                )}
+                <div className={selectionMode && selectedIds.has(product.id) ? "ring-2 ring-primary rounded-lg" : ""}>
+                  <ProductCard
+                    id={product.id}
+                    name={product.name}
+                    description={product.description}
+                    category={product.category}
+                    price={product.price}
+                    imageUrl={product.image_url}
+                    images={imagesByProduct[product.id] || []}
+                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                    featured={product.featured}
+                    includeInCatalog={product.include_in_catalog}
+                    onEdit={() => !selectionMode && setEditingProduct(product)}
+                    isAdmin
+                  />
+                </div>
+              </div>
             ))}
           </div>
         ) : (
