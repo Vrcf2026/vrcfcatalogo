@@ -208,7 +208,7 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
           {!checking && results.length > 0 && (
             <>
               {/* Summary */}
-              <div className="flex gap-3 justify-center">
+               <div className="flex gap-3 justify-center flex-wrap">
                 <Badge variant="outline" className="gap-1.5 py-1.5 px-3">
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                   {ok.length} OK
@@ -220,6 +220,10 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
                 <Badge variant={broken.length > 0 ? "destructive" : "outline"} className="gap-1.5 py-1.5 px-3">
                   <XCircle className="h-3.5 w-3.5" />
                   {broken.length} Quebradas
+                </Badge>
+                <Badge variant={incompleteProducts.length > 0 ? "secondary" : "outline"} className="gap-1.5 py-1.5 px-3">
+                  <ImageOff className="h-3.5 w-3.5 text-blue-500" />
+                  {incompleteProducts.length} Incompletas
                 </Badge>
               </div>
 
