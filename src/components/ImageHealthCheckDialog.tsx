@@ -271,10 +271,42 @@ export function ImageHealthCheckDialog({ products, productImages, onEditProduct,
                 </ScrollArea>
               )}
 
-              {broken.length === 0 && slow.length === 0 && (
+              {/* Incomplete images list */}
+              {incompleteProducts.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <ImageOff className="h-3.5 w-3.5 text-blue-500" />
+                    Produtos com menos de 3 imagens na galeria
+                  </p>
+                  <ScrollArea className="max-h-[200px]">
+                    <div className="space-y-1.5">
+                      {incompleteProducts.map((p) => (
+                        <div key={p.productId} className="flex items-center justify-between p-2 rounded-lg bg-secondary/50 border border-border">
+                          <button
+                            className="text-sm font-medium truncate text-left hover:text-primary hover:underline transition-colors cursor-pointer"
+                            onClick={() => {
+                              if (onEditProduct) {
+                                setOpen(false);
+                                onEditProduct(p.productId);
+                              }
+                            }}
+                          >
+                            {p.productName}
+                          </button>
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            {p.imageCount}/3
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {broken.length === 0 && slow.length === 0 && incompleteProducts.length === 0 && (
                 <div className="text-center py-4">
                   <CheckCircle2 className="h-10 w-10 text-green-600 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground">Todas as imagens estão OK!</p>
+                  <p className="text-sm font-medium text-foreground">Todas as imagens estão OK e completas!</p>
                 </div>
               )}
 
