@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
-import { KilomatCatalogViewer } from "@/components/KilomatCatalogViewer";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
@@ -91,7 +91,7 @@ const Catalogos = () => {
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
-  const categories = dynamicCategories.includes("Kilomat") ? dynamicCategories : [...dynamicCategories, "Kilomat"];
+  const categories = dynamicCategories.filter((c) => c !== "Kilomat");
   const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
 
   const handleBack = () => { setSelectedCategory(null); setSelectedBrand(null); };
@@ -124,7 +124,7 @@ const Catalogos = () => {
     );
   }
 
-  if (selectedCategory === "Kilomat") return <KilomatCatalogViewer onBack={handleBack} />;
+  
 
   if (selectedCategory) {
     const categoryProducts = catalogProducts.filter((p) => p.category === selectedCategory);
