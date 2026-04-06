@@ -37,6 +37,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
   const allBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
+  const featuredProducts = products.filter((p) => p.featured && p.include_in_catalog);
 
   const publishedUrl = "https://vrcfcatalogo.lovable.app";
 
