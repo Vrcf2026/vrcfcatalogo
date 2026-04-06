@@ -37,6 +37,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
   const allBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
+  const featuredProducts = products.filter((p) => p.featured && p.include_in_catalog);
 
   const publishedUrl = "https://vrcfcatalogo.lovable.app";
 
@@ -151,15 +152,67 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
           </div>
 
           <Tabs defaultValue="categories" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="categories">Por Categoria</TabsTrigger>
-              <TabsTrigger value="brands">Por Marca</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="categories">Categorias</TabsTrigger>
+              <TabsTrigger value="brands">Marcas</TabsTrigger>
+              <TabsTrigger value="hidden">Privados</TabsTrigger>
             </TabsList>
             <TabsContent value="categories" className="mt-3">
               {renderList(categoryItems, "category")}
             </TabsContent>
             <TabsContent value="brands" className="mt-3">
               {renderList(brandItems, "brand")}
+            </TabsContent>
+            <TabsContent value="hidden" className="mt-3">
+              <p className="text-xs text-muted-foreground mb-3">Catálogos acessíveis apenas por link direto — não aparecem no índice público.</p>
+              <div className="space-y-2">
+                {/* Destaques */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">⭐</span>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">Destaques</p>
+                      <p className="text-xs text-muted-foreground">{featuredProducts.length} produtos</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                      navigator.clipboard.writeText(`${publishedUrl}/catalogos/destaques`);
+                      setCopiedLink("__destaques__");
+                      toast.success("Link copiado!");
+                      setTimeout(() => setCopiedLink(null), 2000);
+                    }}>
+                      {copiedLink === "__destaques__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">{copiedLink === "__destaques__" ? "Copiado" : "Link"}</span>
+                    </Button>
+                    <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf("Destaques", featuredProducts)} disabled={downloading === "Destaques"}>
+                      {downloading === "Destaques" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">PDF</span>
+                    </Button>
+                  </div>
+                </div>
+                {/* Kilomat */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/20 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🏷️</span>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">Kilomat</p>
+                      <p className="text-xs text-muted-foreground">Catálogo digitalizado</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                      navigator.clipboard.writeText(`${publishedUrl}/catalogos/kilomat`);
+                      setCopiedLink("__kilomat__");
+                      toast.success("Link copiado!");
+                      setTimeout(() => setCopiedLink(null), 2000);
+                    }}>
+                      {copiedLink === "__kilomat__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                      <span className="hidden sm:inline">{copiedLink === "__kilomat__" ? "Copiado" : "Link"}</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </DialogContent>
