@@ -89,6 +89,7 @@ const Catalogos = () => {
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
   const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
 
+  const catalogProducts = products.filter((p) => p.include_in_catalog);
   const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
   const categories = dynamicCategories.filter((c) => c !== "Kilomat");
   const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
