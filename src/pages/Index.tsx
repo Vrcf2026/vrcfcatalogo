@@ -144,10 +144,6 @@ const Index = () => {
         <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-4">
           <img src={vrcfLogo} alt="VRCF Logo" className="h-10 sm:h-20 w-auto drop-shadow-md" />
           <div className="flex items-center gap-2 sm:gap-3">
-            <Link to="/catalogos" className="flex items-center gap-1 text-xs sm:text-sm font-medium text-primary hover:text-primary/80 transition-colors">
-              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Catálogos
-            </Link>
             <Button variant="outline" size="sm" className="relative gap-1 sm:gap-1.5 text-xs sm:text-sm h-8 sm:h-9 px-2.5 sm:px-3" onClick={() => setIsOpen(true)}>
               <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Orçamento
