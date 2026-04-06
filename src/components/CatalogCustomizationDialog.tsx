@@ -143,6 +143,19 @@ export function CatalogCustomizationDialog({ categories, brands }: CatalogCustom
               />
             ))}
           </TabsContent>
+
+          <TabsContent value="special" className="space-y-4">
+            <p className="text-xs text-muted-foreground">Personaliza o logo e capa dos catálogos privados.</p>
+            <CustomizationRow
+              label="Destaques"
+              type="category"
+              name="Destaques"
+              customization={getCustomization("category", "Destaques")}
+              uploading={uploading}
+              onUpload={handleUpload}
+              onRemove={handleRemove}
+            />
+          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
