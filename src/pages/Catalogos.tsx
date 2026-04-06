@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { BookOpen } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
-import { KilomatCatalogViewer } from "@/components/KilomatCatalogViewer";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
