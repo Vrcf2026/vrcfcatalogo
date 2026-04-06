@@ -106,9 +106,10 @@ export function CatalogCustomizationDialog({ categories, brands }: CatalogCustom
         </DialogHeader>
 
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="categories">Categorias</TabsTrigger>
             <TabsTrigger value="brands">Marcas</TabsTrigger>
+            <TabsTrigger value="special">Privados</TabsTrigger>
           </TabsList>
 
           <TabsContent value="categories" className="space-y-4">
