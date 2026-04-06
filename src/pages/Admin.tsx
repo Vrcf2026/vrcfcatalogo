@@ -219,6 +219,7 @@ const Admin = () => {
               }}
             />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
+            <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
             </Button>
