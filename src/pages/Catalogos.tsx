@@ -124,7 +124,7 @@ const Catalogos = () => {
     );
   }
 
-  if (selectedCategory === "Kilomat") return <KilomatCatalogViewer onBack={handleBack} />;
+  
 
   if (selectedCategory) {
     const categoryProducts = catalogProducts.filter((p) => p.category === selectedCategory);
