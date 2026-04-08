@@ -670,6 +670,7 @@ export function CatalogViewer({
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          trackEvent(product.id, "catalog_view");
                                           setSelectedProduct({
                                             name: product.name, description: product.description,
                                             category: product.category, price: product.price,
