@@ -83,6 +83,27 @@ export type Database = {
         }
         Relationships: []
       }
+      product_analytics: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          product_id?: string
+        }
+        Relationships: []
+      }
       product_families: {
         Row: {
           category: string

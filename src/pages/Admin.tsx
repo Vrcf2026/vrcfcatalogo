@@ -10,6 +10,7 @@ import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { CatalogManagerDialog } from "@/components/CatalogManagerDialog";
 import { CatalogCustomizationDialog } from "@/components/CatalogCustomizationDialog";
 import { ImageHealthCheckDialog } from "@/components/ImageHealthCheckDialog";
+import { AdminDashboard } from "@/components/AdminDashboard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -226,6 +227,15 @@ const Admin = () => {
           </div>
         </div>
       </header>
+
+      <section className="container mx-auto px-4 py-6">
+        <AdminDashboard
+          products={products || []}
+          productImages={productImages}
+          categories={categoryNames}
+          brands={brands}
+        />
+      </section>
 
       <section className="container mx-auto px-4 py-8">
         <div className="flex flex-col sm:flex-row gap-3 max-w-3xl mx-auto flex-wrap">
