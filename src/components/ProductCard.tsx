@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { trackEvent } from "@/lib/trackEvent";
 
 function ProductImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -79,7 +80,7 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onCli
     <div
       ref={ref}
       className={`group product-card-shadow rounded-xl bg-card overflow-hidden cursor-pointer ${featured && !isAdmin ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-border'}`}
-      onClick={isAdmin ? onEdit : onClick}
+      onClick={() => { if (isAdmin) { onEdit?.(); } else { trackEvent(id, "click"); onClick?.(); } }}
     >
       <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
         {currentImage ? (
