@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, forwardRef, useEffect } from "react";
+import { trackEvent } from "@/lib/trackEvent";
 import HTMLFlipBook from "react-pageflip";
 import {
   ChevronLeft,
