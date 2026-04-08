@@ -65,7 +65,9 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onCli
   const currentImage = allImages[selectedIndex] || null;
 
   const toggleField = async (field: "featured" | "include_in_catalog", value: boolean) => {
-    const { error } = await supabase.from("products").update({ [field]: value }).eq("id", id);
+    const updateData: any = {};
+    updateData[field] = value;
+    const { error } = await supabase.from("products").update(updateData).eq("id", id);
     if (error) {
       toast.error("Erro ao atualizar produto");
     } else {

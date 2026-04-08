@@ -56,15 +56,19 @@ export function CatalogCustomizationDialog({ categories, brands }: CatalogCustom
       const url = await uploadImage(file, `catalog-custom`);
       const existing = getCustomization(type, name);
       if (existing) {
+        const updateData: Record<string, string> = { updated_at: new Date().toISOString() };
+        updateData[field] = url;
         const { error } = await supabase
           .from("catalog_customizations")
-          .update({ [field]: url, updated_at: new Date().toISOString() })
+          .update(updateData as any)
           .eq("id", existing.id);
         if (error) throw error;
       } else {
+        const insertData: any = { type, reference_name: name };
+        insertData[field] = url;
         const { error } = await supabase
           .from("catalog_customizations")
-          .insert({ type, reference_name: name, [field]: url });
+          .insert(insertData);
         if (error) throw error;
       }
       queryClient.invalidateQueries({ queryKey: ["catalog_customizations"] });
@@ -80,9 +84,11 @@ export function CatalogCustomizationDialog({ categories, brands }: CatalogCustom
     const existing = getCustomization(type, name);
     if (!existing) return;
     try {
+      const updateData: Record<string, string | null> = { updated_at: new Date().toISOString() };
+      updateData[field] = null;
       const { error } = await supabase
         .from("catalog_customizations")
-        .update({ [field]: null, updated_at: new Date().toISOString() })
+        .update(updateData as any)
         .eq("id", existing.id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["catalog_customizations"] });
