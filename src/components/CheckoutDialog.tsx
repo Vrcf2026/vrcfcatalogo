@@ -9,6 +9,7 @@ import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Send, CheckCircle, Plus, Trash2 } from "lucide-react";
+import { trackEvent } from "@/lib/trackEvent";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -103,6 +104,8 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       if (fnError) throw fnError;
 
       setSuccess(true);
+      // Track quote events for analytics
+      items.forEach((item) => trackEvent(item.id, "quote"));
       clearCart();
       setTimeout(() => {
         setSuccess(false);
