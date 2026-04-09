@@ -1,53 +1,85 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, Package, ImageOff, Star, TrendingUp, MousePointerClick, ShoppingCart, Eye } from "lucide-react";
+import { BarChart3, Package, ImageOff, Star, MousePointerClick, ShoppingCart, Eye, Trash2, CalendarDays } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface AdminDashboardProps {
   products: any[];
   productImages: any[];
-  categories: string[];
+  families: { id: string; name: string; category: string }[];
   brands: { id: string; name: string }[];
 }
 
-export function AdminDashboard({ products, productImages, categories, brands }: AdminDashboardProps) {
+export function AdminDashboard({ products, productImages, families, brands }: AdminDashboardProps) {
+  const [dateRange, setDateRange] = useState("all");
+  const [clearing, setClearing] = useState(false);
+  const queryClient = useQueryClient();
+
+  const dateFilter = (() => {
+    const now = new Date();
+    if (dateRange === "7d") return new Date(now.getTime() - 7 * 86400000).toISOString();
+    if (dateRange === "30d") return new Date(now.getTime() - 30 * 86400000).toISOString();
+    if (dateRange === "90d") return new Date(now.getTime() - 90 * 86400000).toISOString();
+    return null;
+  })();
+
   const { data: analytics = [] } = useQuery({
-    queryKey: ["product_analytics"],
+    queryKey: ["product_analytics", dateRange],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      let query = (supabase as any)
         .from("product_analytics")
         .select("product_id, event_type, created_at")
         .order("created_at", { ascending: false })
         .limit(5000);
+      if (dateFilter) {
+        query = query.gte("created_at", dateFilter);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as { product_id: string; event_type: string; created_at: string }[];
     },
   });
+
+  const handleClearAnalytics = async () => {
+    if (!confirm("Tem a certeza que deseja limpar todos os dados de analytics? Esta ação é irreversível.")) return;
+    setClearing(true);
+    try {
+      const { error } = await (supabase as any)
+        .from("product_analytics")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["product_analytics"] });
+      toast.success("Analytics limpos com sucesso");
+    } catch (e: any) {
+      toast.error("Erro ao limpar analytics: " + e.message);
+    } finally {
+      setClearing(false);
+    }
+  };
 
   // Stats
   const totalProducts = products.length;
   const catalogProducts = products.filter((p) => p.include_in_catalog).length;
   const featuredProducts = products.filter((p) => p.featured).length;
   const productsWithoutImage = products.filter((p) => !p.image_url).length;
-  
-  // Images per product
-  const imageCount: Record<string, number> = {};
-  productImages.forEach((img) => {
-    imageCount[img.product_id] = (imageCount[img.product_id] || 0) + 1;
-  });
-  const productsIncomplete = products.filter((p) => (imageCount[p.id] || 0) < 3).length;
 
-  // By category
-  const byCategory: Record<string, number> = {};
+  // By family
+  const familyNameMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
+  const byFamily: Record<string, number> = {};
   products.forEach((p) => {
-    const cat = p.category || "Sem categoria";
-    byCategory[cat] = (byCategory[cat] || 0) + 1;
+    const name = p.family_id ? (familyNameMap[p.family_id] || "Desconhecida") : "Sem família";
+    byFamily[name] = (byFamily[name] || 0) + 1;
   });
 
   // By brand
-  const byBrand: Record<string, number> = {};
   const brandNameMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
+  const byBrand: Record<string, number> = {};
   products.forEach((p) => {
     if (p.brand_id) {
       const name = brandNameMap[p.brand_id] || "Desconhecida";
@@ -87,6 +119,34 @@ export function AdminDashboard({ products, productImages, categories, brands }: 
         <StatCard icon={ShoppingCart} label="Total Orçamentos" value={totalQuotes} color="text-green-500" />
       </div>
 
+      {/* Date filter + Clear */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          <Select value={dateRange} onValueChange={setDateRange}>
+            <SelectTrigger className="w-[160px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todo o período</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="90d">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleClearAnalytics}
+          disabled={clearing}
+          className="gap-1.5"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          {clearing ? "A limpar..." : "Limpar Analytics"}
+        </Button>
+      </div>
+
       {/* Analytics tabs */}
       <Tabs defaultValue="clicks" className="w-full">
         <TabsList className="grid w-full grid-cols-3 max-w-md">
@@ -115,10 +175,10 @@ export function AdminDashboard({ products, productImages, categories, brands }: 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Por Categoria</CardTitle>
+            <CardTitle className="text-sm font-medium">Por Família</CardTitle>
           </CardHeader>
           <CardContent>
-            <DistributionList items={byCategory} total={totalProducts} />
+            <DistributionList items={byFamily} total={totalProducts} />
           </CardContent>
         </Card>
         <Card>

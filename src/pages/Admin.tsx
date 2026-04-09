@@ -232,7 +232,7 @@ const Admin = () => {
         <AdminDashboard
           products={products || []}
           productImages={productImages}
-          categories={categoryNames}
+          families={families}
           brands={brands}
         />
       </section>
