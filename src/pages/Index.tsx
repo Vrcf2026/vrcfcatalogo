@@ -350,6 +350,7 @@ const Index = () => {
       )}
 
       <CartDrawer />
+      <SuggestionButton />
     </div>
   );
 };
