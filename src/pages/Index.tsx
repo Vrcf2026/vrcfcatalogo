@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
+import SuggestionButton from "@/components/SuggestionButton";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
 
