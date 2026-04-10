@@ -32,7 +32,7 @@ interface ProductFiltersProps {
   visibleBrands: Brand[];
 }
 
-export const ProductFilters = forwardRef<ProductFiltersHandle, ProductFiltersProps>(({
+export const ProductFilters = ({
   search,
   onSearchChange,
   categoryFilter,
@@ -46,20 +46,9 @@ export const ProductFilters = forwardRef<ProductFiltersHandle, ProductFiltersPro
   categories,
   visibleFamilies,
   visibleBrands,
-}, ref) => {
+}: ProductFiltersProps) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const isMobile = useIsMobile();
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useImperativeHandle(ref, () => ({
-    focusSearch: () => {
-      searchInputRef.current?.focus();
-      searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    },
-    openFilters: () => {
-      setFiltersOpen(true);
-    },
-  }));
 
   const activeFilterCount = [
     categoryFilter !== "all",
