@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Package, Loader2, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { ProductFilters } from "@/components/ProductFilters";
+import { ProductFilters, type ProductFiltersHandle } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import vrcfShield from "@/assets/vrcf-shield.png";
 import { Link } from "react-router-dom";
@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
 import SuggestionButton from "@/components/SuggestionButton";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
 
