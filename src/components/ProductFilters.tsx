@@ -76,12 +76,7 @@ export const ProductFilters = ({
         <SelectContent>
           <SelectItem value="all">Todas as Categorias</SelectItem>
           {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>
-              <span className="flex items-center gap-2">
-                {getCategoryIcon(cat)}
-                {cat}
-              </span>
-            </SelectItem>
+            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
           ))}
         </SelectContent>
       </Select>
