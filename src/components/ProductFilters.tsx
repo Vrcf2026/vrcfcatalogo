@@ -217,6 +217,4 @@ export const ProductFilters = ({
       </div>
     </section>
   );
-});
-
-ProductFilters.displayName = "ProductFilters";
+};
