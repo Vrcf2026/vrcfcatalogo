@@ -1,10 +1,29 @@
-import { useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useState, useRef, useImperativeHandle, forwardRef } from "react";
+import { Search, SlidersHorizontal, X, Camera, Shield, Wifi, Monitor, Wrench, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  "Videovigilância": <Camera className="h-4 w-4" />,
+  "CCTV": <Camera className="h-4 w-4" />,
+  "Alarmes": <Shield className="h-4 w-4" />,
+  "Segurança": <Shield className="h-4 w-4" />,
+  "Redes": <Wifi className="h-4 w-4" />,
+  "Informática": <Monitor className="h-4 w-4" />,
+  "Acessórios": <Wrench className="h-4 w-4" />,
+};
+
+const getCategoryIcon = (category: string) => {
+  return CATEGORY_ICONS[category] || <Package className="h-4 w-4" />;
+};
+
+export interface ProductFiltersHandle {
+  focusSearch: () => void;
+  openFilters: () => void;
+}
 
 interface Family {
   id: string;
