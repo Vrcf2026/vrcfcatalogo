@@ -354,6 +354,10 @@ const Index = () => {
 
       <CartDrawer />
       <SuggestionButton />
+      <MobileBottomNav
+        onSearchClick={() => filtersRef.current?.focusSearch()}
+        onCategoriesClick={() => filtersRef.current?.openFilters()}
+      />
     </div>
   );
 };
