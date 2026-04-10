@@ -246,4 +246,6 @@ export const ProductFilters = forwardRef<ProductFiltersHandle, ProductFiltersPro
       </div>
     </section>
   );
-};
+});
+
+ProductFilters.displayName = "ProductFilters";
