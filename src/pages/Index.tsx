@@ -27,7 +27,6 @@ const Index = () => {
   const [pageSize, setPageSize] = useState(12);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { totalItems, setIsOpen } = useCart();
-  const filtersRef = useRef<ProductFiltersHandle>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
