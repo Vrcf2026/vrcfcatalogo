@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { Package, Loader2, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { ProductFilters } from "@/components/ProductFilters";
+import { ProductFilters, type ProductFiltersHandle } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import vrcfShield from "@/assets/vrcf-shield.png";
 import { Link } from "react-router-dom";
@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
 import SuggestionButton from "@/components/SuggestionButton";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
 
@@ -26,6 +27,7 @@ const Index = () => {
   const [pageSize, setPageSize] = useState(12);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const { totalItems, setIsOpen } = useCart();
+  const filtersRef = useRef<ProductFiltersHandle>(null);
 
   const { data: products, isLoading } = useQuery({
     queryKey: ["products"],
@@ -141,7 +143,7 @@ const Index = () => {
   const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter) && (familyFilter === "all" || p.family_id === familyFilter)));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16 md:pb-0">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-4">
           <img src={vrcfLogo} alt="VRCF Logo" className="h-10 sm:h-20 w-auto drop-shadow-md" />
@@ -173,6 +175,7 @@ const Index = () => {
       </section>
 
       <ProductFilters
+        ref={filtersRef}
         search={search}
         onSearchChange={(v) => { setSearch(v); setCurrentPage(1); }}
         categoryFilter={categoryFilter}
@@ -351,6 +354,10 @@ const Index = () => {
 
       <CartDrawer />
       <SuggestionButton />
+      <MobileBottomNav
+        onSearchClick={() => filtersRef.current?.focusSearch()}
+        onCategoriesClick={() => filtersRef.current?.openFilters()}
+      />
     </div>
   );
 };

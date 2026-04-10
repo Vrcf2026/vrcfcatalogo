@@ -1,10 +1,29 @@
-import { useState } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useState, useRef, useImperativeHandle, forwardRef } from "react";
+import { Search, SlidersHorizontal, X, Camera, Shield, Wifi, Monitor, Wrench, Package } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  "Videovigilância": <Camera className="h-4 w-4" />,
+  "CCTV": <Camera className="h-4 w-4" />,
+  "Alarmes": <Shield className="h-4 w-4" />,
+  "Segurança": <Shield className="h-4 w-4" />,
+  "Redes": <Wifi className="h-4 w-4" />,
+  "Informática": <Monitor className="h-4 w-4" />,
+  "Acessórios": <Wrench className="h-4 w-4" />,
+};
+
+const getCategoryIcon = (category: string) => {
+  return CATEGORY_ICONS[category] || <Package className="h-4 w-4" />;
+};
+
+export interface ProductFiltersHandle {
+  focusSearch: () => void;
+  openFilters: () => void;
+}
 
 interface Family {
   id: string;
@@ -32,7 +51,7 @@ interface ProductFiltersProps {
   visibleBrands: Brand[];
 }
 
-export const ProductFilters = ({
+export const ProductFilters = forwardRef<ProductFiltersHandle, ProductFiltersProps>(({
   search,
   onSearchChange,
   categoryFilter,
@@ -46,9 +65,20 @@ export const ProductFilters = ({
   categories,
   visibleFamilies,
   visibleBrands,
-}: ProductFiltersProps) => {
+}, ref) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const isMobile = useIsMobile();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focusSearch: () => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    openFilters: () => {
+      setFiltersOpen(true);
+    },
+  }));
 
   const activeFilterCount = [
     categoryFilter !== "all",
@@ -76,7 +106,12 @@ export const ProductFilters = ({
         <SelectContent>
           <SelectItem value="all">Todas as Categorias</SelectItem>
           {categories.map((cat) => (
-            <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            <SelectItem key={cat} value={cat}>
+              <span className="flex items-center gap-2">
+                {getCategoryIcon(cat)}
+                {cat}
+              </span>
+            </SelectItem>
           ))}
         </SelectContent>
       </Select>
@@ -133,6 +168,7 @@ export const ProductFilters = ({
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               placeholder="Pesquisar produtos..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
@@ -216,4 +252,6 @@ export const ProductFilters = ({
       </div>
     </section>
   );
-};
+});
+
+ProductFilters.displayName = "ProductFilters";
