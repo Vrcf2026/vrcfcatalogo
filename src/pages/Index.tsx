@@ -142,7 +142,7 @@ const Index = () => {
   const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter) && (familyFilter === "all" || p.family_id === familyFilter)));
 
   return (
-    <div className="min-h-screen bg-background pb-16 md:pb-0">
+    <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-4">
           <img src={vrcfLogo} alt="VRCF Logo" className="h-10 sm:h-20 w-auto drop-shadow-md" />
