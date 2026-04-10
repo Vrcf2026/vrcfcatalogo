@@ -175,6 +175,7 @@ const Index = () => {
       </section>
 
       <ProductFilters
+        ref={filtersRef}
         search={search}
         onSearchChange={(v) => { setSearch(v); setCurrentPage(1); }}
         categoryFilter={categoryFilter}
