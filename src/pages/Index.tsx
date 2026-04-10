@@ -174,7 +174,6 @@ const Index = () => {
       </section>
 
       <ProductFilters
-        ref={filtersRef}
         search={search}
         onSearchChange={(v) => { setSearch(v); setCurrentPage(1); }}
         categoryFilter={categoryFilter}
@@ -353,10 +352,7 @@ const Index = () => {
 
       <CartDrawer />
       <SuggestionButton />
-      <MobileBottomNav
-        onSearchClick={() => filtersRef.current?.focusSearch()}
-        onCategoriesClick={() => filtersRef.current?.openFilters()}
-      />
+      <ScrollToTopButton />
     </div>
   );
 };
