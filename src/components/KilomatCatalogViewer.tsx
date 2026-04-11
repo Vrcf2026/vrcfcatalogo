@@ -85,9 +85,7 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
       ref={containerRef}
       className="h-screen flex flex-col relative overflow-hidden"
       style={{ backgroundColor: "#1a2e1a" }}
-      onMouseMove={showBars}
       onTouchStart={showBars}
-      onClick={showBars}
     >
       {/* Top bar */}
       <div
