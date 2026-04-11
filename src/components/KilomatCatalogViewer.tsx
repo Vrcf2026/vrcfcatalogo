@@ -165,13 +165,13 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
-          width={isTablet ? 700 : 550}
-          height={isTablet ? 950 : 750}
+          width={bookDimensions.width}
+          height={bookDimensions.height}
           size="stretch"
-          minWidth={isTablet ? 500 : 300}
-          maxWidth={isTablet ? 900 : 1400}
-          minHeight={isTablet ? 650 : 400}
-          maxHeight={isTablet ? 1200 : 1800}
+          minWidth={bookDimensions.minWidth}
+          maxWidth={bookDimensions.maxWidth}
+          minHeight={bookDimensions.minHeight}
+          maxHeight={bookDimensions.maxHeight}
           showCover={true}
           mobileScrollSupport={true}
           onFlip={onFlip}
