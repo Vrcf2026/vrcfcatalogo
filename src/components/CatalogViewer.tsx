@@ -750,6 +750,7 @@ export function CatalogViewer({
         }`}
         style={{ backgroundColor: "rgba(26,26,26,0.9)", backdropFilter: "blur(8px)" }}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+        onMouseLeave={() => { hideTimerRef.current = setTimeout(() => setBarsVisible(false), 1500); }}
       >
         <div className="flex items-center gap-3">
           <span className="text-white/70 text-xs font-medium">{currentPage + 1} / {totalPages}</span>
