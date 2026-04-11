@@ -488,6 +488,7 @@ export function CatalogViewer({
           barsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
         }`}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+        onMouseLeave={() => { hideTimerRef.current = setTimeout(() => setBarsVisible(false), 1500); }}
       >
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors">
           <ChevronLeft className="h-4 w-4" /> Voltar
