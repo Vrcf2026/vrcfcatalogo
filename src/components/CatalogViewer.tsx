@@ -480,9 +480,7 @@ export function CatalogViewer({
       ref={containerRef}
       className="h-screen flex flex-col relative overflow-hidden"
       style={{ backgroundColor: "#2a2a2a" }}
-      onMouseMove={showBars}
       onTouchStart={showBars}
-      onClick={showBars}
     >
       {/* Top bar */}
       <div
