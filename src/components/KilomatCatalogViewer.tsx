@@ -93,6 +93,7 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
           barsVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
         }`}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+        onMouseLeave={() => { hideTimerRef.current = setTimeout(() => setBarsVisible(false), 1500); }}
       >
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors">
           <ChevronLeft className="h-4 w-4" /> Voltar
@@ -181,6 +182,7 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
           barsVisible ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
         }`}
         onMouseEnter={() => { setBarsVisible(true); if (hideTimerRef.current) clearTimeout(hideTimerRef.current); }}
+        onMouseLeave={() => { hideTimerRef.current = setTimeout(() => setBarsVisible(false), 1500); }}
       >
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white/60 hover:text-white hover:bg-white/10" onClick={() => setShowThumbnails(!showThumbnails)}>
