@@ -36,16 +36,44 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
   const [zoom, setZoom] = useState(100);
   const [barsVisible, setBarsVisible] = useState(true);
   const [isTablet, setIsTablet] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [viewportSize, setViewportSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const check = () => setIsTablet(window.innerWidth >= 600 && window.innerWidth <= 1100);
+    const check = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsTablet(w >= 600 && w <= 1100);
+      setIsMobile(w < 600);
+      setViewportSize({ w, h });
+    };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  const bookDimensions = useMemo(() => {
+    const { w, h } = viewportSize;
+    const availH = h - 40;
+    const ratio = 3 / 4;
+
+    if (isMobile) {
+      const pageH = Math.min(availH, h * 0.85);
+      const pageW = Math.floor(pageH * ratio);
+      return { width: pageW, height: Math.floor(pageH), minWidth: 260, maxWidth: w - 20, minHeight: 350, maxHeight: Math.floor(availH) };
+    }
+    if (isTablet) {
+      const pageH = Math.min(availH * 0.92, 1200);
+      const pageW = Math.floor(pageH * ratio);
+      return { width: Math.floor(pageW), height: Math.floor(pageH), minWidth: 400, maxWidth: Math.floor(w * 0.9), minHeight: 500, maxHeight: Math.floor(availH) };
+    }
+    const pageH = Math.min(availH * 0.88, 900);
+    const pageW = Math.floor(pageH * ratio);
+    return { width: pageW, height: Math.floor(pageH), minWidth: 300, maxWidth: 1400, minHeight: 400, maxHeight: 1800 };
+  }, [viewportSize, isTablet, isMobile]);
 
   const showBars = useCallback(() => {
     setBarsVisible(true);
