@@ -91,8 +91,15 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               </div>
             </div>
             <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                const url = type === "category" ? `/catalogos?category=${encodeURIComponent(item.label)}` : `/catalogos?brand=${encodeURIComponent(item.label)}`;
+                window.open(url, "_blank");
+              }}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Abrir</span>
+              </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopyLink(item.label, type)}>
-                {isCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
               </Button>
               <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf(item.key, item.products, item.brandLogo)} disabled={isDownloading}>
