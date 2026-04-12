@@ -220,6 +220,12 @@ const Admin = () => {
               }}
             />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
+            <Link to="/catalogos">
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <BookOpen className="h-4 w-4" />
+                <span className="hidden md:inline">Catálogos</span>
+              </Button>
+            </Link>
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
