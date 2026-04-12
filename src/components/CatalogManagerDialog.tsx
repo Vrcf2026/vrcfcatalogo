@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Download, Link2, Loader2, Check } from "lucide-react";
+import { BookOpen, Download, Link2, Loader2, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { CatalogPdfRenderer } from "./CatalogPdfRenderer";
 
