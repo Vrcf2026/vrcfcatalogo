@@ -15,12 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
-import { Search, ShieldCheck, Package, Loader2, LogOut, Trash2, CheckSquare, Square, XSquare, BookOpen } from "lucide-react";
+import { Search, ShieldCheck, Package, Loader2, LogOut, Trash2, CheckSquare, Square, XSquare } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const Admin = () => {
   const [search, setSearch] = useState("");
@@ -220,12 +220,6 @@ const Admin = () => {
               }}
             />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
-            <Link to="/catalogos">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <BookOpen className="h-4 w-4" />
-                <span className="hidden md:inline">Catálogos</span>
-              </Button>
-            </Link>
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookOpen, Download, Link2, Loader2, Check } from "lucide-react";
+import { BookOpen, Download, Link2, Loader2, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { CatalogPdfRenderer } from "./CatalogPdfRenderer";
 
@@ -91,8 +91,15 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               </div>
             </div>
             <div className="flex items-center gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                const url = type === "category" ? `/catalogos?category=${encodeURIComponent(item.label)}` : `/catalogos?brand=${encodeURIComponent(item.label)}`;
+                window.open(url, "_blank");
+              }}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Abrir</span>
+              </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopyLink(item.label, type)}>
-                {isCopied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
               </Button>
               <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf(item.key, item.products, item.brandLogo)} disabled={isDownloading}>
@@ -176,13 +183,17 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open("/catalogos/destaques", "_blank")}>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Abrir</span>
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/destaques`);
                       setCopiedLink("__destaques__");
                       toast.success("Link copiado!");
                       setTimeout(() => setCopiedLink(null), 2000);
                     }}>
-                      {copiedLink === "__destaques__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                      {copiedLink === "__destaques__" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                       <span className="hidden sm:inline">{copiedLink === "__destaques__" ? "Copiado" : "Link"}</span>
                     </Button>
                     <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf("Destaques", featuredProducts)} disabled={downloading === "Destaques"}>
@@ -201,13 +212,17 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open("/catalogos/kilomat", "_blank")}>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Abrir</span>
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/kilomat`);
                       setCopiedLink("__kilomat__");
                       toast.success("Link copiado!");
                       setTimeout(() => setCopiedLink(null), 2000);
                     }}>
-                      {copiedLink === "__kilomat__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                      {copiedLink === "__kilomat__" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                       <span className="hidden sm:inline">{copiedLink === "__kilomat__" ? "Copiado" : "Link"}</span>
                     </Button>
                   </div>
