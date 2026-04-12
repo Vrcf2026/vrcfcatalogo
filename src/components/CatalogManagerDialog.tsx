@@ -212,13 +212,17 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open("/catalogos/kilomat", "_blank")}>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Abrir</span>
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/kilomat`);
                       setCopiedLink("__kilomat__");
                       toast.success("Link copiado!");
                       setTimeout(() => setCopiedLink(null), 2000);
                     }}>
-                      {copiedLink === "__kilomat__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+                      {copiedLink === "__kilomat__" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                       <span className="hidden sm:inline">{copiedLink === "__kilomat__" ? "Copiado" : "Link"}</span>
                     </Button>
                   </div>
