@@ -148,6 +148,12 @@ const Index = () => {
           <img src={vrcfLogo} alt="VRCF Logo" className="h-10 sm:h-20 w-auto drop-shadow-md" />
           <div className="flex items-center gap-2 sm:gap-3">
             <DarkModeToggle />
+            <Link to="/catalogos">
+              <Button variant="outline" size="sm" className="gap-1 sm:gap-1.5 text-xs sm:text-sm h-8 sm:h-9 px-2.5 sm:px-3">
+                <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Catálogos
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" className="relative gap-1 sm:gap-1.5 text-xs sm:text-sm h-8 sm:h-9 px-2.5 sm:px-3" onClick={() => setIsOpen(true)}>
               <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Orçamento
