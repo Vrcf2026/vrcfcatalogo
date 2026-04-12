@@ -91,13 +91,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                const url = type === "category" ? `/catalogos?category=${encodeURIComponent(item.label)}` : `/catalogos?brand=${encodeURIComponent(item.label)}`;
-                window.open(url, "_blank");
-              }}>
-                <ExternalLink className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Abrir</span>
-              </Button>
+              <a href={type === "category" ? `/catalogos?category=${encodeURIComponent(item.label)}` : `/catalogos?brand=${encodeURIComponent(item.label)}`} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Abrir</span>
+                </Button>
+              </a>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopyLink(item.label, type)}>
                 {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
@@ -183,10 +182,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open("/catalogos/destaques", "_blank")}>
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Abrir</span>
-                    </Button>
+                    <a href="/catalogos/destaques" target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="gap-1.5">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Abrir</span>
+                      </Button>
+                    </a>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/destaques`);
                       setCopiedLink("__destaques__");
@@ -212,10 +213,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.open("/catalogos/kilomat", "_blank")}>
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Abrir</span>
-                    </Button>
+                    <a href="/catalogos/kilomat" target="_blank" rel="noopener noreferrer">
+                      <Button variant="outline" size="sm" className="gap-1.5">
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Abrir</span>
+                      </Button>
+                    </a>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/kilomat`);
                       setCopiedLink("__kilomat__");

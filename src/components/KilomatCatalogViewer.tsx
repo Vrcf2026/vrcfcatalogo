@@ -58,21 +58,21 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
   const bookDimensions = useMemo(() => {
     const { w, h } = viewportSize;
     const availH = h - 40;
-    const ratio = 3 / 4;
+    const ratio = 210 / 297; // A4 width/height aspect ratio
 
     if (isMobile) {
       const pageH = Math.min(availH, h * 0.85);
       const pageW = Math.floor(pageH * ratio);
-      return { width: pageW, height: Math.floor(pageH), minWidth: 260, maxWidth: w - 20, minHeight: 350, maxHeight: Math.floor(availH) };
+      return { width: pageW, height: Math.floor(pageH), minWidth: 220, maxWidth: w - 20, minHeight: 350, maxHeight: Math.floor(availH) };
     }
     if (isTablet) {
       const pageH = Math.min(availH * 0.92, 1200);
       const pageW = Math.floor(pageH * ratio);
-      return { width: Math.floor(pageW), height: Math.floor(pageH), minWidth: 400, maxWidth: Math.floor(w * 0.9), minHeight: 500, maxHeight: Math.floor(availH) };
+      return { width: Math.floor(pageW), height: Math.floor(pageH), minWidth: 350, maxWidth: Math.floor(w * 0.9), minHeight: 500, maxHeight: Math.floor(availH) };
     }
     const pageH = Math.min(availH * 0.88, 900);
     const pageW = Math.floor(pageH * ratio);
-    return { width: pageW, height: Math.floor(pageH), minWidth: 300, maxWidth: 1400, minHeight: 400, maxHeight: 1800 };
+    return { width: pageW, height: Math.floor(pageH), minWidth: 280, maxWidth: 1400, minHeight: 400, maxHeight: 1800 };
   }, [viewportSize, isTablet, isMobile]);
 
   const showBars = useCallback(() => {
