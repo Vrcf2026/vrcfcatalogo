@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Download, Link2, Loader2, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { CatalogPdfRenderer } from "./CatalogPdfRenderer";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CatalogProduct {
   id: string;
@@ -28,11 +30,42 @@ interface CatalogManagerDialogProps {
   brandMap: Record<string, string>;
 }
 
+interface CatalogCustomization {
+  id: string;
+  type: string;
+  reference_name: string;
+  logo_url: string | null;
+  cover_image_url: string | null;
+}
+
+interface PdfRenderOptions {
+  brandLogo?: string | null;
+  customLogoUrl?: string | null;
+  customCoverUrl?: string | null;
+  brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+}
+
+interface CatalogListItem extends PdfRenderOptions {
+  key: string;
+  label: string;
+  count: number;
+  products: CatalogProduct[];
+}
+
 export function CatalogManagerDialog({ products, imagesByProduct, familyMap, categories, brands, brandMap }: CatalogManagerDialogProps) {
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [renderConfig, setRenderConfig] = useState<{ label: string; products: CatalogProduct[]; brandLogo?: string | null } | null>(null);
+  const [renderConfig, setRenderConfig] = useState<({ label: string; products: CatalogProduct[] } & PdfRenderOptions) | null>(null);
+
+  const { data: customizations = [] } = useQuery({
+    queryKey: ["catalog_customizations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("catalog_customizations").select("*");
+      if (error) throw error;
+      return data as CatalogCustomization[];
+    },
+  });
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
@@ -56,9 +89,33 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const handleDownloadPdf = (label: string, filteredProducts: CatalogProduct[], brandLogo?: string | null) => {
+  const BRAND_THEMES: Record<string, { gradient: string; accent: string; pattern: string }> = {
+    Dahua: {
+      gradient: "linear-gradient(135deg, #1a0505 0%, #3d0c0c 50%, #6b1515 100%)",
+      accent: "#c41230",
+      pattern: "radial-gradient(circle at 30% 70%, rgba(196,18,48,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(196,18,48,0.1) 0%, transparent 50%)",
+    },
+    Ajax: {
+      gradient: "linear-gradient(135deg, #0a1a2e 0%, #122a46 50%, #1a3b5c 100%)",
+      accent: "#00b894",
+      pattern: "radial-gradient(circle at 30% 70%, rgba(0,184,148,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0,184,148,0.1) 0%, transparent 50%)",
+    },
+  };
+
+  const customizationsByKey = new Map(customizations.map((item) => [`${item.type}:${item.reference_name}`, item]));
+
+  const handleDownloadPdf = (
+    label: string,
+    filteredProducts: CatalogProduct[],
+    options?: {
+      brandLogo?: string | null;
+      customLogoUrl?: string | null;
+      customCoverUrl?: string | null;
+      brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+    }
+  ) => {
     setDownloading(label);
-    setRenderConfig({ label, products: filteredProducts, brandLogo });
+    setRenderConfig({ label, products: filteredProducts, ...options });
   };
 
   const handlePdfReady = () => {
@@ -76,10 +133,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     Outros: "🔧",
   };
 
-  const renderList = (
-    items: { key: string; label: string; count: number; products: CatalogProduct[]; brandLogo?: string | null }[],
-    type: "category" | "brand"
-  ) => (
+  const renderList = (items: CatalogListItem[], type: "category" | "brand") => (
     <div className="space-y-2">
       {items.map((item) => {
         const isDownloading = downloading === item.key;
@@ -106,7 +160,20 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                 {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
               </Button>
-              <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf(item.key, item.products, item.brandLogo)} disabled={isDownloading}>
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
+                  handleDownloadPdf(item.label, item.products, {
+                    brandLogo: item.brandLogo,
+                    customLogoUrl: item.customLogoUrl,
+                    customCoverUrl: item.customCoverUrl,
+                    brandTheme: item.brandTheme,
+                  })
+                }
+                disabled={isDownloading}
+              >
                 {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">PDF</span>
               </Button>
@@ -120,14 +187,32 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     </div>
   );
 
-  const categoryItems = allCategories.map((cat) => {
+  const categoryItems: CatalogListItem[] = allCategories.map((cat) => {
     const prods = catalogProducts.filter((p) => p.category === cat);
-    return { key: cat, label: cat, count: prods.length, products: prods };
+    const custom = customizationsByKey.get(`category:${cat}`);
+    return {
+      key: cat,
+      label: cat,
+      count: prods.length,
+      products: prods,
+      customLogoUrl: custom?.logo_url ?? null,
+      customCoverUrl: custom?.cover_image_url ?? null,
+    };
   });
 
-  const brandItems = allBrands.map((b) => {
+  const brandItems: CatalogListItem[] = allBrands.map((b) => {
     const prods = catalogProducts.filter((p) => p.brand_id === b.id);
-    return { key: b.id, label: b.name, count: prods.length, products: prods, brandLogo: b.logo_url };
+    const custom = customizationsByKey.get(`brand:${b.name}`);
+    return {
+      key: b.id,
+      label: b.name,
+      count: prods.length,
+      products: prods,
+      brandLogo: b.logo_url,
+      customLogoUrl: custom?.logo_url ?? null,
+      customCoverUrl: custom?.cover_image_url ?? null,
+      brandTheme: BRAND_THEMES[b.name] || null,
+    };
   });
 
   return (
@@ -157,7 +242,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               </div>
             </div>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopyLink()}>
-              {copiedLink === "__all__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+              {copiedLink === "__all__" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
               {copiedLink === "__all__" ? "Copiado" : "Copiar Link"}
             </Button>
           </div>
@@ -249,6 +334,9 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
           familyMap={familyMap}
           onComplete={handlePdfReady}
           brandLogo={renderConfig.brandLogo}
+          customLogoUrl={renderConfig.customLogoUrl}
+          customCoverUrl={renderConfig.customCoverUrl}
+          brandTheme={renderConfig.brandTheme}
         />
       )}
     </>
