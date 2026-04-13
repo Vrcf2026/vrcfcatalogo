@@ -32,7 +32,14 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [renderConfig, setRenderConfig] = useState<{ label: string; products: CatalogProduct[]; brandLogo?: string | null } | null>(null);
+  const [renderConfig, setRenderConfig] = useState<{
+    label: string;
+    products: CatalogProduct[];
+    brandLogo?: string | null;
+    customLogoUrl?: string | null;
+    customCoverUrl?: string | null;
+    brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+  } | null>(null);
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
@@ -56,9 +63,35 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     setTimeout(() => setCopiedLink(null), 2000);
   };
 
-  const handleDownloadPdf = (label: string, filteredProducts: CatalogProduct[], brandLogo?: string | null) => {
+  const BRAND_THEMES: Record<string, { gradient: string; accent: string; pattern: string }> = {
+    Dahua: {
+      gradient: "linear-gradient(135deg, #1a0505 0%, #3d0c0c 50%, #6b1515 100%)",
+      accent: "#c41230",
+      pattern: "radial-gradient(circle at 30% 70%, rgba(196,18,48,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(196,18,48,0.1) 0%, transparent 50%)",
+    },
+    Ajax: {
+      gradient: "linear-gradient(135deg, #0a1a2e 0%, #122a46 50%, #1a3b5c 100%)",
+      accent: "#00b894",
+      pattern: "radial-gradient(circle at 30% 70%, rgba(0,184,148,0.15) 0%, transparent 50%), radial-gradient(circle at 70% 30%, rgba(0,184,148,0.1) 0%, transparent 50%)",
+    },
+  };
+
+  const customizationsByKey = new Map(
+    (products.length >= 0 ? [] : []).concat()
+  );
+
+  const handleDownloadPdf = (
+    label: string,
+    filteredProducts: CatalogProduct[],
+    options?: {
+      brandLogo?: string | null;
+      customLogoUrl?: string | null;
+      customCoverUrl?: string | null;
+      brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+    }
+  ) => {
     setDownloading(label);
-    setRenderConfig({ label, products: filteredProducts, brandLogo });
+    setRenderConfig({ label, products: filteredProducts, ...options });
   };
 
   const handlePdfReady = () => {
@@ -122,12 +155,30 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
   const categoryItems = allCategories.map((cat) => {
     const prods = catalogProducts.filter((p) => p.category === cat);
-    return { key: cat, label: cat, count: prods.length, products: prods };
+    const custom = customizationsByKey.get(`category:${cat}`);
+    return {
+      key: cat,
+      label: cat,
+      count: prods.length,
+      products: prods,
+      customLogoUrl: custom?.logo_url ?? null,
+      customCoverUrl: custom?.cover_image_url ?? null,
+    };
   });
 
   const brandItems = allBrands.map((b) => {
     const prods = catalogProducts.filter((p) => p.brand_id === b.id);
-    return { key: b.id, label: b.name, count: prods.length, products: prods, brandLogo: b.logo_url };
+    const custom = customizationsByKey.get(`brand:${b.name}`);
+    return {
+      key: b.id,
+      label: b.name,
+      count: prods.length,
+      products: prods,
+      brandLogo: b.logo_url,
+      customLogoUrl: custom?.logo_url ?? null,
+      customCoverUrl: custom?.cover_image_url ?? null,
+      brandTheme: BRAND_THEMES[b.name] || null,
+    };
   });
 
   return (
