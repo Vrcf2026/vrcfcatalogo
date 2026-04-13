@@ -259,9 +259,9 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
 }
 
 /* ─── Family Section Header (inline on page) ─── */
-function FamilyHeader({ familyName, accent, bgImage }: { familyName: string; accent: string; bgImage: string }) {
+function FamilyHeader({ familyName, accent, bgImage, scale }: { familyName: string; accent: string; bgImage: string; scale: number }) {
   return (
-    <div className="rounded-lg overflow-hidden mb-2 relative" style={{ height: "60px" }}>
+    <div className="rounded-lg overflow-hidden relative" style={{ height: Math.round(40 * scale), marginBottom: Math.round(4 * scale) }}>
       {bgImage ? (
         <>
           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -270,9 +270,9 @@ function FamilyHeader({ familyName, accent, bgImage }: { familyName: string; acc
       ) : (
         <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}40)` }} />
       )}
-      <div className="relative z-10 h-full flex items-center px-3 gap-2">
-        <div className="w-1 h-6 rounded-full" style={{ backgroundColor: accent }} />
-        <h3 className="font-heading text-sm font-bold text-white drop-shadow-md">{familyName}</h3>
+      <div className="relative z-10 h-full flex items-center gap-2" style={{ padding: `0 ${Math.round(8 * scale)}px` }}>
+        <div className="rounded-full" style={{ width: Math.max(2, Math.round(3 * scale)), height: Math.round(16 * scale), backgroundColor: accent }} />
+        <h3 className="font-heading font-bold text-white drop-shadow-md" style={{ fontSize: Math.round(11 * scale) }}>{familyName}</h3>
       </div>
     </div>
   );
@@ -316,6 +316,7 @@ function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, 
   // Now pack into pages: max 2 families per page, max 6 products per page
   const MAX_PRODUCTS = 6;
   const MAX_FAMILIES = 2;
+  const MAX_PRODUCTS_MULTI_FAMILY = 4;
   const pages: FamilyPageGroup[] = [];
 
   let currentPageFamilies: { name: string; products: CatalogProduct[] }[] = [];
@@ -325,7 +326,8 @@ function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, 
     let remaining = [...family.products];
 
     while (remaining.length > 0) {
-      const spaceLeft = MAX_PRODUCTS - currentPageProductCount;
+      const effectiveMax = currentPageFamilies.length >= 1 ? MAX_PRODUCTS_MULTI_FAMILY : MAX_PRODUCTS;
+      const spaceLeft = effectiveMax - currentPageProductCount;
       const familySlotAvailable = currentPageFamilies.length < MAX_FAMILIES;
 
       if (spaceLeft <= 0 || !familySlotAvailable) {
@@ -594,9 +596,24 @@ export function CatalogViewer({
           </FlipPage>
 
           {/* Product pages grouped by family */}
-          {pages.map((page, pageIndex) => (
+          {pages.map((page, pageIndex) => {
+            // Scale factor: reference height is 700px (comfortable A4 on desktop)
+            const scale = Math.min(bookDimensions.height / 700, 1.2);
+            const pagePad = Math.round(12 * scale);
+            const headerH = Math.round(28 * scale);
+            const footerH = Math.round(20 * scale);
+            const familyHeaderH = Math.round(40 * scale);
+            const gapSize = Math.round(4 * scale);
+            const cardPad = Math.round(4 * scale);
+            const fontTitle = Math.max(8, Math.round(10 * scale));
+            const fontDesc = Math.max(6, Math.round(8 * scale));
+            const fontPrice = Math.max(8, Math.round(11 * scale));
+            const fontHeader = Math.max(8, Math.round(10 * scale));
+            const logoH = Math.round(20 * scale);
+
+            return (
             <FlipPage key={pageIndex}>
-              <div className="h-full flex flex-col relative overflow-hidden">
+              <div className="h-full w-full flex flex-col relative overflow-hidden">
                 {/* Background */}
                 {pageTheme.bgImage && (
                   <div className="absolute inset-0 z-0">
@@ -604,42 +621,45 @@ export function CatalogViewer({
                     <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.90)" }} />
                   </div>
                 )}
-                <div className="relative z-10 h-full flex flex-col p-4 sm:p-5">
+                <div className="relative z-10 h-full flex flex-col" style={{ padding: pagePad }}>
                   {/* Page header with logo */}
-                  <div className="flex items-center justify-between mb-2 pb-2 border-b" style={{ borderColor: "#e5e5e5" }}>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between shrink-0" style={{ height: headerH, marginBottom: gapSize, paddingBottom: gapSize, borderBottom: "1px solid #e5e5e5" }}>
+                    <div className="flex items-center" style={{ gap: gapSize }}>
                       {brandLogo ? (
-                        <img src={brandLogo} alt={category} className="h-5 object-contain" />
+                        <img src={brandLogo} alt={category} style={{ height: logoH }} className="object-contain" />
                       ) : (
-                        <img src={vrcfLogo} alt="VRCF" className="h-8 w-8 object-contain" />
+                        <img src={vrcfLogo} alt="VRCF" style={{ height: logoH, width: logoH }} className="object-contain" />
                       )}
-                      <span className="font-heading text-xs font-bold" style={{ color: "#1a1a1a" }}>{category}</span>
+                      <span className="font-heading font-bold" style={{ fontSize: fontHeader, color: "#1a1a1a" }}>{category}</span>
                     </div>
-                    <span className="text-[10px] font-medium" style={{ color: pageTheme.accent }}>
+                    <span className="font-medium" style={{ fontSize: Math.max(7, Math.round(9 * scale)), color: pageTheme.accent }}>
                       VRCF
                     </span>
                   </div>
 
-                  {/* Family sections */}
-                  <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                  {/* Family sections - fill remaining space */}
+                  <div className="flex-1 flex flex-col overflow-hidden" style={{ gap: gapSize }}>
                     {page.families.length === 0 ? (
                       <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
                         <Search className="h-8 w-8 mb-2 opacity-40" />
-                        <p className="text-xs">Nenhum produto encontrado</p>
+                        <p style={{ fontSize: fontDesc }}>Nenhum produto encontrado</p>
                       </div>
                     ) : (
                       page.families.map((family, fi) => {
-                        // Calculate grid based on how many families on page
                         const isSingleFamily = page.families.length === 1;
-                        const gridCols = isSingleFamily ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2";
+                        const cols = isSingleFamily ? 3 : 2;
                         
                         return (
                           <div key={fi} className={`${isSingleFamily ? "flex-1" : ""} flex flex-col min-h-0`}>
-                            {/* Family header with background */}
-                            <FamilyHeader familyName={family.name} accent={pageTheme.accent} bgImage={pageTheme.bgImage} />
+                            <FamilyHeader familyName={family.name} accent={pageTheme.accent} bgImage={pageTheme.bgImage} scale={scale} />
                             
                             {/* Products grid */}
-                            <div className={`grid ${gridCols} gap-2 content-start ${isSingleFamily ? "flex-1" : ""}`}>
+                            <div className="flex-1" style={{
+                              display: "grid",
+                              gridTemplateColumns: `repeat(${cols}, 1fr)`,
+                              gap: gapSize,
+                              alignContent: "start",
+                            }}>
                               {family.products.map((product) => {
                                 const imgUrl = getProductImage(product);
                                 const descShort = product.description
@@ -647,13 +667,13 @@ export function CatalogViewer({
                                   : null;
 
                                 return (
-                                  <div key={product.id} className="group flex flex-col rounded-md overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
+                                  <div key={product.id} className="group flex flex-col rounded overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
                                     {product.featured && (
-                                      <div className="absolute top-0 left-0 z-20 px-1.5 py-0.5 rounded-br-md text-[7px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: pageTheme.accent }}>
+                                      <div className="absolute top-0 left-0 z-20 rounded-br text-white font-bold uppercase" style={{ backgroundColor: pageTheme.accent, fontSize: Math.max(5, Math.round(6 * scale)), padding: `${Math.round(1 * scale)}px ${Math.round(4 * scale)}px`, letterSpacing: "0.05em" }}>
                                         ★ Destaque
                                       </div>
                                     )}
-                                    <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
+                                    <div className="overflow-hidden relative" style={{ backgroundColor: "#f5f5f5", aspectRatio: isSingleFamily ? "1/1" : "4/3" }}>
                                       {imgUrl ? (
                                         <>
                                           <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
@@ -671,7 +691,7 @@ export function CatalogViewer({
                                         </div>
                                       )}
                                     </div>
-                                    <div className="p-1.5 flex flex-col gap-0.5 flex-1">
+                                    <div className="flex flex-col flex-1" style={{ padding: cardPad, gap: Math.round(1 * scale) }}>
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -685,20 +705,20 @@ export function CatalogViewer({
                                         }}
                                         className="text-left"
                                       >
-                                        <h4 className="font-heading text-[10px] font-bold leading-tight line-clamp-2" style={{ color: "#1a1a1a" }}>
+                                        <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
                                           {product.name}
                                         </h4>
                                       </button>
                                       {descShort && (
-                                        <p className="text-[8px] line-clamp-1 leading-snug" style={{ color: "#888" }}>{descShort}</p>
+                                        <p className="line-clamp-1 leading-snug" style={{ fontSize: fontDesc, color: "#888" }}>{descShort}</p>
                                       )}
-                                      <div className="mt-auto pt-1">
+                                      <div className="mt-auto" style={{ paddingTop: Math.round(2 * scale) }}>
                                         {product.price != null ? (
-                                          <span className="font-heading font-bold text-[11px]" style={{ color: "#1a1a1a" }}>
+                                          <span className="font-heading font-bold" style={{ fontSize: fontPrice, color: "#1a1a1a" }}>
                                             {product.price.toFixed(2).replace(".", ",")} €
                                           </span>
                                         ) : (
-                                          <span className="text-[8px]" style={{ color: "#aaa" }}>Consultar</span>
+                                          <span style={{ fontSize: fontDesc, color: "#aaa" }}>Consultar</span>
                                         )}
                                       </div>
                                     </div>
@@ -713,14 +733,15 @@ export function CatalogViewer({
                   </div>
 
                   {/* Page footer */}
-                  <div className="mt-2 pt-2 flex items-center justify-between text-[9px]" style={{ borderTop: "1px solid #eee", color: "#bbb" }}>
+                  <div className="shrink-0 flex items-center justify-between" style={{ height: footerH, marginTop: gapSize, paddingTop: gapSize, borderTop: "1px solid #eee", fontSize: Math.max(7, Math.round(8 * scale)), color: "#bbb" }}>
                     <span>Catálogo {category}</span>
                     <span>{pageIndex + 1} / {pages.length}</span>
                   </div>
                 </div>
               </div>
             </FlipPage>
-          ))}
+            );
+          })}
 
           {/* Contacts last page */}
           <FlipPage>
