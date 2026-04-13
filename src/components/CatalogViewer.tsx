@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { getCatalogBookLayout } from "@/lib/catalogBookLayout";
+import { buildCatalogFamilyPages } from "@/lib/catalogPagination";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import vrcfShield from "@/assets/vrcf-shield.png";
 
@@ -278,90 +279,6 @@ function FamilyHeader({ familyName, accent, bgImage, scale }: { familyName: stri
   );
 }
 
-/* ─── Build pages grouped by family (max 2 families per page) ─── */
-interface FamilyPageGroup {
-  families: { name: string; products: CatalogProduct[] }[];
-}
-
-function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, string>): FamilyPageGroup[] {
-  // Sort featured products first
-  const sorted = [...products].sort((a, b) => {
-    if (a.featured && !b.featured) return -1;
-    if (!a.featured && b.featured) return 1;
-    return 0;
-  });
-
-  // Group products by family
-  const familyGroups: Record<string, CatalogProduct[]> = {};
-  const noFamily: CatalogProduct[] = [];
-
-  sorted.forEach((p) => {
-    if (p.family_id && familyMap[p.family_id]) {
-      const fname = familyMap[p.family_id];
-      if (!familyGroups[fname]) familyGroups[fname] = [];
-      familyGroups[fname].push(p);
-    } else {
-      noFamily.push(p);
-    }
-  });
-
-  const allFamilies: { name: string; products: CatalogProduct[] }[] = [];
-  Object.entries(familyGroups).forEach(([name, prods]) => {
-    allFamilies.push({ name, products: prods });
-  });
-  if (noFamily.length > 0) {
-    allFamilies.push({ name: "Outros", products: noFamily });
-  }
-
-  // Now pack into pages: max 2 families per page, max 6 products per page
-  const MAX_PRODUCTS = 6;
-  const MAX_FAMILIES = 2;
-  const MAX_PRODUCTS_MULTI_FAMILY = 4;
-  const pages: FamilyPageGroup[] = [];
-
-  let currentPageFamilies: { name: string; products: CatalogProduct[] }[] = [];
-  let currentPageProductCount = 0;
-
-  allFamilies.forEach((family) => {
-    let remaining = [...family.products];
-
-    while (remaining.length > 0) {
-      const effectiveMax = currentPageFamilies.length >= 1 ? MAX_PRODUCTS_MULTI_FAMILY : MAX_PRODUCTS;
-      const spaceLeft = effectiveMax - currentPageProductCount;
-      const familySlotAvailable = currentPageFamilies.length < MAX_FAMILIES;
-
-      if (spaceLeft <= 0 || !familySlotAvailable) {
-        // Flush current page
-        if (currentPageFamilies.length > 0) {
-          pages.push({ families: currentPageFamilies });
-        }
-        currentPageFamilies = [];
-        currentPageProductCount = 0;
-        continue;
-      }
-
-      const take = remaining.splice(0, spaceLeft);
-      currentPageFamilies.push({ name: family.name, products: take });
-      currentPageProductCount += take.length;
-
-      // If this family still has remaining, flush
-      if (remaining.length > 0) {
-        pages.push({ families: currentPageFamilies });
-        currentPageFamilies = [];
-        currentPageProductCount = 0;
-      }
-    }
-  });
-
-  // Flush last page
-  if (currentPageFamilies.length > 0) {
-    pages.push({ families: currentPageFamilies });
-  }
-
-  if (pages.length === 0) pages.push({ families: [] });
-  return pages;
-}
-
 /* ─── Main Component ─── */
 export function CatalogViewer({
   category,
@@ -427,7 +344,7 @@ export function CatalogViewer({
     );
   }, [products, searchQuery, familyMap]);
 
-  const pages = useMemo(() => buildFamilyPages(filteredProducts, familyMap), [filteredProducts, familyMap]);
+  const pages = useMemo(() => buildCatalogFamilyPages(filteredProducts, familyMap), [filteredProducts, familyMap]);
 
   // +2 for cover + contacts page
   const totalPages = pages.length + 2;
@@ -610,6 +527,7 @@ export function CatalogViewer({
             const fontPrice = Math.max(8, Math.round(11 * scale));
             const fontHeader = Math.max(8, Math.round(10 * scale));
             const logoH = Math.round(20 * scale);
+            const metaFont = Math.max(7, Math.round(8 * scale));
 
             return (
             <FlipPage key={pageIndex}>
@@ -639,96 +557,96 @@ export function CatalogViewer({
 
                   {/* Family sections - fill remaining space */}
                   <div className="flex-1 flex flex-col overflow-hidden" style={{ gap: gapSize }}>
-                    {page.families.length === 0 ? (
+                    {page.products.length === 0 ? (
                       <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
                         <Search className="h-8 w-8 mb-2 opacity-40" />
                         <p style={{ fontSize: fontDesc }}>Nenhum produto encontrado</p>
                       </div>
                     ) : (
-                      page.families.map((family, fi) => {
-                        const isSingleFamily = page.families.length === 1;
-                        const cols = isSingleFamily ? 3 : 2;
-                        
-                        return (
-                          <div key={fi} className={`${isSingleFamily ? "flex-1" : ""} flex flex-col min-h-0`}>
-                            <FamilyHeader familyName={family.name} accent={pageTheme.accent} bgImage={pageTheme.bgImage} scale={scale} />
-                            
-                            {/* Products grid */}
-                            <div className="flex-1" style={{
-                              display: "grid",
-                              gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                              gap: gapSize,
-                              alignContent: "start",
-                            }}>
-                              {family.products.map((product) => {
-                                const imgUrl = getProductImage(product);
-                                const descShort = product.description
-                                  ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
-                                  : null;
+                      <div className="flex-1 flex flex-col min-h-0">
+                        <FamilyHeader familyName={page.familyName} accent={pageTheme.accent} bgImage={pageTheme.bgImage} scale={scale} />
 
-                                return (
-                                  <div key={product.id} className="group flex flex-col rounded overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
-                                    {product.featured && (
-                                      <div className="absolute top-0 left-0 z-20 rounded-br text-white font-bold uppercase" style={{ backgroundColor: pageTheme.accent, fontSize: Math.max(5, Math.round(6 * scale)), padding: `${Math.round(1 * scale)}px ${Math.round(4 * scale)}px`, letterSpacing: "0.05em" }}>
-                                        ★ Destaque
-                                      </div>
-                                    )}
-                                    <div className="overflow-hidden relative" style={{ backgroundColor: "#f5f5f5", aspectRatio: isSingleFamily ? "1/1" : "4/3" }}>
-                                      {imgUrl ? (
-                                        <>
-                                          <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                                          <button
-                                            onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
-                                            className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
-                                          >
-                                            <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
-                                          </button>
-                                        </>
-                                      ) : (
-                                        <div className="flex items-center justify-center h-full">
-                                          <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
-                                        </div>
-                                      )}
-                                    </div>
-                                    <div className="flex flex-col flex-1" style={{ padding: cardPad, gap: Math.round(1 * scale) }}>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          trackEvent(product.id, "catalog_view");
-                                          setSelectedProduct({
-                                            name: product.name, description: product.description,
-                                            category: product.category, price: product.price,
-                                            imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
-                                            familyName: family.name,
-                                          });
-                                        }}
-                                        className="text-left"
-                                      >
-                                        <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
-                                          {product.name}
-                                        </h4>
-                                      </button>
-                                      {descShort && (
-                                        <p className="line-clamp-1 leading-snug" style={{ fontSize: fontDesc, color: "#888" }}>{descShort}</p>
-                                      )}
-                                      <div className="mt-auto" style={{ paddingTop: Math.round(2 * scale) }}>
-                                        {product.price != null ? (
-                                          <span className="font-heading font-bold" style={{ fontSize: fontPrice, color: "#1a1a1a" }}>
-                                            {product.price.toFixed(2).replace(".", ",")} €
-                                          </span>
-                                        ) : (
-                                          <span style={{ fontSize: fontDesc, color: "#aaa" }}>Consultar</span>
-                                        )}
-                                      </div>
-                                    </div>
+                        <div className="shrink-0" style={{ marginBottom: gapSize, marginTop: -Math.round(1 * scale) }}>
+                          {page.totalPagesInFamily > 1 && (
+                            <p style={{ fontSize: metaFont, color: "#666" }}>
+                              {page.pageNumberInFamily} / {page.totalPagesInFamily} da família {page.familyName}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-h-0" style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gridTemplateRows: "repeat(2, minmax(0, 1fr))",
+                          gap: gapSize,
+                        }}>
+                          {page.products.map((product) => {
+                            const imgUrl = getProductImage(product);
+                            const descShort = product.description
+                              ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
+                              : null;
+
+                            return (
+                              <div key={product.id} className="group h-full min-h-0 flex flex-col rounded overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
+                                {product.featured && (
+                                  <div className="absolute top-0 left-0 z-20 rounded-br text-white font-bold uppercase" style={{ backgroundColor: pageTheme.accent, fontSize: Math.max(5, Math.round(6 * scale)), padding: `${Math.round(1 * scale)}px ${Math.round(4 * scale)}px`, letterSpacing: "0.05em" }}>
+                                    ★ Destaque
                                   </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })
+                                )}
+                                <div className="overflow-hidden relative shrink-0" style={{ backgroundColor: "#f5f5f5", aspectRatio: "4/3" }}>
+                                  {imgUrl ? (
+                                    <>
+                                      <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
+                                        className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
+                                      >
+                                        <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full">
+                                      <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col flex-1 min-h-0" style={{ padding: cardPad, gap: Math.round(1 * scale) }}>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      trackEvent(product.id, "catalog_view");
+                                      setSelectedProduct({
+                                        name: product.name, description: product.description,
+                                        category: product.category, price: product.price,
+                                        imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
+                                        familyName: page.familyName,
+                                      });
+                                    }}
+                                    className="text-left"
+                                  >
+                                    <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
+                                      {product.name}
+                                    </h4>
+                                  </button>
+                                  {descShort && (
+                                    <p className="line-clamp-1 leading-snug" style={{ fontSize: fontDesc, color: "#888" }}>{descShort}</p>
+                                  )}
+                                  <div className="mt-auto" style={{ paddingTop: Math.round(2 * scale) }}>
+                                    {product.price != null ? (
+                                      <span className="font-heading font-bold" style={{ fontSize: fontPrice, color: "#1a1a1a" }}>
+                                        {product.price.toFixed(2).replace(".", ",")} €
+                                      </span>
+                                    ) : (
+                                      <span style={{ fontSize: fontDesc, color: "#aaa" }}>Consultar</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
 
