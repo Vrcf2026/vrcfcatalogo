@@ -39,10 +39,10 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const allBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
   const featuredProducts = products.filter((p) => p.featured && p.include_in_catalog);
 
-  const publishedUrl = "https://vrcfcatalogo.lovable.app";
+  const appBaseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
   const buildCatalogUrl = (key?: string, type: "category" | "brand" | "all" = "all") => {
-    let url = `${publishedUrl}/catalogos`;
+    let url = `${appBaseUrl}/catalogos`;
     if (type === "category" && key) url += `?category=${encodeURIComponent(key)}`;
     if (type === "brand" && key) url += `?brand=${encodeURIComponent(key)}`;
     return url;
@@ -188,13 +188,13 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                      <a href={`${publishedUrl}/catalogos/destaques`} target="_blank" rel="noopener noreferrer">
+                        <a href={`${appBaseUrl}/catalogos/destaques`} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Abrir</span>
                       </a>
                     </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                      navigator.clipboard.writeText(`${publishedUrl}/catalogos/destaques`);
+                       navigator.clipboard.writeText(`${appBaseUrl}/catalogos/destaques`);
                       setCopiedLink("__destaques__");
                       toast.success("Link copiado!");
                       setTimeout(() => setCopiedLink(null), 2000);
@@ -219,13 +219,13 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                      <a href={`${publishedUrl}/catalogos/kilomat`} target="_blank" rel="noopener noreferrer">
+                        <a href={`${appBaseUrl}/catalogos/kilomat`} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Abrir</span>
                       </a>
                     </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                      navigator.clipboard.writeText(`${publishedUrl}/catalogos/kilomat`);
+                       navigator.clipboard.writeText(`${appBaseUrl}/catalogos/kilomat`);
                       setCopiedLink("__kilomat__");
                       toast.success("Link copiado!");
                       setTimeout(() => setCopiedLink(null), 2000);
