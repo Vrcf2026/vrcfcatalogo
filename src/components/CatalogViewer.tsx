@@ -429,6 +429,7 @@ export function CatalogViewer({
 
   // +2 for cover + contacts page
   const totalPages = pages.length + 2;
+  const flipbookKey = `${category}-${bookDimensions.width}-${bookDimensions.height}-${bookDimensions.singlePage ? "single" : "spread"}-${totalPages}-${filteredProducts.length}`;
 
   const getProductImage = (product: CatalogProduct) => {
     const imgs = imagesByProduct[product.id];
@@ -554,7 +555,7 @@ export function CatalogViewer({
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
-          key={`${bookDimensions.width}-${bookDimensions.height}-${bookDimensions.singlePage ? "single" : "spread"}`}
+          key={flipbookKey}
           width={bookDimensions.width}
           height={bookDimensions.height}
           size="fixed"

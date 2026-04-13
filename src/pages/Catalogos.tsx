@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 import { CatalogViewer } from "@/components/CatalogViewer";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,7 +32,7 @@ const Catalogos = () => {
     else if (brand) { setSelectedBrand(brand); setActiveTab("brands"); }
   }, [searchParams]);
 
-  const { data: products = [] } = useQuery({
+  const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase.from("products").select("*").order("name", { ascending: true });
@@ -41,7 +41,7 @@ const Catalogos = () => {
     },
   });
 
-  const { data: productImages = [] } = useQuery({
+  const { data: productImages = [], isLoading: isLoadingProductImages } = useQuery({
     queryKey: ["product_images"],
     queryFn: async () => {
       const { data, error } = await supabase.from("product_images").select("*").order("position", { ascending: true });
@@ -50,7 +50,7 @@ const Catalogos = () => {
     },
   });
 
-  const { data: families = [] } = useQuery({
+  const { data: families = [], isLoading: isLoadingFamilies } = useQuery({
     queryKey: ["families"],
     queryFn: async () => {
       const { data, error } = await supabase.from("product_families").select("*").order("category", { ascending: true });
@@ -59,7 +59,7 @@ const Catalogos = () => {
     },
   });
 
-  const { data: brands = [] } = useQuery({
+  const { data: brands = [], isLoading: isLoadingBrands } = useQuery({
     queryKey: ["brands"],
     queryFn: async () => {
       const { data, error } = await supabase.from("brands").select("*").order("name", { ascending: true });
@@ -68,7 +68,7 @@ const Catalogos = () => {
     },
   });
 
-  const { data: customizations = [] } = useQuery({
+  const { data: customizations = [], isLoading: isLoadingCustomizations } = useQuery({
     queryKey: ["catalog_customizations"],
     queryFn: async () => {
       const { data, error } = await supabase.from("catalog_customizations").select("*");
@@ -93,6 +93,12 @@ const Catalogos = () => {
   const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
   const categories = dynamicCategories.filter((c) => c !== "Kilomat");
   const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
+  const isCatalogDataLoading =
+    isLoadingProducts ||
+    isLoadingProductImages ||
+    isLoadingFamilies ||
+    isLoadingBrands ||
+    isLoadingCustomizations;
 
   const handleBack = () => { setSelectedCategory(null); setSelectedBrand(null); };
 
@@ -112,6 +118,17 @@ const Catalogos = () => {
 
   // Brand-based catalog view
   if (selectedBrand) {
+    if (isCatalogDataLoading) {
+      return (
+        <div className="h-screen flex items-center justify-center bg-background text-foreground">
+          <div className="flex items-center gap-3 text-sm font-medium">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            A carregar catálogo…
+          </div>
+        </div>
+      );
+    }
+
     const brandProducts = catalogProducts.filter((p) => {
       const brandName = p.brand_id ? brandMap[p.brand_id] : null;
       return brandName === selectedBrand;
@@ -127,6 +144,17 @@ const Catalogos = () => {
   
 
   if (selectedCategory) {
+    if (isCatalogDataLoading) {
+      return (
+        <div className="h-screen flex items-center justify-center bg-background text-foreground">
+          <div className="flex items-center gap-3 text-sm font-medium">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            A carregar catálogo…
+          </div>
+        </div>
+      );
+    }
+
     const categoryProducts = catalogProducts.filter((p) => p.category === selectedCategory);
     const catCustom = getCustom("category", selectedCategory);
     return (
