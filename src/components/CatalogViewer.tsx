@@ -259,9 +259,9 @@ function ContactsPage({ category, brandLogo, brandTheme }: { category: string; b
 }
 
 /* ─── Family Section Header (inline on page) ─── */
-function FamilyHeader({ familyName, accent, bgImage }: { familyName: string; accent: string; bgImage: string }) {
+function FamilyHeader({ familyName, accent, bgImage, scale }: { familyName: string; accent: string; bgImage: string; scale: number }) {
   return (
-    <div className="rounded-lg overflow-hidden mb-2 relative" style={{ height: "60px" }}>
+    <div className="rounded-lg overflow-hidden relative" style={{ height: Math.round(40 * scale), marginBottom: Math.round(4 * scale) }}>
       {bgImage ? (
         <>
           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -270,9 +270,9 @@ function FamilyHeader({ familyName, accent, bgImage }: { familyName: string; acc
       ) : (
         <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${accent}20, ${accent}40)` }} />
       )}
-      <div className="relative z-10 h-full flex items-center px-3 gap-2">
-        <div className="w-1 h-6 rounded-full" style={{ backgroundColor: accent }} />
-        <h3 className="font-heading text-sm font-bold text-white drop-shadow-md">{familyName}</h3>
+      <div className="relative z-10 h-full flex items-center gap-2" style={{ padding: `0 ${Math.round(8 * scale)}px` }}>
+        <div className="rounded-full" style={{ width: Math.max(2, Math.round(3 * scale)), height: Math.round(16 * scale), backgroundColor: accent }} />
+        <h3 className="font-heading font-bold text-white drop-shadow-md" style={{ fontSize: Math.round(11 * scale) }}>{familyName}</h3>
       </div>
     </div>
   );
