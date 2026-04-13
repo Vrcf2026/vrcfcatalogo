@@ -41,10 +41,15 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
   const publishedUrl = "https://vrcfcatalogo.lovable.app";
 
-  const handleCopyLink = (key?: string, type: "category" | "brand" | "all" = "all") => {
+  const buildCatalogUrl = (key?: string, type: "category" | "brand" | "all" = "all") => {
     let url = `${publishedUrl}/catalogos`;
     if (type === "category" && key) url += `?category=${encodeURIComponent(key)}`;
     if (type === "brand" && key) url += `?brand=${encodeURIComponent(key)}`;
+    return url;
+  };
+
+  const handleCopyLink = (key?: string, type: "category" | "brand" | "all" = "all") => {
+    const url = buildCatalogUrl(key, type);
     navigator.clipboard.writeText(url);
     setCopiedLink(key || "__all__");
     toast.success("Link copiado!");
@@ -91,12 +96,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <a href={type === "category" ? `/catalogos?category=${encodeURIComponent(item.label)}` : `/catalogos?brand=${encodeURIComponent(item.label)}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm" className="gap-1.5">
+              <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                <a href={buildCatalogUrl(item.label, type)} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Abrir</span>
-                </Button>
-              </a>
+                </a>
+              </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopyLink(item.label, type)}>
                 {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
@@ -182,12 +187,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <a href="/catalogos/destaques" target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                      <a href={`${publishedUrl}/catalogos/destaques`} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Abrir</span>
-                      </Button>
-                    </a>
+                      </a>
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/destaques`);
                       setCopiedLink("__destaques__");
@@ -213,12 +218,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <a href="/catalogos/kilomat" target="_blank" rel="noopener noreferrer">
-                      <Button variant="outline" size="sm" className="gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5" asChild>
+                      <a href={`${publishedUrl}/catalogos/kilomat`} target="_blank" rel="noopener noreferrer">
                         <ExternalLink className="h-3.5 w-3.5" />
                         <span className="hidden sm:inline">Abrir</span>
-                      </Button>
-                    </a>
+                      </a>
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
                       navigator.clipboard.writeText(`${publishedUrl}/catalogos/kilomat`);
                       setCopiedLink("__kilomat__");

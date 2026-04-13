@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { getCatalogBookLayout } from "@/lib/catalogBookLayout";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import vrcfShield from "@/assets/vrcf-shield.png";
 
@@ -380,49 +381,21 @@ export function CatalogViewer({
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [barsVisible, setBarsVisible] = useState(true);
-  const [isTablet, setIsTablet] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [viewportSize, setViewportSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bookRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Detect device type and track viewport size for responsive flipbook
   useEffect(() => {
     const check = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      setIsTablet(w >= 600 && w <= 1100);
-      setIsMobile(w < 600);
-      setViewportSize({ w, h });
+      setViewportSize({ w: window.innerWidth, h: window.innerHeight });
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Calculate flipbook dimensions based on viewport
-  const bookDimensions = useMemo(() => {
-    const { w, h } = viewportSize;
-    const availH = h - 40; // padding
-    const ratio = 210 / 297; // A4 width/height aspect ratio
-
-    if (isMobile) {
-      const pageH = Math.min(availH, h * 0.85);
-      const pageW = Math.floor(pageH * ratio);
-      return { width: pageW, height: Math.floor(pageH), minWidth: 220, maxWidth: w - 20, minHeight: 350, maxHeight: Math.floor(availH) };
-    }
-    if (isTablet) {
-      // Single large page filling the screen
-      const pageH = Math.min(availH * 0.92, 1200);
-      const pageW = Math.floor(pageH * ratio);
-      return { width: Math.floor(pageW), height: Math.floor(pageH), minWidth: 350, maxWidth: Math.floor(w * 0.9), minHeight: 500, maxHeight: Math.floor(availH) };
-    }
-    // Desktop
-    const pageH = Math.min(availH * 0.88, 900);
-    const pageW = Math.floor(pageH * ratio);
-    return { width: pageW, height: Math.floor(pageH), minWidth: 280, maxWidth: 1400, minHeight: 400, maxHeight: 1800 };
-  }, [viewportSize, isTablet, isMobile]);
+  const bookDimensions = useMemo(() => getCatalogBookLayout(viewportSize), [viewportSize]);
 
   const showBars = useCallback(() => {
     setBarsVisible(true);
@@ -549,7 +522,7 @@ export function CatalogViewer({
               onClick={() => { flipTo(0); setShowThumbnails(false); }}
               className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === 0 ? "border-primary" : "border-transparent hover:border-white/30"}`}
             >
-              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+              <div className="aspect-[210/297] bg-white flex items-center justify-center p-2">
                 <span className="font-heading text-[8px] font-bold text-gray-800 text-center">{category}</span>
               </div>
               <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Capa</div>
@@ -560,7 +533,7 @@ export function CatalogViewer({
                 onClick={() => { flipTo(i + 1); setShowThumbnails(false); }}
                 className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
               >
-                <div className="aspect-[3/4] bg-white flex items-center justify-center p-1">
+                  <div className="aspect-[210/297] bg-white flex items-center justify-center p-1">
                   <span className="text-[8px] text-gray-500">Pág. {i + 1}</span>
                 </div>
                 <div className="bg-black/60 text-white text-[10px] text-center py-0.5">{i + 1}</div>
@@ -570,7 +543,7 @@ export function CatalogViewer({
               onClick={() => { flipTo(pages.length + 1); setShowThumbnails(false); }}
               className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === pages.length + 1 ? "border-primary" : "border-transparent hover:border-white/30"}`}
             >
-              <div className="aspect-[3/4] bg-white flex items-center justify-center p-2">
+              <div className="aspect-[210/297] bg-white flex items-center justify-center p-2">
                 <span className="font-heading text-[8px] font-bold text-gray-800 text-center">Contactos</span>
               </div>
               <div className="bg-black/60 text-white text-[10px] text-center py-0.5">Contactos</div>
@@ -581,9 +554,10 @@ export function CatalogViewer({
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
+          key={`${bookDimensions.width}-${bookDimensions.height}-${bookDimensions.singlePage ? "single" : "spread"}`}
           width={bookDimensions.width}
           height={bookDimensions.height}
-          size="stretch"
+          size="fixed"
           minWidth={bookDimensions.minWidth}
           maxWidth={bookDimensions.maxWidth}
           minHeight={bookDimensions.minHeight}
@@ -596,9 +570,9 @@ export function CatalogViewer({
           startPage={0}
           drawShadow={true}
           flippingTime={800}
-          usePortrait={true}
+          usePortrait={bookDimensions.singlePage}
           startZIndex={0}
-          autoSize={true}
+          autoSize={false}
           maxShadowOpacity={0.4}
           showPageCorners={true}
           disableFlipByClick={false}
