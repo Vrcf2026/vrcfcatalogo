@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Download, Link2, Loader2, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { CatalogPdfRenderer } from "./CatalogPdfRenderer";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CatalogProduct {
   id: string;
@@ -28,18 +30,42 @@ interface CatalogManagerDialogProps {
   brandMap: Record<string, string>;
 }
 
+interface CatalogCustomization {
+  id: string;
+  type: string;
+  reference_name: string;
+  logo_url: string | null;
+  cover_image_url: string | null;
+}
+
+interface PdfRenderOptions {
+  brandLogo?: string | null;
+  customLogoUrl?: string | null;
+  customCoverUrl?: string | null;
+  brandTheme?: { gradient: string; accent: string; pattern: string } | null;
+}
+
+interface CatalogListItem extends PdfRenderOptions {
+  key: string;
+  label: string;
+  count: number;
+  products: CatalogProduct[];
+}
+
 export function CatalogManagerDialog({ products, imagesByProduct, familyMap, categories, brands, brandMap }: CatalogManagerDialogProps) {
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [renderConfig, setRenderConfig] = useState<{
-    label: string;
-    products: CatalogProduct[];
-    brandLogo?: string | null;
-    customLogoUrl?: string | null;
-    customCoverUrl?: string | null;
-    brandTheme?: { gradient: string; accent: string; pattern: string } | null;
-  } | null>(null);
+  const [renderConfig, setRenderConfig] = useState<({ label: string; products: CatalogProduct[] } & PdfRenderOptions) | null>(null);
+
+  const { data: customizations = [] } = useQuery({
+    queryKey: ["catalog_customizations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("catalog_customizations").select("*");
+      if (error) throw error;
+      return data as CatalogCustomization[];
+    },
+  });
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
   const allCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
@@ -76,9 +102,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     },
   };
 
-  const customizationsByKey = new Map(
-    (products.length >= 0 ? [] : []).concat()
-  );
+  const customizationsByKey = new Map(customizations.map((item) => [`${item.type}:${item.reference_name}`, item]));
 
   const handleDownloadPdf = (
     label: string,
@@ -109,10 +133,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     Outros: "🔧",
   };
 
-  const renderList = (
-    items: { key: string; label: string; count: number; products: CatalogProduct[]; brandLogo?: string | null }[],
-    type: "category" | "brand"
-  ) => (
+  const renderList = (items: CatalogListItem[], type: "category" | "brand") => (
     <div className="space-y-2">
       {items.map((item) => {
         const isDownloading = downloading === item.key;
@@ -139,7 +160,20 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                 {isCopied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">{isCopied ? "Copiado" : "Link"}</span>
               </Button>
-              <Button variant="default" size="sm" className="gap-1.5" onClick={() => handleDownloadPdf(item.key, item.products, item.brandLogo)} disabled={isDownloading}>
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1.5"
+                onClick={() =>
+                  handleDownloadPdf(item.label, item.products, {
+                    brandLogo: item.brandLogo,
+                    customLogoUrl: item.customLogoUrl,
+                    customCoverUrl: item.customCoverUrl,
+                    brandTheme: item.brandTheme,
+                  })
+                }
+                disabled={isDownloading}
+              >
                 {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
                 <span className="hidden sm:inline">PDF</span>
               </Button>
@@ -153,7 +187,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     </div>
   );
 
-  const categoryItems = allCategories.map((cat) => {
+  const categoryItems: CatalogListItem[] = allCategories.map((cat) => {
     const prods = catalogProducts.filter((p) => p.category === cat);
     const custom = customizationsByKey.get(`category:${cat}`);
     return {
@@ -166,7 +200,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     };
   });
 
-  const brandItems = allBrands.map((b) => {
+  const brandItems: CatalogListItem[] = allBrands.map((b) => {
     const prods = catalogProducts.filter((p) => p.brand_id === b.id);
     const custom = customizationsByKey.get(`brand:${b.name}`);
     return {
@@ -208,7 +242,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               </div>
             </div>
             <Button variant="outline" size="sm" className="gap-1.5" onClick={() => handleCopyLink()}>
-              {copiedLink === "__all__" ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Link2 className="h-3.5 w-3.5" />}
+              {copiedLink === "__all__" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
               {copiedLink === "__all__" ? "Copiado" : "Copiar Link"}
             </Button>
           </div>
@@ -300,6 +334,9 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
           familyMap={familyMap}
           onComplete={handlePdfReady}
           brandLogo={renderConfig.brandLogo}
+          customLogoUrl={renderConfig.customLogoUrl}
+          customCoverUrl={renderConfig.customCoverUrl}
+          brandTheme={renderConfig.brandTheme}
         />
       )}
     </>
