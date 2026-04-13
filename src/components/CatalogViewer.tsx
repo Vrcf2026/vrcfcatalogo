@@ -316,6 +316,7 @@ function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, 
   // Now pack into pages: max 2 families per page, max 6 products per page
   const MAX_PRODUCTS = 6;
   const MAX_FAMILIES = 2;
+  const MAX_PRODUCTS_MULTI_FAMILY = 4;
   const pages: FamilyPageGroup[] = [];
 
   let currentPageFamilies: { name: string; products: CatalogProduct[] }[] = [];
