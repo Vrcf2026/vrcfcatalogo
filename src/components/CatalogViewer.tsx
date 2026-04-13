@@ -326,7 +326,8 @@ function buildFamilyPages(products: CatalogProduct[], familyMap: Record<string, 
     let remaining = [...family.products];
 
     while (remaining.length > 0) {
-      const spaceLeft = MAX_PRODUCTS - currentPageProductCount;
+      const effectiveMax = currentPageFamilies.length >= 1 ? MAX_PRODUCTS_MULTI_FAMILY : MAX_PRODUCTS;
+      const spaceLeft = effectiveMax - currentPageProductCount;
       const familySlotAvailable = currentPageFamilies.length < MAX_FAMILIES;
 
       if (spaceLeft <= 0 || !familySlotAvailable) {
