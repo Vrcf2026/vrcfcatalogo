@@ -671,7 +671,7 @@ export function CatalogViewer({
                                         ★ Destaque
                                       </div>
                                     )}
-                                    <div className="aspect-square overflow-hidden relative" style={{ backgroundColor: "#f5f5f5" }}>
+                                    <div className="overflow-hidden relative" style={{ backgroundColor: "#f5f5f5", aspectRatio: isSingleFamily ? "1/1" : "4/3" }}>
                                       {imgUrl ? (
                                         <>
                                           <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
