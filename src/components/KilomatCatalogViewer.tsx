@@ -9,6 +9,7 @@ import {
   Grid3X3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getCatalogBookLayout } from "@/lib/catalogBookLayout";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
 const TOTAL_PAGES = 16;
@@ -35,8 +36,6 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
   const [showThumbnails, setShowThumbnails] = useState(false);
   const [zoom, setZoom] = useState(100);
   const [barsVisible, setBarsVisible] = useState(true);
-  const [isTablet, setIsTablet] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const [viewportSize, setViewportSize] = useState({ w: window.innerWidth, h: window.innerHeight });
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bookRef = useRef<any>(null);
@@ -44,36 +43,14 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
 
   useEffect(() => {
     const check = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      setIsTablet(w >= 600 && w <= 1100);
-      setIsMobile(w < 600);
-      setViewportSize({ w, h });
+      setViewportSize({ w: window.innerWidth, h: window.innerHeight });
     };
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const bookDimensions = useMemo(() => {
-    const { w, h } = viewportSize;
-    const availH = h - 40;
-    const ratio = 210 / 297; // A4 width/height aspect ratio
-
-    if (isMobile) {
-      const pageH = Math.min(availH, h * 0.85);
-      const pageW = Math.floor(pageH * ratio);
-      return { width: pageW, height: Math.floor(pageH), minWidth: 220, maxWidth: w - 20, minHeight: 350, maxHeight: Math.floor(availH) };
-    }
-    if (isTablet) {
-      const pageH = Math.min(availH * 0.92, 1200);
-      const pageW = Math.floor(pageH * ratio);
-      return { width: Math.floor(pageW), height: Math.floor(pageH), minWidth: 350, maxWidth: Math.floor(w * 0.9), minHeight: 500, maxHeight: Math.floor(availH) };
-    }
-    const pageH = Math.min(availH * 0.88, 900);
-    const pageW = Math.floor(pageH * ratio);
-    return { width: pageW, height: Math.floor(pageH), minWidth: 280, maxWidth: 1400, minHeight: 400, maxHeight: 1800 };
-  }, [viewportSize, isTablet, isMobile]);
+  const bookDimensions = useMemo(() => getCatalogBookLayout(viewportSize), [viewportSize]);
 
   const showBars = useCallback(() => {
     setBarsVisible(true);
@@ -153,7 +130,7 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
                 onClick={() => { flipTo(i); setShowThumbnails(false); }}
                 className={`w-full rounded-md overflow-hidden border-2 transition-all ${currentPage === i ? "border-green-500" : "border-transparent hover:border-white/30"}`}
               >
-                <img src={url} alt={`Página ${i + 1}`} className="w-full aspect-[3/4] object-cover" loading="lazy" />
+                <img src={url} alt={`Página ${i + 1}`} className="w-full aspect-[210/297] object-cover" loading="lazy" />
                 <div className="bg-black/60 text-white text-[10px] text-center py-0.5">
                   {i === 0 ? "Capa" : i === TOTAL_PAGES - 1 ? "Contracapa" : `Pág. ${i}`}
                 </div>
@@ -165,9 +142,10 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
         {/* @ts-ignore */}
         <HTMLFlipBook
           ref={bookRef}
+          key={`${bookDimensions.width}-${bookDimensions.height}-${bookDimensions.singlePage ? "single" : "spread"}`}
           width={bookDimensions.width}
           height={bookDimensions.height}
-          size="stretch"
+          size="fixed"
           minWidth={bookDimensions.minWidth}
           maxWidth={bookDimensions.maxWidth}
           minHeight={bookDimensions.minHeight}
@@ -180,9 +158,9 @@ export function KilomatCatalogViewer({ onBack }: KilomatCatalogViewerProps) {
           startPage={0}
           drawShadow={true}
           flippingTime={650}
-          usePortrait={true}
+          usePortrait={bookDimensions.singlePage}
           startZIndex={0}
-          autoSize={true}
+          autoSize={false}
           maxShadowOpacity={0.4}
           showPageCorners={true}
           disableFlipByClick={false}
