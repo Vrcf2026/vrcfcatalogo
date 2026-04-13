@@ -21,8 +21,9 @@ export function getCatalogBookLayout({ w, h }: ViewportSize): CatalogBookLayout 
   const isPortraitViewport = h >= w;
   const singlePage = (isMobile || isTablet) && isPortraitViewport;
 
-  const horizontalPadding = singlePage ? 24 : 48;
-  const verticalPadding = singlePage ? 24 : 40;
+  // Minimize padding in single-page/kiosk mode to maximize screen usage
+  const horizontalPadding = singlePage ? 8 : 48;
+  const verticalPadding = singlePage ? 8 : 40;
   const availableWidth = Math.max(w - horizontalPadding, 220);
   const availableHeight = Math.max(h - verticalPadding, 320);
 
