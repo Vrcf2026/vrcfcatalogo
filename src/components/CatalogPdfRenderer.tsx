@@ -91,10 +91,29 @@ const DEFAULT_THEME = {
 
 const PAGE_W = 794;
 const PAGE_H = 1123;
-const PDF_LAYOUT_SCALE = 1.35;
+const PDF_LAYOUT_SCALE = 1.2;
 
 const A4_W_MM = 210;
 const A4_H_MM = 297;
+const IMAGE_PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-image`;
+
+function getPdfSafeImageUrl(url: string | null | undefined) {
+  if (!url) return null;
+
+  const normalizedUrl = url.trim();
+  if (!normalizedUrl) return null;
+
+  if (
+    normalizedUrl.startsWith("data:") ||
+    normalizedUrl.startsWith("blob:") ||
+    normalizedUrl.startsWith("/") ||
+    normalizedUrl.includes("/storage/v1/object/public/product-images/")
+  ) {
+    return normalizedUrl;
+  }
+
+  return `${IMAGE_PROXY_BASE}?url=${encodeURIComponent(normalizedUrl)}`;
+}
 
 function getProductImage(product: CatalogProduct, imagesByProduct: Record<string, any[]>) {
   const imgs = imagesByProduct[product.id];
@@ -102,14 +121,31 @@ function getProductImage(product: CatalogProduct, imagesByProduct: Record<string
   return product.image_url;
 }
 
-function waitForImage(img: HTMLImageElement) {
-  if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+async function waitForImage(img: HTMLImageElement) {
+  if (img.complete && img.naturalWidth > 0) {
+    if (typeof img.decode === "function") {
+      try {
+        await img.decode();
+      } catch {
+        return;
+      }
+    }
+    return;
+  }
 
-  return new Promise<void>((resolve) => {
+  await new Promise<void>((resolve) => {
     const done = () => resolve();
     img.addEventListener("load", done, { once: true });
     img.addEventListener("error", done, { once: true });
   });
+
+  if (typeof img.decode === "function") {
+    try {
+      await img.decode();
+    } catch {
+      return;
+    }
+  }
 }
 
 async function waitForRenderableAssets(container: HTMLDivElement) {
@@ -141,7 +177,7 @@ export function CatalogPdfRenderer({
   const pageTheme = brandTheme
     ? { ...DEFAULT_THEME, ...brandTheme, icon: DEFAULT_THEME.icon, bgImage: DEFAULT_THEME.bgImage }
     : (CATEGORY_THEMES[category] || DEFAULT_THEME);
-  const coverBgImage = useMemo(() => {
+  const rawCoverBgImage = useMemo(() => {
     if (customCoverUrl) return customCoverUrl;
     if (CATEGORY_THEMES[category]) return pageTheme.bgImage;
 
@@ -149,7 +185,9 @@ export function CatalogPdfRenderer({
     const firstProduct = featured || products[0];
     return firstProduct ? getProductImage(firstProduct, imagesByProduct) || pageTheme.bgImage : pageTheme.bgImage;
   }, [category, customCoverUrl, imagesByProduct, pageTheme.bgImage, products]);
-  const effectiveBrandLogo = customLogoUrl || brandLogo;
+  const coverBgImage = useMemo(() => getPdfSafeImageUrl(rawCoverBgImage), [rawCoverBgImage]);
+  const effectiveBrandLogo = useMemo(() => getPdfSafeImageUrl(customLogoUrl || brandLogo), [brandLogo, customLogoUrl]);
+  const contentBgImage = useMemo(() => getPdfSafeImageUrl(pageTheme.bgImage), [pageTheme.bgImage]);
 
   useEffect(() => {
     const generate = async () => {
@@ -177,11 +215,10 @@ export function CatalogPdfRenderer({
             useCORS: true,
             allowTaint: false,
             backgroundColor: null,
-            width: PAGE_W,
-            height: PAGE_H,
             windowWidth: PAGE_W,
             windowHeight: PAGE_H,
             imageTimeout: 0,
+            removeContainer: true,
             logging: false,
           });
 
@@ -214,6 +251,7 @@ export function CatalogPdfRenderer({
   const fontHeader = Math.max(12, Math.round(10 * PDF_LAYOUT_SCALE));
   const logoH = Math.round(20 * PDF_LAYOUT_SCALE);
   const metaFont = Math.max(10, Math.round(8 * PDF_LAYOUT_SCALE));
+  const familyHeaderH = Math.round(40 * PDF_LAYOUT_SCALE);
 
   return (
     <div
@@ -286,8 +324,8 @@ export function CatalogPdfRenderer({
           <div style={{ position: "relative", zIndex: 1, height: "100%", display: "flex", flexDirection: "column", padding: pagePad }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", height: headerH, marginBottom: gapSize, paddingBottom: gapSize, borderBottom: "1px solid #e5e5e5", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: gapSize }}>
-                {brandLogo ? (
-                  <img src={brandLogo} alt={category} style={{ height: logoH, objectFit: "contain" }} crossOrigin="anonymous" loading="eager" />
+               {effectiveBrandLogo ? (
+                   <img src={effectiveBrandLogo} alt={category} style={{ height: logoH, objectFit: "contain" }} crossOrigin="anonymous" loading="eager" />
                 ) : (
                   <img src={vrcfLogo} alt="VRCF" style={{ height: logoH, width: logoH, objectFit: "contain" }} crossOrigin="anonymous" loading="eager" />
                 )}
@@ -303,10 +341,10 @@ export function CatalogPdfRenderer({
                 </div>
               ) : (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-                  <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", height: 54, marginBottom: 6 }}>
-                    {pageTheme.bgImage ? (
+                  <div style={{ borderRadius: 10, overflow: "hidden", position: "relative", height: familyHeaderH, marginBottom: 6 }}>
+                    {contentBgImage ? (
                       <>
-                        <img src={pageTheme.bgImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} crossOrigin="anonymous" loading="eager" />
+                        <img src={contentBgImage} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} crossOrigin="anonymous" loading="eager" />
                         <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)" }} />
                       </>
                     ) : (
@@ -328,7 +366,7 @@ export function CatalogPdfRenderer({
 
                   <div style={{ flex: 1, minHeight: 0, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gridTemplateRows: "repeat(2, minmax(0, 1fr))", gap: gapSize }}>
                     {page.products.map((product) => {
-                      const imgUrl = getProductImage(product, imagesByProduct);
+                      const imgUrl = getPdfSafeImageUrl(getProductImage(product, imagesByProduct));
                       const descShort = product.description ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50) : null;
 
                       return (
