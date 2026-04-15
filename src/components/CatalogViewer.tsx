@@ -577,14 +577,11 @@ export function CatalogViewer({
                         <div className="flex-1 min-h-0" style={{
                           display: "grid",
                           gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                          gridTemplateRows: "repeat(2, minmax(0, 1fr))",
+                          gridTemplateRows: "repeat(3, minmax(0, 1fr))",
                           gap: gapSize,
                         }}>
                           {page.products.map((product) => {
                             const imgUrl = getProductImage(product);
-                            const descShort = product.description
-                              ? product.description.split("\n")[0].replace(/^•\s*/, "").slice(0, 50)
-                              : null;
 
                             return (
                               <div key={product.id} className="group h-full min-h-0 flex flex-col rounded overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
@@ -629,9 +626,6 @@ export function CatalogViewer({
                                       {product.name}
                                     </h4>
                                   </button>
-                                  {descShort && (
-                                    <p className="line-clamp-1 leading-snug" style={{ fontSize: fontDesc, color: "#888" }}>{descShort}</p>
-                                  )}
                                   <div className="mt-auto" style={{ paddingTop: Math.round(2 * scale) }}>
                                     {product.price != null ? (
                                       <span className="font-heading font-bold" style={{ fontSize: fontPrice, color: "#1a1a1a" }}>

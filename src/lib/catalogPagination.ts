@@ -12,7 +12,7 @@ export interface CatalogFamilyPage<T extends CatalogPaginationProduct = CatalogP
   totalPagesInFamily: number;
 }
 
-const PRODUCTS_PER_PAGE = 4;
+const PRODUCTS_PER_PAGE = 6;
 
 function sortFamilyProducts<T extends CatalogPaginationProduct>(products: T[]) {
   return [...products].sort((a, b) => {
