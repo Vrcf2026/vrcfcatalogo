@@ -385,16 +385,16 @@ export function CatalogProductPage({
                         )}
                       </div>
 
-                      <div className="flex flex-col flex-1" style={{ padding: cardPad }}>
+                      <div className="flex flex-col flex-1" style={{ padding: cardPad, minHeight: 60 }}>
                         {onProductOpen ? (
                           <button type="button" onClick={() => onProductOpen(product)} className="text-left">
-                            <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
+                            <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a", minHeight: fontTitle * 2.4 }}>
                               {product.name}
                             </h4>
                           </button>
                         ) : (
                           <div>
-                            <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
+                            <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a", minHeight: fontTitle * 2.4 }}>
                               {product.name}
                             </h4>
                           </div>

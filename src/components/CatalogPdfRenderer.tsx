@@ -165,7 +165,15 @@ export function CatalogPdfRenderer({
   const familyBarH = 44;
 
   /* ── Inline styles as objects for readability ── */
-  const pageBase: React.CSSProperties = { width: PAGE_W, height: PAGE_H, position: "relative", overflow: "hidden" };
+  const pageBase: React.CSSProperties = {
+    width: PAGE_W,
+    height: PAGE_H,
+    minHeight: PAGE_H,
+    position: "relative",
+    overflow: "hidden",
+    background: "#ffffff",
+    display: "block",
+  };
 
   return (
     <div
