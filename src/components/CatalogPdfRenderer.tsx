@@ -113,19 +113,41 @@ export function CatalogPdfRenderer({
         toast.info(`A gerar PDF "${category}"...`);
         const container = containerRef.current;
         if (!container) return;
+
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         await waitForRenderableAssets(container);
-        const pageEls = container.querySelectorAll("[data-pdf-page]");
-        if (pageEls.length === 0) { toast.error("Sem páginas."); onComplete(); return; }
+
+        const pageEls = Array.from(container.querySelectorAll("[data-pdf-page]")) as HTMLElement[];
+        if (pageEls.length === 0) {
+          toast.error("Sem páginas.");
+          onComplete();
+          return;
+        }
+
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
         for (let i = 0; i < pageEls.length; i++) {
-          const el = pageEls[i] as HTMLElement;
+          const el = pageEls[i];
           const canvas = await html2canvas(el, {
-            scale: 2, useCORS: true, allowTaint: false, backgroundColor: null,
-            windowWidth: PAGE_W, windowHeight: PAGE_H, imageTimeout: 0, removeContainer: true, logging: false,
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: "#ffffff",
+            windowWidth: PAGE_W,
+            windowHeight: PAGE_H,
+            width: PAGE_W,
+            height: PAGE_H,
+            scrollX: 0,
+            scrollY: 0,
+            imageTimeout: 0,
+            removeContainer: false,
+            logging: false,
           });
+
           if (i > 0) pdf.addPage("a4", "portrait");
           pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297, undefined, "FAST");
         }
+
         pdf.save(`Catalogo_${category.replace(/\s+/g, "_")}_VRCF.pdf`);
         toast.success(`PDF "${category}" descarregado!`);
       } catch (err) {
@@ -135,6 +157,7 @@ export function CatalogPdfRenderer({
         onComplete();
       }
     };
+
     generate();
   }, [category, onComplete]);
 
@@ -149,7 +172,18 @@ export function CatalogPdfRenderer({
   const pageBase: React.CSSProperties = { width: PAGE_W, height: PAGE_H, position: "relative", overflow: "hidden" };
 
   return (
-    <div ref={containerRef} style={{ position: "fixed", left: -20000, top: 0, pointerEvents: "none", width: PAGE_W }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: PAGE_W,
+        opacity: 0,
+        pointerEvents: "none",
+        zIndex: -1,
+      }}
+    >
       {/* ═══ COVER ═══ */}
       <div data-pdf-page style={{ ...pageBase, background: theme.gradient }}>
         {coverBg && (
