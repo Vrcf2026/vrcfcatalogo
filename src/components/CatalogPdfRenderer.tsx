@@ -45,14 +45,23 @@ function getProductImage(product: CatalogProduct, imagesByProduct: Record<string
 }
 
 async function waitForImage(img: HTMLImageElement) {
+  const src = img.currentSrc || img.src;
+  if (!src) return;
+
   if (img.complete && img.naturalWidth > 0) {
     try { await img.decode(); } catch { /* ok */ }
     return;
   }
+
   await new Promise<void>((resolve) => {
+    const timeoutId = window.setTimeout(() => resolve(), 5000);
     const done = () => resolve();
-    img.addEventListener("load", done, { once: true });
-    img.addEventListener("error", done, { once: true });
+    const finish = () => {
+      window.clearTimeout(timeoutId);
+      done();
+    };
+    img.addEventListener("load", finish, { once: true });
+    img.addEventListener("error", finish, { once: true });
   });
   try { await img.decode(); } catch { /* ok */ }
 }
@@ -121,7 +130,7 @@ export function CatalogPdfRenderer({
             height: PAGE_H,
             scrollX: 0,
             scrollY: 0,
-            imageTimeout: 0,
+            imageTimeout: 5000,
             removeContainer: false,
             logging: false,
           });
