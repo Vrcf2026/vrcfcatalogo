@@ -312,9 +312,15 @@ export function CatalogPdfRenderer({
             <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 16, margin: 0 }}>📍 Rua Luis Calado Nunes 15 LJB — 2870-350 Montijo</p>
             <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 16, margin: 0 }}>🌐 www.vrcf.pt</p>
           </div>
-          <p style={{ position: "absolute", bottom: 28, color: "rgba(255,255,255,0.2)", fontSize: 9, letterSpacing: "0.1em", margin: 0 }}>
-            © {new Date().getFullYear()} VRCF — Todos os direitos reservados
-          </p>
+          <div style={{ position: "absolute", bottom: 24, left: 0, right: 0, padding: "0 60px", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, textAlign: "center" }}>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", margin: 0 }}>vrcf.pt</p>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 9, margin: 0, lineHeight: 1.4 }}>Todos os preços apresentados incluem IVA à taxa legal em vigor.</p>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 9, margin: 0, lineHeight: 1.4 }}>Os preços são meramente indicativos e podem sofrer alterações sem aviso prévio.</p>
+            <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 9, margin: 0, lineHeight: 1.4 }}>As imagens apresentadas são meramente ilustrativas.</p>
+            <p style={{ color: "rgba(255,255,255,0.2)", fontSize: 9, letterSpacing: "0.1em", margin: "4px 0 0" }}>
+              © {new Date().getFullYear()} VRCF — Todos os direitos reservados
+            </p>
+          </div>
         </div>
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, backgroundColor: `${theme.accent}60` }} />
       </div>
