@@ -123,6 +123,29 @@ const DEFAULT_THEME = {
   bgImage: "/images/bg-outros.jpg",
 };
 
+const A4_PAGE_W = 794;
+const A4_PAGE_H = 1123;
+
+function A4PageStage({ scale, children }: { scale: number; children: React.ReactNode }) {
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      <div
+        style={{
+          width: A4_PAGE_W,
+          height: A4_PAGE_H,
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          transformOrigin: "center center",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Cover Page ─── */
 function CoverPage({ category, productCount, bgImage, brandLogo, brandTheme }: { category: string; productCount: number; bgImage: string; brandLogo?: string | null; brandTheme?: { gradient: string; accent: string; pattern: string } | null }) {
   const theme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
@@ -364,6 +387,10 @@ export function CatalogViewer({
   };
 
   const pageTheme = brandTheme ? { ...DEFAULT_THEME, ...brandTheme, bgImage: DEFAULT_THEME.bgImage } : (CATEGORY_THEMES[category] || DEFAULT_THEME);
+  const pageRenderScale = useMemo(
+    () => Math.min(bookDimensions.width / A4_PAGE_W, bookDimensions.height / A4_PAGE_H),
+    [bookDimensions.height, bookDimensions.width]
+  );
 
   // For brands, use the first product image as cover background (custom override takes priority)
   const coverBgImage = useMemo(() => {
@@ -503,161 +530,155 @@ export function CatalogViewer({
         >
           {/* Cover page */}
           <FlipPage>
-            <CoverPage
-              category={category}
-              productCount={filteredProducts.length}
-              bgImage={coverBgImage}
-              brandLogo={effectiveBrandLogo}
-              brandTheme={brandTheme}
-            />
+            <A4PageStage scale={pageRenderScale}>
+              <CoverPage
+                category={category}
+                productCount={filteredProducts.length}
+                bgImage={coverBgImage}
+                brandLogo={effectiveBrandLogo}
+                brandTheme={brandTheme}
+              />
+            </A4PageStage>
           </FlipPage>
 
           {/* Product pages grouped by family */}
           {pages.map((page, pageIndex) => {
-            // Scale factor: reference height is 700px (comfortable A4 on desktop)
-            const scale = Math.min(bookDimensions.height / 700, 1.2);
-            const pagePad = Math.round(12 * scale);
-            const headerH = Math.round(28 * scale);
-            const footerH = Math.round(20 * scale);
-            const familyHeaderH = Math.round(40 * scale);
-            const gapSize = Math.round(4 * scale);
-            const cardPad = Math.round(4 * scale);
-            const fontTitle = Math.max(8, Math.round(10 * scale));
-            const fontDesc = Math.max(6, Math.round(8 * scale));
-            const fontPrice = Math.max(8, Math.round(11 * scale));
-            const fontHeader = Math.max(8, Math.round(10 * scale));
-            const logoH = Math.round(20 * scale);
-            const metaFont = Math.max(7, Math.round(8 * scale));
+            const pagePad = 14;
+            const headerH = 34;
+            const footerH = 22;
+            const gapSize = 6;
+            const cardPad = 6;
+            const fontTitle = 11;
+            const fontDesc = 10;
+            const fontPrice = 13;
+            const fontHeader = 13;
+            const logoH = 24;
+            const metaFont = 10;
 
             return (
             <FlipPage key={pageIndex}>
-              <div className="h-full w-full flex flex-col relative overflow-hidden">
-                {/* Background */}
-                {pageTheme.bgImage && (
-                  <div className="absolute inset-0 z-0">
-                    <img src={pageTheme.bgImage} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.90)" }} />
-                  </div>
-                )}
-                <div className="relative z-10 h-full flex flex-col" style={{ padding: pagePad }}>
-                  {/* Page header with logo */}
-                  <div className="flex items-center justify-between shrink-0" style={{ height: headerH, marginBottom: gapSize, paddingBottom: gapSize, borderBottom: "1px solid #e5e5e5" }}>
-                    <div className="flex items-center" style={{ gap: gapSize }}>
-                      {brandLogo ? (
-                        <img src={brandLogo} alt={category} style={{ height: logoH }} className="object-contain" />
-                      ) : (
-                        <img src={vrcfLogo} alt="VRCF" style={{ height: logoH, width: logoH }} className="object-contain" />
-                      )}
-                      <span className="font-heading font-bold" style={{ fontSize: fontHeader, color: "#1a1a1a" }}>{category}</span>
+              <A4PageStage scale={pageRenderScale}>
+                <div className="h-full w-full flex flex-col relative overflow-hidden">
+                  {pageTheme.bgImage && (
+                    <div className="absolute inset-0 z-0">
+                      <img src={pageTheme.bgImage} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.90)" }} />
                     </div>
-                    <span className="font-medium" style={{ fontSize: Math.max(7, Math.round(9 * scale)), color: pageTheme.accent }}>
-                      VRCF
-                    </span>
-                  </div>
-
-                  {/* Family sections - fill remaining space */}
-                  <div className="flex-1 flex flex-col overflow-hidden" style={{ gap: gapSize }}>
-                    {page.products.length === 0 ? (
-                      <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
-                        <Search className="h-8 w-8 mb-2 opacity-40" />
-                        <p style={{ fontSize: fontDesc }}>Nenhum produto encontrado</p>
+                  )}
+                  <div className="relative z-10 h-full flex flex-col" style={{ padding: pagePad }}>
+                    <div className="flex items-center justify-between shrink-0" style={{ height: headerH, marginBottom: gapSize, paddingBottom: gapSize, borderBottom: "1px solid #e5e5e5" }}>
+                      <div className="flex items-center" style={{ gap: 8 }}>
+                        {effectiveBrandLogo ? (
+                          <img src={effectiveBrandLogo} alt={category} style={{ height: logoH }} className="object-contain" />
+                        ) : (
+                          <img src={vrcfLogo} alt="VRCF" style={{ height: logoH, width: logoH }} className="object-contain" />
+                        )}
+                        <span className="font-heading font-bold" style={{ fontSize: fontHeader, color: "#1a1a1a" }}>{category}</span>
                       </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col min-h-0">
-                        <FamilyHeader familyName={page.familyName} accent={pageTheme.accent} bgImage={pageTheme.bgImage} scale={scale} />
+                      <span className="font-medium" style={{ fontSize: 11, color: pageTheme.accent }}>
+                        VRCF
+                      </span>
+                    </div>
 
-                        <div className="shrink-0" style={{ marginBottom: gapSize, marginTop: -Math.round(1 * scale) }}>
-                          {page.totalPagesInFamily > 1 && (
-                            <p style={{ fontSize: metaFont, color: "#666" }}>
-                              {page.pageNumberInFamily} / {page.totalPagesInFamily} da família {page.familyName}
-                            </p>
-                          )}
+                    <div className="flex-1 flex flex-col overflow-hidden" style={{ gap: gapSize }}>
+                      {page.products.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center" style={{ color: "#999" }}>
+                          <Search className="h-8 w-8 mb-2 opacity-40" />
+                          <p style={{ fontSize: fontDesc }}>Nenhum produto encontrado</p>
                         </div>
+                      ) : (
+                        <div className="flex-1 flex flex-col min-h-0">
+                          <FamilyHeader familyName={page.familyName} accent={pageTheme.accent} bgImage={pageTheme.bgImage} scale={1} />
 
-                        <div className="flex-1 min-h-0" style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                          gridTemplateRows: "repeat(3, minmax(0, 1fr))",
-                          gap: gapSize,
-                        }}>
-                          {page.products.map((product) => {
-                            const imgUrl = getProductImage(product);
+                          <div className="shrink-0" style={{ marginBottom: gapSize }}>
+                            {page.totalPagesInFamily > 1 && (
+                              <p style={{ fontSize: metaFont, color: "#666" }}>
+                                {page.pageNumberInFamily} / {page.totalPagesInFamily} da família {page.familyName}
+                              </p>
+                            )}
+                          </div>
 
-                            return (
-                              <div key={product.id} className="group h-full min-h-0 flex flex-col rounded overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
-                                {product.featured && (
-                                  <div className="absolute top-0 left-0 z-20 rounded-br text-white font-bold uppercase" style={{ backgroundColor: pageTheme.accent, fontSize: Math.max(5, Math.round(6 * scale)), padding: `${Math.round(1 * scale)}px ${Math.round(4 * scale)}px`, letterSpacing: "0.05em" }}>
-                                    ★ Destaque
-                                  </div>
-                                )}
-                                <div className="overflow-hidden relative shrink-0" style={{ backgroundColor: "#f5f5f5", aspectRatio: "16/10" }}>
-                                  {imgUrl ? (
-                                    <>
-                                      <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
-                                      <button
-                                        onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
-                                        className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
-                                      >
-                                        <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <div className="flex items-center justify-center h-full">
-                                      <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gridTemplateRows: "repeat(3, auto)", gap: gapSize, alignContent: "start" }}>
+                            {page.products.map((product) => {
+                              const imgUrl = getProductImage(product);
+
+                              return (
+                                <div key={product.id} className="group flex flex-col rounded overflow-hidden relative" style={{ border: product.featured ? `2px solid ${pageTheme.accent}` : "1px solid #eee", backgroundColor: product.featured ? "#fffbf0" : "#fff" }}>
+                                  {product.featured && (
+                                    <div className="absolute top-0 left-0 z-20 rounded-br text-white font-bold uppercase" style={{ backgroundColor: pageTheme.accent, fontSize: 8, padding: "2px 6px", letterSpacing: "0.05em" }}>
+                                      ★ Destaque
                                     </div>
                                   )}
-                                </div>
-                                <div className="flex flex-col flex-1 min-h-0" style={{ padding: cardPad, gap: Math.round(1 * scale) }}>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      trackEvent(product.id, "catalog_view");
-                                      setSelectedProduct({
-                                        name: product.name, description: product.description,
-                                        category: product.category, price: product.price,
-                                        imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
-                                        familyName: page.familyName,
-                                      });
-                                    }}
-                                    className="text-left"
-                                  >
-                                    <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
-                                      {product.name}
-                                    </h4>
-                                  </button>
-                                  <div className="mt-auto" style={{ paddingTop: Math.round(2 * scale) }}>
-                                    {product.price != null ? (
-                                      <span className="font-heading font-bold" style={{ fontSize: fontPrice, color: "#1a1a1a" }}>
-                                        {product.price.toFixed(2).replace(".", ",")} €
-                                      </span>
+                                  <div className="overflow-hidden relative shrink-0" style={{ backgroundColor: "#f5f5f5", aspectRatio: "16/10" }}>
+                                    {imgUrl ? (
+                                      <>
+                                        <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); setZoomedImage(imgUrl); }}
+                                          className="absolute top-1 right-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          style={{ backgroundColor: "rgba(255,255,255,0.8)" }}
+                                        >
+                                          <ZoomIn className="h-3 w-3" style={{ color: "#333" }} />
+                                        </button>
+                                      </>
                                     ) : (
-                                      <span style={{ fontSize: fontDesc, color: "#aaa" }}>Consultar</span>
+                                      <div className="flex items-center justify-center h-full">
+                                        <ImageOff className="h-5 w-5" style={{ color: "#ccc" }} />
+                                      </div>
                                     )}
                                   </div>
+                                  <div className="flex flex-col flex-1" style={{ padding: cardPad }}>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        trackEvent(product.id, "catalog_view");
+                                        setSelectedProduct({
+                                          name: product.name, description: product.description,
+                                          category: product.category, price: product.price,
+                                          imageUrl: product.image_url, images: imagesByProduct[product.id] || [],
+                                          familyName: page.familyName,
+                                        });
+                                      }}
+                                      className="text-left"
+                                    >
+                                      <h4 className="font-heading font-bold leading-tight line-clamp-2" style={{ fontSize: fontTitle, color: "#1a1a1a" }}>
+                                        {product.name}
+                                      </h4>
+                                    </button>
+                                    <div className="mt-auto" style={{ paddingTop: 3 }}>
+                                      {product.price != null ? (
+                                        <span className="font-heading font-bold" style={{ fontSize: fontPrice, color: "#1a1a1a" }}>
+                                          {product.price.toFixed(2).replace(".", ",")} €
+                                        </span>
+                                      ) : (
+                                        <span style={{ fontSize: fontDesc, color: "#aaa" }}>Consultar</span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* Page footer */}
-                  <div className="shrink-0 flex items-center justify-between" style={{ height: footerH, marginTop: gapSize, paddingTop: gapSize, borderTop: "1px solid #eee", fontSize: Math.max(7, Math.round(8 * scale)), color: "#bbb" }}>
-                    <span>Catálogo {category}</span>
-                    <span>{pageIndex + 1} / {pages.length}</span>
+                    <div className="shrink-0 flex items-center justify-between" style={{ height: footerH, marginTop: gapSize, paddingTop: gapSize, borderTop: "1px solid #eee", fontSize: metaFont, color: "#bbb" }}>
+                      <span>Catálogo {category}</span>
+                      <span>{pageIndex + 1} / {pages.length}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </A4PageStage>
             </FlipPage>
             );
           })}
 
           {/* Contacts last page */}
           <FlipPage>
-            <ContactsPage category={category} brandLogo={brandLogo} brandTheme={brandTheme} />
+            <A4PageStage scale={pageRenderScale}>
+              <ContactsPage category={category} brandLogo={brandLogo} brandTheme={brandTheme} />
+            </A4PageStage>
           </FlipPage>
         </HTMLFlipBook>
 
