@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { forwardRef, useEffect, useMemo, useRef } from "react";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
@@ -73,7 +73,7 @@ async function waitForRenderableAssets(container: HTMLDivElement) {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
-export function CatalogPdfRenderer({
+function CatalogPdfRendererInner({
   requestId, category, products, imagesByProduct, familyMap, onComplete,
   brandLogo, customLogoUrl, customCoverUrl, brandTheme,
 }: Props) {
@@ -210,3 +210,8 @@ export function CatalogPdfRenderer({
     </div>
   );
 }
+
+export const CatalogPdfRenderer = forwardRef<HTMLDivElement, Props>((props, _ref) => (
+  <CatalogPdfRendererInner {...props} />
+));
+CatalogPdfRenderer.displayName = "CatalogPdfRenderer";
