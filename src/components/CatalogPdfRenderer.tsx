@@ -194,7 +194,7 @@ export function CatalogPdfRenderer({
         const gridAreaW = PAGE_W - pad * 2;
         const cardW = (gridAreaW - gap) / 2;
         const cardH = (gridAreaH - gap * 2) / 3;
-        const imgH = Math.round(cardH * 0.65);
+        const imgH = Math.round(cardH * 0.58); /* matches 16/10 aspect ratio */
         const textPad = 6;
 
         return (
