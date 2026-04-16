@@ -100,6 +100,8 @@ export function CatalogPdfRenderer({
     hasStartedRef.current = requestId;
 
     const generate = async () => {
+      let completionResult: { fileName: string; url: string } | undefined;
+
       try {
         toast.info(`A gerar PDF "${category}"...`);
         const container = containerRef.current;
@@ -143,13 +145,12 @@ export function CatalogPdfRenderer({
         const blob = pdf.output("blob");
         const url = URL.createObjectURL(blob);
         toast.success(`PDF "${category}" pronto para descarregar.`);
-        onComplete({ fileName, url });
-        return;
+        completionResult = { fileName, url };
       } catch (err) {
         console.error("PDF generation error:", err);
         toast.error("Erro ao gerar o PDF.");
       } finally {
-        onComplete();
+        onComplete(completionResult);
       }
     };
 
