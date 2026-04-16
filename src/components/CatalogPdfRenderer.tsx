@@ -29,6 +29,7 @@ interface Props {
 }
 
 const IMAGE_PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-image`;
+const PDF_RENDER_SCALE = 1.25;
 
 function getPdfSafeImageUrl(url: string | null | undefined) {
   if (!url) return null;
@@ -76,7 +77,7 @@ async function waitForRenderableAssets(container: HTMLDivElement) {
 async function renderPageToCanvas(element: HTMLElement) {
   return Promise.race([
     html2canvas(element, {
-      scale: 1.6,
+      scale: PDF_RENDER_SCALE,
       useCORS: true,
       allowTaint: false,
       backgroundColor: "#ffffff",
@@ -147,8 +148,10 @@ export function CatalogPdfRenderer({
           const canvas = await renderPageToCanvas(el);
 
           if (i > 0) pdf.addPage("a4", "portrait");
-          pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297, undefined, "FAST");
-          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+          pdf.addImage(canvas, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+          canvas.width = 1;
+          canvas.height = 1;
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         }
 
         const fileName = `Catalogo_${category.replace(/\s+/g, "_")}_VRCF.pdf`;
@@ -181,11 +184,11 @@ export function CatalogPdfRenderer({
       ref={containerRef}
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
+        top: -PAGE_H - 40,
+        left: -PAGE_W - 40,
         width: PAGE_W,
         height: PAGE_H,
-        opacity: 0,
+        opacity: 1,
         pointerEvents: "none",
         zIndex: -1,
         overflow: "hidden",

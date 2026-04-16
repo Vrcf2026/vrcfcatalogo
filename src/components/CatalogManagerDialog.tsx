@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { saveAs } from "file-saver";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -71,10 +71,14 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [renderConfig, setRenderConfig] = useState<PdfRenderConfig | null>(null);
   const [generatedPdf, setGeneratedPdf] = useState<GeneratedPdfFile | null>(null);
+  const pendingPdfWindowRef = useRef<Window | null>(null);
 
   useEffect(() => {
     return () => {
       if (generatedPdf?.url) URL.revokeObjectURL(generatedPdf.url);
+      if (pendingPdfWindowRef.current && !pendingPdfWindowRef.current.closed) {
+        pendingPdfWindowRef.current.close();
+      }
     };
   }, [generatedPdf]);
 
@@ -135,6 +139,17 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     }
   ) => {
     if (generatedPdf?.url) URL.revokeObjectURL(generatedPdf.url);
+    if (pendingPdfWindowRef.current && !pendingPdfWindowRef.current.closed) {
+      pendingPdfWindowRef.current.close();
+    }
+
+    const pendingWindow = window.open("", "_blank");
+    if (pendingWindow) {
+      pendingWindow.document.title = "A gerar PDF...";
+      pendingWindow.document.body.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:24px;line-height:1.5"><h1 style="font-size:18px;margin:0 0 8px">A gerar PDF…</h1><p style="margin:0;color:#555">O catálogo será aberto automaticamente quando estiver pronto.</p></div>';
+    }
+
+    pendingPdfWindowRef.current = pendingWindow;
     setGeneratedPdf(null);
     setDownloading(label);
     setRenderConfig({ requestId: Date.now(), label, products: filteredProducts, ...options });
@@ -143,10 +158,23 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const handlePdfReady = useCallback((result?: { fileName: string; blob: Blob }) => {
     setDownloading(null);
     setRenderConfig(null);
+
+    const pendingWindow = pendingPdfWindowRef.current;
+    pendingPdfWindowRef.current = null;
+
     if (!result) return;
 
     const url = URL.createObjectURL(result.blob);
     setGeneratedPdf({ ...result, url });
+
+    if (pendingWindow && !pendingWindow.closed) {
+      try {
+        pendingWindow.location.href = url;
+        pendingWindow.focus();
+      } catch {
+        pendingWindow.close();
+      }
+    }
 
     try {
       saveAs(result.blob, result.fileName);
