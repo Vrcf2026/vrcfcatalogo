@@ -221,7 +221,7 @@ export function CatalogPdfRenderer({
               </div>
 
               {/* Product grid 2x3 */}
-              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gridTemplateRows: "repeat(3, auto)", gap, alignContent: "start" }}>
                 {page.products.map((product) => {
                   const imgUrl = getPdfSafeImageUrl(getProductImage(product, imagesByProduct));
                   return (
