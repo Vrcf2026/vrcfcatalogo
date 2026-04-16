@@ -21,7 +21,7 @@ interface Props {
   products: CatalogProduct[];
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
   familyMap: Record<string, string>;
-  onComplete: () => void;
+  onComplete: (result?: { fileName: string; url: string }) => void;
   brandLogo?: string | null;
   customLogoUrl?: string | null;
   customCoverUrl?: string | null;
@@ -100,6 +100,8 @@ export function CatalogPdfRenderer({
     hasStartedRef.current = requestId;
 
     const generate = async () => {
+      let completionResult: { fileName: string; url: string } | undefined;
+
       try {
         toast.info(`A gerar PDF "${category}"...`);
         const container = containerRef.current;
@@ -139,13 +141,16 @@ export function CatalogPdfRenderer({
           pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297, undefined, "FAST");
         }
 
-        pdf.save(`Catalogo_${category.replace(/\s+/g, "_")}_VRCF.pdf`);
-        toast.success(`PDF "${category}" descarregado!`);
+        const fileName = `Catalogo_${category.replace(/\s+/g, "_")}_VRCF.pdf`;
+        const blob = pdf.output("blob");
+        const url = URL.createObjectURL(blob);
+        toast.success(`PDF "${category}" pronto para descarregar.`);
+        completionResult = { fileName, url };
       } catch (err) {
         console.error("PDF generation error:", err);
         toast.error("Erro ao gerar o PDF.");
       } finally {
-        onComplete();
+        onComplete(completionResult);
       }
     };
 
