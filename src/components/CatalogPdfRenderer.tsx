@@ -189,12 +189,6 @@ export function CatalogPdfRenderer({
 
       {/* ═══ CONTENT PAGES ═══ */}
       {pages.map((page, pageIndex) => {
-        /* Available height for the grid = PAGE_H - pad*2 - headerH - footerH - familyBarH - gaps */
-        const gridAreaH = PAGE_H - pad * 2 - headerH - footerH - familyBarH - gap * 4;
-        const gridAreaW = PAGE_W - pad * 2;
-        const cardW = (gridAreaW - gap) / 2;
-        const cardH = (gridAreaH - gap * 2) / 3;
-        const imgH = Math.round(cardH * 0.58); /* matches 16/10 aspect ratio */
         const textPad = 6;
 
         return (
