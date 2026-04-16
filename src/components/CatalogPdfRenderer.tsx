@@ -16,6 +16,7 @@ import {
 } from "@/components/catalog/CatalogA4Pages";
 
 interface Props {
+  requestId: number;
   category: string;
   products: CatalogProduct[];
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
@@ -64,10 +65,11 @@ async function waitForRenderableAssets(container: HTMLDivElement) {
 }
 
 export function CatalogPdfRenderer({
-  category, products, imagesByProduct, familyMap, onComplete,
+  requestId, category, products, imagesByProduct, familyMap, onComplete,
   brandLogo, customLogoUrl, customCoverUrl, brandTheme,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const hasStartedRef = useRef<number | null>(null);
   const pages = useMemo(() => buildCatalogFamilyPages(products, familyMap), [products, familyMap]);
   const isBrand = !CATEGORY_THEMES[category];
   const pageTheme = brandTheme
@@ -85,6 +87,9 @@ export function CatalogPdfRenderer({
   const brandLogoUrl = useMemo(() => getPdfSafeImageUrl(customLogoUrl || brandLogo), [brandLogo, customLogoUrl]);
 
   useEffect(() => {
+    if (hasStartedRef.current === requestId) return;
+    hasStartedRef.current = requestId;
+
     const generate = async () => {
       try {
         toast.info(`A gerar PDF "${category}"...`);
@@ -136,7 +141,7 @@ export function CatalogPdfRenderer({
     };
 
     generate();
-  }, [category, onComplete]);
+  }, [requestId, category, onComplete]);
 
   /* ── Shared sizes ── */
   const pad = 14;
