@@ -231,7 +231,7 @@ export function CatalogPdfRenderer({
                           ★ Destaque
                         </div>
                       )}
-                      <div style={{ height: imgH, flexShrink: 0, backgroundColor: "#f5f5f5", overflow: "hidden" }}>
+                      <div style={{ flexShrink: 0, backgroundColor: "#f5f5f5", overflow: "hidden", aspectRatio: "16/10" }}>
                         {imgUrl ? (
                           <img src={imgUrl} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} crossOrigin="anonymous" loading="eager" />
                         ) : (
