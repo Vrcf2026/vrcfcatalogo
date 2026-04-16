@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,11 @@ interface PdfRenderConfig extends PdfRenderOptions {
   products: CatalogProduct[];
 }
 
+interface GeneratedPdfFile {
+  fileName: string;
+  url: string;
+}
+
 interface CatalogListItem extends PdfRenderOptions {
   key: string;
   label: string;
@@ -63,6 +68,13 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [renderConfig, setRenderConfig] = useState<PdfRenderConfig | null>(null);
+  const [generatedPdf, setGeneratedPdf] = useState<GeneratedPdfFile | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (generatedPdf?.url) URL.revokeObjectURL(generatedPdf.url);
+    };
+  }, [generatedPdf]);
 
   const { data: customizations = [] } = useQuery({
     queryKey: ["catalog_customizations"],
@@ -120,14 +132,28 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
       brandTheme?: { gradient: string; accent: string; pattern: string } | null;
     }
   ) => {
+    if (generatedPdf?.url) URL.revokeObjectURL(generatedPdf.url);
+    setGeneratedPdf(null);
     setDownloading(label);
     setRenderConfig({ requestId: Date.now(), label, products: filteredProducts, ...options });
   };
 
-  const handlePdfReady = useCallback(() => {
+  const handlePdfReady = useCallback((result?: GeneratedPdfFile) => {
     setDownloading(null);
     setRenderConfig(null);
+    if (result) setGeneratedPdf(result);
   }, []);
+
+  const handleDownloadReadyPdf = useCallback(() => {
+    if (!generatedPdf) return;
+    const link = document.createElement("a");
+    link.href = generatedPdf.url;
+    link.download = generatedPdf.fileName;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [generatedPdf]);
 
   const CATEGORY_ICONS: Record<string, string> = {
     Laptops: "💻",
@@ -237,6 +263,27 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
               Gestão de Catálogos
             </DialogTitle>
           </DialogHeader>
+
+          {generatedPdf && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 p-3 mb-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">PDF pronto</p>
+                <p className="text-xs text-muted-foreground truncate">{generatedPdf.fileName}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <a href={generatedPdf.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Abrir</span>
+                  </a>
+                </Button>
+                <Button variant="default" size="sm" className="gap-1.5" onClick={handleDownloadReadyPdf}>
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Descarregar</span>
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Share all */}
           <div className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30 mb-2">
