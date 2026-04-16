@@ -162,7 +162,12 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     const pendingWindow = pendingPdfWindowRef.current;
     pendingPdfWindowRef.current = null;
 
-    if (!result) return;
+    if (!result) {
+      if (pendingWindow && !pendingWindow.closed) {
+        pendingWindow.close();
+      }
+      return;
+    }
 
     const url = URL.createObjectURL(result.blob);
     setGeneratedPdf({ ...result, url });
