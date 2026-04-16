@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 import { Globe, ImageOff, Mail, MapPin, Phone, Search, ZoomIn } from "lucide-react";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import vrcfShield from "@/assets/vrcf-shield.png";
@@ -118,23 +118,23 @@ export function A4PageStage({ scale, children }: { scale: number; children: Reac
   );
 }
 
-export function CatalogCoverPage({
-  category,
-  productCount,
-  bgImage,
-  brandLogo,
-  theme,
-}: {
+export const CatalogCoverPage = forwardRef<HTMLDivElement, {
   category: string;
   productCount: number;
   bgImage: string;
   brandLogo?: string | null;
   theme: CatalogTheme;
-}) {
+}>(function CatalogCoverPage({
+  category,
+  productCount,
+  bgImage,
+  brandLogo,
+  theme,
+}, ref) {
   const isBrand = !CATEGORY_THEMES[category];
 
   return (
-    <div className="h-full w-full relative overflow-hidden">
+    <div ref={ref} className="h-full w-full relative overflow-hidden">
       {bgImage ? (
         <>
           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -192,17 +192,17 @@ export function CatalogCoverPage({
       <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: `${theme.accent}60` }} />
     </div>
   );
-}
+});
 
-export function CatalogContactsPage({
-  theme,
-  onWhatsAppClick,
-}: {
+export const CatalogContactsPage = forwardRef<HTMLDivElement, {
   theme: CatalogTheme;
   onWhatsAppClick?: () => void;
-}) {
+}>(function CatalogContactsPage({
+  theme,
+  onWhatsAppClick,
+}, ref) {
   return (
-    <div className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+    <div ref={ref} className="h-full w-full relative overflow-hidden" style={{ background: theme.gradient }}>
       <div className="absolute inset-0" style={{ background: theme.pattern }} />
       <div className="absolute top-0 left-0 right-0 h-1.5" style={{ background: theme.accent }} />
 
@@ -257,11 +257,11 @@ export function CatalogContactsPage({
       <div className="absolute bottom-0 left-0 right-0 h-1" style={{ backgroundColor: `${theme.accent}60` }} />
     </div>
   );
-}
+});
 
-export function CatalogFamilyHeader({ familyName, accent, bgImage }: { familyName: string; accent: string; bgImage: string }) {
+export const CatalogFamilyHeader = forwardRef<HTMLDivElement, { familyName: string; accent: string; bgImage: string }>(function CatalogFamilyHeader({ familyName, accent, bgImage }, ref) {
   return (
-    <div className="rounded-lg overflow-hidden relative" style={{ height: 40, marginBottom: 4 }}>
+    <div ref={ref} className="rounded-lg overflow-hidden relative" style={{ height: 40, marginBottom: 4 }}>
       {bgImage ? (
         <>
           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -276,19 +276,9 @@ export function CatalogFamilyHeader({ familyName, accent, bgImage }: { familyNam
       </div>
     </div>
   );
-}
+});
 
-export function CatalogProductPage({
-  category,
-  page,
-  pageIndex,
-  totalPages,
-  theme,
-  brandLogo,
-  getProductImage,
-  onProductOpen,
-  onImageZoom,
-}: {
+export const CatalogProductPage = forwardRef<HTMLDivElement, {
   category: string;
   page: CatalogFamilyPage;
   pageIndex: number;
@@ -298,7 +288,17 @@ export function CatalogProductPage({
   getProductImage: (product: CatalogProduct) => string | null | undefined;
   onProductOpen?: (product: CatalogProduct) => void;
   onImageZoom?: (imageUrl: string) => void;
-}) {
+}>(function CatalogProductPage({
+  category,
+  page,
+  pageIndex,
+  totalPages,
+  theme,
+  brandLogo,
+  getProductImage,
+  onProductOpen,
+  onImageZoom,
+}, ref) {
   const pagePad = 14;
   const headerH = 34;
   const footerH = 22;
@@ -312,7 +312,7 @@ export function CatalogProductPage({
   const metaFont = 10;
 
   return (
-    <div className="h-full w-full flex flex-col relative overflow-hidden">
+    <div ref={ref} className="h-full w-full flex flex-col relative overflow-hidden">
       {theme.bgImage && (
         <div className="absolute inset-0 z-0">
           <img src={theme.bgImage} alt="" className="w-full h-full object-cover" />
@@ -425,4 +425,4 @@ export function CatalogProductPage({
       </div>
     </div>
   );
-}
+});
