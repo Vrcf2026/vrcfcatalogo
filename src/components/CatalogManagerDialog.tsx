@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,12 @@ interface PdfRenderOptions {
   brandTheme?: { gradient: string; accent: string; pattern: string } | null;
 }
 
+interface PdfRenderConfig extends PdfRenderOptions {
+  requestId: number;
+  label: string;
+  products: CatalogProduct[];
+}
+
 interface CatalogListItem extends PdfRenderOptions {
   key: string;
   label: string;
@@ -56,7 +62,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [open, setOpen] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [renderConfig, setRenderConfig] = useState<({ label: string; products: CatalogProduct[] } & PdfRenderOptions) | null>(null);
+  const [renderConfig, setRenderConfig] = useState<PdfRenderConfig | null>(null);
 
   const { data: customizations = [] } = useQuery({
     queryKey: ["catalog_customizations"],
@@ -115,13 +121,13 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     }
   ) => {
     setDownloading(label);
-    setRenderConfig({ label, products: filteredProducts, ...options });
+    setRenderConfig({ requestId: Date.now(), label, products: filteredProducts, ...options });
   };
 
-  const handlePdfReady = () => {
+  const handlePdfReady = useCallback(() => {
     setDownloading(null);
     setRenderConfig(null);
-  };
+  }, []);
 
   const CATEGORY_ICONS: Record<string, string> = {
     Laptops: "💻",
@@ -328,6 +334,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
       {renderConfig && (
         <CatalogPdfRenderer
+          requestId={renderConfig.requestId}
           category={renderConfig.label}
           products={renderConfig.products}
           imagesByProduct={imagesByProduct}
