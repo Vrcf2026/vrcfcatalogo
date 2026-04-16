@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { saveAs } from "file-saver";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -53,6 +54,7 @@ interface PdfRenderConfig extends PdfRenderOptions {
 
 interface GeneratedPdfFile {
   fileName: string;
+  blob: Blob;
   url: string;
 }
 
@@ -138,21 +140,24 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     setRenderConfig({ requestId: Date.now(), label, products: filteredProducts, ...options });
   };
 
-  const handlePdfReady = useCallback((result?: GeneratedPdfFile) => {
+  const handlePdfReady = useCallback((result?: { fileName: string; blob: Blob }) => {
     setDownloading(null);
     setRenderConfig(null);
-    if (result) setGeneratedPdf(result);
+    if (!result) return;
+
+    const url = URL.createObjectURL(result.blob);
+    setGeneratedPdf({ ...result, url });
+
+    try {
+      saveAs(result.blob, result.fileName);
+    } catch {
+      toast.info("O PDF ficou pronto. Se a descarga não abrir automaticamente, usa o botão Descarregar.");
+    }
   }, []);
 
   const handleDownloadReadyPdf = useCallback(() => {
     if (!generatedPdf) return;
-    const link = document.createElement("a");
-    link.href = generatedPdf.url;
-    link.download = generatedPdf.fileName;
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    saveAs(generatedPdf.blob, generatedPdf.fileName);
   }, [generatedPdf]);
 
   const CATEGORY_ICONS: Record<string, string> = {

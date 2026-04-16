@@ -21,7 +21,7 @@ interface Props {
   products: CatalogProduct[];
   imagesByProduct: Record<string, { id: string; image_url: string; position: number }[]>;
   familyMap: Record<string, string>;
-  onComplete: (result?: { fileName: string; url: string }) => void;
+  onComplete: (result?: { fileName: string; blob: Blob }) => void;
   brandLogo?: string | null;
   customLogoUrl?: string | null;
   customCoverUrl?: string | null;
@@ -73,6 +73,29 @@ async function waitForRenderableAssets(container: HTMLDivElement) {
   await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 }
 
+async function renderPageToCanvas(element: HTMLElement) {
+  return Promise.race([
+    html2canvas(element, {
+      scale: 1.6,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: "#ffffff",
+      windowWidth: PAGE_W,
+      windowHeight: PAGE_H,
+      width: PAGE_W,
+      height: PAGE_H,
+      scrollX: 0,
+      scrollY: 0,
+      imageTimeout: 5000,
+      removeContainer: false,
+      logging: false,
+    }),
+    new Promise<never>((_, reject) => {
+      window.setTimeout(() => reject(new Error("PDF page render timeout")), 20000);
+    }),
+  ]);
+}
+
 export function CatalogPdfRenderer({
   requestId, category, products, imagesByProduct, familyMap, onComplete,
   brandLogo, customLogoUrl, customCoverUrl, brandTheme,
@@ -100,7 +123,7 @@ export function CatalogPdfRenderer({
     hasStartedRef.current = requestId;
 
     const generate = async () => {
-      let completionResult: { fileName: string; url: string } | undefined;
+      let completionResult: { fileName: string; blob: Blob } | undefined;
 
       try {
         toast.info(`A gerar PDF "${category}"...`);
@@ -121,31 +144,17 @@ export function CatalogPdfRenderer({
 
         for (let i = 0; i < pageEls.length; i++) {
           const el = pageEls[i];
-          const canvas = await html2canvas(el, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            backgroundColor: "#ffffff",
-            windowWidth: PAGE_W,
-            windowHeight: PAGE_H,
-            width: PAGE_W,
-            height: PAGE_H,
-            scrollX: 0,
-            scrollY: 0,
-            imageTimeout: 5000,
-            removeContainer: false,
-            logging: false,
-          });
+          const canvas = await renderPageToCanvas(el);
 
           if (i > 0) pdf.addPage("a4", "portrait");
-          pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297, undefined, "FAST");
+          pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 210, 297, undefined, "FAST");
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
         }
 
         const fileName = `Catalogo_${category.replace(/\s+/g, "_")}_VRCF.pdf`;
         const blob = pdf.output("blob");
-        const url = URL.createObjectURL(blob);
         toast.success(`PDF "${category}" pronto para descarregar.`);
-        completionResult = { fileName, url };
+        completionResult = { fileName, blob };
       } catch (err) {
         console.error("PDF generation error:", err);
         toast.error("Erro ao gerar o PDF.");
@@ -157,14 +166,6 @@ export function CatalogPdfRenderer({
     generate();
   }, [requestId, category, onComplete]);
 
-  /* ── Shared sizes ── */
-  const pad = 14;
-  const headerH = 34;
-  const footerH = 22;
-  const gap = 6;
-  const familyBarH = 44;
-
-  /* ── Inline styles as objects for readability ── */
   const pageBase: React.CSSProperties = {
     width: PAGE_W,
     height: PAGE_H,
@@ -183,9 +184,11 @@ export function CatalogPdfRenderer({
         top: 0,
         left: 0,
         width: PAGE_W,
+        height: PAGE_H,
         opacity: 0,
         pointerEvents: "none",
         zIndex: -1,
+        overflow: "hidden",
       }}
     >
       {/* ═══ COVER ═══ */}
