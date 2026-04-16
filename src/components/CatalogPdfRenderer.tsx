@@ -189,12 +189,6 @@ export function CatalogPdfRenderer({
 
       {/* ═══ CONTENT PAGES ═══ */}
       {pages.map((page, pageIndex) => {
-        /* Available height for the grid = PAGE_H - pad*2 - headerH - footerH - familyBarH - gaps */
-        const gridAreaH = PAGE_H - pad * 2 - headerH - footerH - familyBarH - gap * 4;
-        const gridAreaW = PAGE_W - pad * 2;
-        const cardW = (gridAreaW - gap) / 2;
-        const cardH = (gridAreaH - gap * 2) / 3;
-        const imgH = Math.round(cardH * 0.58); /* matches 16/10 aspect ratio */
         const textPad = 6;
 
         return (
@@ -227,7 +221,7 @@ export function CatalogPdfRenderer({
               </div>
 
               {/* Product grid 2x3 */}
-              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gridTemplateRows: "repeat(3, 1fr)", gap }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gridTemplateRows: "repeat(3, auto)", gap, alignContent: "start" }}>
                 {page.products.map((product) => {
                   const imgUrl = getPdfSafeImageUrl(getProductImage(product, imagesByProduct));
                   return (
@@ -237,7 +231,7 @@ export function CatalogPdfRenderer({
                           ★ Destaque
                         </div>
                       )}
-                      <div style={{ height: imgH, flexShrink: 0, backgroundColor: "#f5f5f5", overflow: "hidden" }}>
+                      <div style={{ flexShrink: 0, backgroundColor: "#f5f5f5", overflow: "hidden", aspectRatio: "16/10" }}>
                         {imgUrl ? (
                           <img src={imgUrl} alt={product.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} crossOrigin="anonymous" loading="eager" />
                         ) : (
