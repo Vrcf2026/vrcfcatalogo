@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_families: {
+        Row: {
+          brand_id: string
+          created_at: string
+          family_id: string
+          id: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          family_id: string
+          id?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_families_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_families_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           created_at: string
