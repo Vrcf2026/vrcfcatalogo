@@ -128,6 +128,18 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
   const customizationsByKey = new Map(customizations.map((item) => [`${item.type}:${item.reference_name}`, item]));
 
+  const forceDownloadBlob = useCallback((blob: Blob, fileName: string) => {
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  }, []);
+
   const handleDownloadPdf = (
     label: string,
     filteredProducts: CatalogProduct[],
@@ -146,7 +158,7 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     const pendingWindow = window.open("", "_blank");
     if (pendingWindow) {
       pendingWindow.document.title = "A gerar PDF...";
-      pendingWindow.document.body.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:24px;line-height:1.5"><h1 style="font-size:18px;margin:0 0 8px">A gerar PDF…</h1><p style="margin:0;color:#555">O catálogo será aberto automaticamente quando estiver pronto.</p></div>';
+      pendingWindow.document.body.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:24px;line-height:1.5"><h1 style="font-size:18px;margin:0 0 8px">A gerar PDF…</h1><p style="margin:0;color:#555">Se a descarga não arrancar automaticamente, esta janela vai mostrar o ficheiro pronto.</p></div>';
     }
 
     pendingPdfWindowRef.current = pendingWindow;
@@ -163,35 +175,45 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     pendingPdfWindowRef.current = null;
 
     if (!result) {
-      if (pendingWindow && !pendingWindow.closed) {
-        pendingWindow.close();
-      }
+      if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
       return;
     }
 
     const url = URL.createObjectURL(result.blob);
     setGeneratedPdf({ ...result, url });
 
+    let openedInWindow = false;
     if (pendingWindow && !pendingWindow.closed) {
       try {
-        pendingWindow.location.href = url;
+        pendingWindow.location.replace(url);
         pendingWindow.focus();
+        openedInWindow = true;
       } catch {
         pendingWindow.close();
       }
     }
 
     try {
-      saveAs(result.blob, result.fileName);
+      forceDownloadBlob(result.blob, result.fileName);
     } catch {
-      toast.info("O PDF ficou pronto. Se a descarga não abrir automaticamente, usa o botão Descarregar.");
+      try {
+        saveAs(result.blob, result.fileName);
+      } catch {
+        if (!openedInWindow) {
+          toast.info("O PDF ficou pronto. Usa o botão Descarregar para guardar o ficheiro.");
+        }
+      }
     }
-  }, []);
+  }, [forceDownloadBlob]);
 
   const handleDownloadReadyPdf = useCallback(() => {
     if (!generatedPdf) return;
-    saveAs(generatedPdf.blob, generatedPdf.fileName);
-  }, [generatedPdf]);
+    try {
+      forceDownloadBlob(generatedPdf.blob, generatedPdf.fileName);
+    } catch {
+      saveAs(generatedPdf.blob, generatedPdf.fileName);
+    }
+  }, [forceDownloadBlob, generatedPdf]);
 
   const CATEGORY_ICONS: Record<string, string> = {
     Laptops: "💻",
