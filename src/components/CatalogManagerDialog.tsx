@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { saveAs } from "file-saver";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,14 +70,10 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [renderConfig, setRenderConfig] = useState<PdfRenderConfig | null>(null);
   const [generatedPdf, setGeneratedPdf] = useState<GeneratedPdfFile | null>(null);
-  const pendingPdfWindowRef = useRef<Window | null>(null);
 
   useEffect(() => {
     return () => {
       if (generatedPdf?.url) URL.revokeObjectURL(generatedPdf.url);
-      if (pendingPdfWindowRef.current && !pendingPdfWindowRef.current.closed) {
-        pendingPdfWindowRef.current.close();
-      }
     };
   }, [generatedPdf]);
 
@@ -128,18 +123,6 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
   const customizationsByKey = new Map(customizations.map((item) => [`${item.type}:${item.reference_name}`, item]));
 
-  const forceDownloadBlob = useCallback((blob: Blob, fileName: string) => {
-    const downloadUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = fileName;
-    link.rel = "noopener";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-  }, []);
-
   const handleDownloadPdf = (
     label: string,
     filteredProducts: CatalogProduct[],
@@ -151,17 +134,6 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     }
   ) => {
     if (generatedPdf?.url) URL.revokeObjectURL(generatedPdf.url);
-    if (pendingPdfWindowRef.current && !pendingPdfWindowRef.current.closed) {
-      pendingPdfWindowRef.current.close();
-    }
-
-    const pendingWindow = window.open("", "_blank");
-    if (pendingWindow) {
-      pendingWindow.document.title = "A gerar PDF...";
-      pendingWindow.document.body.innerHTML = '<div style="font-family:system-ui,sans-serif;padding:24px;line-height:1.5"><h1 style="font-size:18px;margin:0 0 8px">A gerar PDF…</h1><p style="margin:0;color:#555">Se a descarga não arrancar automaticamente, esta janela vai mostrar o ficheiro pronto.</p></div>';
-    }
-
-    pendingPdfWindowRef.current = pendingWindow;
     setGeneratedPdf(null);
     setDownloading(label);
     setRenderConfig({ requestId: Date.now(), label, products: filteredProducts, ...options });
@@ -171,49 +143,14 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
     setDownloading(null);
     setRenderConfig(null);
 
-    const pendingWindow = pendingPdfWindowRef.current;
-    pendingPdfWindowRef.current = null;
-
     if (!result) {
-      if (pendingWindow && !pendingWindow.closed) pendingWindow.close();
       return;
     }
 
     const url = URL.createObjectURL(result.blob);
     setGeneratedPdf({ ...result, url });
-
-    let openedInWindow = false;
-    if (pendingWindow && !pendingWindow.closed) {
-      try {
-        pendingWindow.location.replace(url);
-        pendingWindow.focus();
-        openedInWindow = true;
-      } catch {
-        pendingWindow.close();
-      }
-    }
-
-    try {
-      forceDownloadBlob(result.blob, result.fileName);
-    } catch {
-      try {
-        saveAs(result.blob, result.fileName);
-      } catch {
-        if (!openedInWindow) {
-          toast.info("O PDF ficou pronto. Usa o botão Descarregar para guardar o ficheiro.");
-        }
-      }
-    }
-  }, [forceDownloadBlob]);
-
-  const handleDownloadReadyPdf = useCallback(() => {
-    if (!generatedPdf) return;
-    try {
-      forceDownloadBlob(generatedPdf.blob, generatedPdf.fileName);
-    } catch {
-      saveAs(generatedPdf.blob, generatedPdf.fileName);
-    }
-  }, [forceDownloadBlob, generatedPdf]);
+    toast.success("PDF pronto. Usa Abrir ou Descarregar.");
+  }, []);
 
   const CATEGORY_ICONS: Record<string, string> = {
     Laptops: "💻",
@@ -337,9 +274,11 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     <span className="hidden sm:inline">Abrir</span>
                   </a>
                 </Button>
-                <Button variant="default" size="sm" className="gap-1.5" onClick={handleDownloadReadyPdf}>
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Descarregar</span>
+                <Button variant="default" size="sm" className="gap-1.5" asChild>
+                  <a href={generatedPdf.url} download={generatedPdf.fileName}>
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Descarregar</span>
+                  </a>
                 </Button>
               </div>
             </div>
