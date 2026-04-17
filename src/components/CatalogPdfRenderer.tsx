@@ -29,7 +29,7 @@ interface Props {
 }
 
 const IMAGE_PROXY_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/proxy-image`;
-const PDF_RENDER_SCALE = 1.25;
+const PDF_RENDER_SCALE = 2;
 
 function getPdfSafeImageUrl(url: string | null | undefined) {
   if (!url) return null;
@@ -81,15 +81,26 @@ async function renderPageToCanvas(element: HTMLElement) {
       useCORS: true,
       allowTaint: false,
       backgroundColor: "#ffffff",
-      windowWidth: PAGE_W,
-      windowHeight: PAGE_H,
-      width: PAGE_W,
-      height: PAGE_H,
+      windowWidth: element.scrollWidth || PAGE_W,
+      windowHeight: element.scrollHeight || PAGE_H,
+      width: element.scrollWidth || PAGE_W,
+      height: element.scrollHeight || PAGE_H,
       scrollX: 0,
       scrollY: 0,
       imageTimeout: 5000,
       removeContainer: false,
       logging: false,
+      onclone: (doc) => {
+        doc.querySelectorAll("img").forEach((img) => {
+          img.setAttribute("loading", "eager");
+          img.setAttribute("decoding", "sync");
+        });
+        doc.querySelectorAll("*").forEach((node) => {
+          const el = node as HTMLElement;
+          el.style.animation = "none";
+          el.style.transition = "none";
+        });
+      },
     }),
     new Promise<never>((_, reject) => {
       window.setTimeout(() => reject(new Error("PDF page render timeout")), 20000);
@@ -146,9 +157,10 @@ export function CatalogPdfRenderer({
         for (let i = 0; i < pageEls.length; i++) {
           const el = pageEls[i];
           const canvas = await renderPageToCanvas(el);
+          const imgData = canvas.toDataURL("image/jpeg", 0.92);
 
           if (i > 0) pdf.addPage("a4", "portrait");
-          pdf.addImage(canvas, "JPEG", 0, 0, 210, 297, undefined, "FAST");
+          pdf.addImage(imgData, "JPEG", 0, 0, 210, 297, undefined, "FAST");
           canvas.width = 1;
           canvas.height = 1;
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));

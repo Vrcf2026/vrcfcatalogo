@@ -366,7 +366,7 @@ export const CatalogProductPage = forwardRef<HTMLDivElement, {
                       <div className="overflow-hidden relative shrink-0" style={{ backgroundColor: "#f5f5f5", aspectRatio: "16/10" }}>
                         {imgUrl ? (
                           <>
-                            <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                            <img src={imgUrl} alt={product.name} className="w-full h-full object-cover" loading={onProductOpen ? "lazy" : "eager"} decoding={onProductOpen ? "async" : "sync"} />
                             {onImageZoom && (
                               <button
                                 type="button"

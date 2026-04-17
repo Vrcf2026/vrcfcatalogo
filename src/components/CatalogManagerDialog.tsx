@@ -53,7 +53,6 @@ interface PdfRenderConfig extends PdfRenderOptions {
 
 interface GeneratedPdfFile {
   fileName: string;
-  blob: Blob;
   url: string;
 }
 
@@ -147,9 +146,30 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
       return;
     }
 
-    const url = URL.createObjectURL(result.blob);
-    setGeneratedPdf({ ...result, url });
-    toast.success("PDF pronto. Usa Abrir ou Descarregar.");
+    void (async () => {
+      try {
+        const safeFileName = result.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = `catalog-pdfs/${Date.now()}-${safeFileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("product-images")
+          .upload(storagePath, result.blob, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+
+        if (uploadError) throw uploadError;
+
+        const { data } = supabase.storage.from("product-images").getPublicUrl(storagePath);
+        setGeneratedPdf({ fileName: result.fileName, url: data.publicUrl });
+        toast.success("PDF pronto. Usa Abrir ou Descarregar.");
+      } catch (error) {
+        console.error("PDF delivery error:", error);
+        const fallbackUrl = URL.createObjectURL(result.blob);
+        setGeneratedPdf({ fileName: result.fileName, url: fallbackUrl });
+        toast.success("PDF pronto. Usa Abrir ou Descarregar.");
+      }
+    })();
   }, []);
 
   const CATEGORY_ICONS: Record<string, string> = {
