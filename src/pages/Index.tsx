@@ -64,6 +64,15 @@ const Index = () => {
     },
   });
 
+  const { data: brandFamilyLinks = [] } = useQuery({
+    queryKey: ["brand_families"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brand_families").select("brand_id, family_id");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const { data: productImages = [] } = useQuery({
     queryKey: ["product_images"],
     queryFn: async () => {
@@ -138,8 +147,33 @@ const Index = () => {
   };
 
   const categories = [...new Set(products?.map((p) => p.category).filter(Boolean) || [])];
-  const visibleFamilies = families.filter((f) => (categoryFilter === "all" || f.category === categoryFilter) && (brandFilter === "all" || products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter)));
-  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter) && (familyFilter === "all" || p.family_id === familyFilter)));
+  // Family ↔ Brand explicit associations (union with derived-from-products for backwards compat)
+  const explicitFamiliesByBrand = brandFamilyLinks.reduce<Record<string, Set<string>>>((acc, l: any) => {
+    if (!acc[l.brand_id]) acc[l.brand_id] = new Set();
+    acc[l.brand_id].add(l.family_id);
+    return acc;
+  }, {});
+  const explicitBrandsByFamily = brandFamilyLinks.reduce<Record<string, Set<string>>>((acc, l: any) => {
+    if (!acc[l.family_id]) acc[l.family_id] = new Set();
+    acc[l.family_id].add(l.brand_id);
+    return acc;
+  }, {});
+
+  const visibleFamilies = families.filter((f) => {
+    if (categoryFilter !== "all" && f.category !== categoryFilter) return false;
+    if (brandFilter === "all") return true;
+    const explicit = explicitFamiliesByBrand[brandFilter]?.has(f.id);
+    const derived = products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter);
+    return explicit || derived;
+  });
+  const visibleBrands = brands.filter((b) => {
+    const matchesProducts = products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter) && (familyFilter === "all" || p.family_id === familyFilter));
+    if (familyFilter !== "all") {
+      const explicit = explicitBrandsByFamily[familyFilter]?.has(b.id);
+      return matchesProducts || explicit;
+    }
+    return matchesProducts;
+  });
 
   return (
     <div className="min-h-screen bg-background">
