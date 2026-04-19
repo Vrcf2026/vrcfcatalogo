@@ -169,7 +169,7 @@ const Catalogos = () => {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <header className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="flex items-center justify-between px-4 py-2">
-          <Link to="/" className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <img src={vrcfLogo} alt="VRCF" className="h-20 w-auto object-contain drop-shadow-md" />
             <div>
               <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
