@@ -283,22 +283,41 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
 
           {generatedPdf && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 p-3 mb-3">
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm font-medium text-foreground">PDF pronto</p>
                 <p className="text-xs text-muted-foreground truncate">{generatedPdf.fileName}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <Button variant="outline" size="sm" asChild>
                   <a href={generatedPdf.url} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Abrir</span>
                   </a>
                 </Button>
-                <Button variant="default" size="sm" className="gap-1.5" asChild>
-                  <a href={generatedPdf.url} download={generatedPdf.fileName}>
-                    <Download className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Descarregar</span>
-                  </a>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(generatedPdf.url);
+                      const blob = await res.blob();
+                      const localUrl = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = localUrl;
+                      a.download = generatedPdf.fileName;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      setTimeout(() => URL.revokeObjectURL(localUrl), 2000);
+                    } catch (e) {
+                      console.error("Download error:", e);
+                      window.open(generatedPdf.url, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Descarregar</span>
                 </Button>
               </div>
             </div>
