@@ -43,10 +43,10 @@ serve(async (req) => {
         </h2>
         <h3 style="color:#333;">Dados do Cliente</h3>
         <table style="width:100%;margin-bottom:20px;">
-          <tr><td style="padding:4px;font-weight:bold;">Nome:</td><td>${customerName}</td></tr>
-          <tr><td style="padding:4px;font-weight:bold;">Email:</td><td><a href="mailto:${customerEmail}">${customerEmail}</a></td></tr>
-          <tr><td style="padding:4px;font-weight:bold;">Telefone:</td><td>${customerPhone}</td></tr>
-          ${notes ? `<tr><td style="padding:4px;font-weight:bold;">Observações:</td><td>${notes}</td></tr>` : ""}
+          <tr><td style="padding:4px;font-weight:bold;">Nome:</td><td>${escapeHtml(customerName)}</td></tr>
+          <tr><td style="padding:4px;font-weight:bold;">Email:</td><td><a href="mailto:${encodeURIComponent(customerEmail)}">${escapeHtml(customerEmail)}</a></td></tr>
+          <tr><td style="padding:4px;font-weight:bold;">Telefone:</td><td>${escapeHtml(customerPhone)}</td></tr>
+          ${notes ? `<tr><td style="padding:4px;font-weight:bold;">Observações:</td><td>${escapeHtml(notes)}</td></tr>` : ""}
         </table>
         <h3 style="color:#333;">Produtos Solicitados</h3>
         <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
@@ -76,7 +76,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           to: RECIPIENT_EMAIL,
-          subject: `Novo Pedido de Orçamento - ${customerName}`,
+          subject: `Novo Pedido de Orçamento - ${customerName}`.replace(/[\r\n]/g, " ").slice(0, 200),
           html,
           replyTo: customerEmail,
         }),
@@ -94,7 +94,7 @@ serve(async (req) => {
             <h2 style="color:#1a1a2e;border-bottom:2px solid #0066cc;padding-bottom:10px;">
               📋 Cópia do Seu Pedido de Orçamento - VRCF
             </h2>
-            <p style="color:#333;">Olá ${customerName},</p>
+            <p style="color:#333;">Olá ${escapeHtml(customerName)},</p>
             <p style="color:#333;">Segue a cópia do seu pedido de orçamento. Entraremos em contacto brevemente.</p>
             <h3 style="color:#333;">Produtos Solicitados</h3>
             <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
@@ -108,7 +108,7 @@ serve(async (req) => {
               </thead>
               <tbody>${itemsHtml}</tbody>
             </table>
-            ${notes ? `<p style="color:#333;"><strong>Observações:</strong> ${notes}</p>` : ""}
+            ${notes ? `<p style="color:#333;"><strong>Observações:</strong> ${escapeHtml(notes)}</p>` : ""}
             <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
             <p style="color:#666;font-size:12px;">VRCF - VALTER ROBERTO CRUZ FRANCISCO UNI. LDA</p>
             <p style="color:#666;font-size:12px;">📞 +351 911 564 243 | ✉️ geral@vrcf.pt</p>

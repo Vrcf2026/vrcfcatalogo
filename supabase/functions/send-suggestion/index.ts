@@ -22,17 +22,29 @@ serve(async (req) => {
       });
     }
 
+    const escapeHtml = (str: unknown) =>
+      String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeMessageHtml = escapeHtml(message).replace(/\n/g, "<br/>");
+
     const html = `
       <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
         <h2 style="color:#1a1a2e;border-bottom:2px solid #0066cc;padding-bottom:10px;">
           💡 Nova Sugestão - Catálogo VRCF
         </h2>
         <table style="width:100%;margin-bottom:20px;">
-          <tr><td style="padding:4px;font-weight:bold;">Nome:</td><td>${name}</td></tr>
-          <tr><td style="padding:4px;font-weight:bold;">Email:</td><td><a href="mailto:${email}">${email}</a></td></tr>
+          <tr><td style="padding:4px;font-weight:bold;">Nome:</td><td>${safeName}</td></tr>
+          <tr><td style="padding:4px;font-weight:bold;">Email:</td><td><a href="mailto:${encodeURIComponent(email)}">${safeEmail}</a></td></tr>
         </table>
         <h3 style="color:#333;">Mensagem</h3>
-        <p style="color:#333;background:#f5f5f5;padding:15px;border-radius:8px;">${message.replace(/\n/g, "<br/>")}</p>
+        <p style="color:#333;background:#f5f5f5;padding:15px;border-radius:8px;">${safeMessageHtml}</p>
         <p style="color:#666;font-size:12px;">Este email foi gerado automaticamente pelo catálogo online VRCF.</p>
       </div>
     `;
@@ -42,10 +54,10 @@ serve(async (req) => {
         <h2 style="color:#1a1a2e;border-bottom:2px solid #0066cc;padding-bottom:10px;">
           ✅ Sugestão Recebida - VRCF
         </h2>
-        <p style="color:#333;">Olá ${name},</p>
+        <p style="color:#333;">Olá ${safeName},</p>
         <p style="color:#333;">Agradecemos a sua sugestão! A sua opinião é muito importante para nós.</p>
         <p style="color:#333;"><strong>A sua mensagem:</strong></p>
-        <p style="color:#555;background:#f5f5f5;padding:15px;border-radius:8px;">${message.replace(/\n/g, "<br/>")}</p>
+        <p style="color:#555;background:#f5f5f5;padding:15px;border-radius:8px;">${safeMessageHtml}</p>
         <hr style="border:none;border-top:1px solid #eee;margin:20px 0;" />
         <p style="color:#666;font-size:12px;">VRCF - VALTER ROBERTO CRUZ FRANCISCO UNI. LDA</p>
         <p style="color:#666;font-size:12px;">📞 +351 911 564 243 | ✉️ geral@vrcf.pt</p>
