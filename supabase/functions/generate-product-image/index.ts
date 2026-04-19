@@ -37,8 +37,33 @@ async function generateSingleImage(productName: string, variation: number, apiKe
   return data.choices?.[0]?.message?.images?.[0]?.image_url?.url || null;
 }
 
+async function requireAdmin(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return { ok: false as const, status: 401 };
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+  const token = authHeader.replace("Bearer ", "");
+  const { data, error } = await sb.auth.getClaims(token);
+  if (error || !data?.claims) return { ok: false as const, status: 401 };
+  const userId = data.claims.sub;
+  const { data: isAdmin } = await sb.rpc("has_role", { _user_id: userId, _role: "admin" });
+  const { data: isSuper } = await sb.rpc("has_role", { _user_id: userId, _role: "super_admin" });
+  if (!isAdmin && !isSuper) return { ok: false as const, status: 403 };
+  return { ok: true as const };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const auth = await requireAdmin(req);
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: auth.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { productName, productId, startPosition = 0, count = 3 } = await req.json();

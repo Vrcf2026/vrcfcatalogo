@@ -1,4 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+async function requireAdmin(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return { ok: false as const, status: 401 };
+  const sb = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+  const token = authHeader.replace("Bearer ", "");
+  const { data, error } = await sb.auth.getClaims(token);
+  if (error || !data?.claims) return { ok: false as const, status: 401 };
+  const userId = data.claims.sub;
+  const { data: isAdmin } = await sb.rpc("has_role", { _user_id: userId, _role: "admin" });
+  const { data: isSuper } = await sb.rpc("has_role", { _user_id: userId, _role: "super_admin" });
+  if (!isAdmin && !isSuper) return { ok: false as const, status: 403 };
+  return { ok: true as const };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,6 +180,13 @@ async function fetchDuckCandidates(searchQuery: string): Promise<string[]> {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const auth = await requireAdmin(req);
+  if (!auth.ok) {
+    return new Response(JSON.stringify({ error: "Unauthorized", images: [] }), {
+      status: auth.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   try {
     const { query, count = 12 } = await req.json();
