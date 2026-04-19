@@ -51,6 +51,27 @@ serve(async (req) => {
       return new Response("Forbidden host", { status: 403, headers: corsHeaders });
     }
 
+    // DNS rebinding protection: resolve hostname and verify no resolved IP is private.
+    try {
+      const records = await Promise.allSettled([
+        Deno.resolveDns(targetUrl.hostname, "A"),
+        Deno.resolveDns(targetUrl.hostname, "AAAA"),
+      ]);
+      const ips: string[] = [];
+      for (const r of records) {
+        if (r.status === "fulfilled") ips.push(...r.value);
+      }
+      if (ips.length === 0) {
+        return new Response("DNS resolution failed", { status: 400, headers: corsHeaders });
+      }
+      if (ips.some((ip) => isPrivateIp(ip))) {
+        return new Response("Forbidden host (resolved to private IP)", { status: 403, headers: corsHeaders });
+      }
+    } catch (e) {
+      console.error("DNS resolution error", e);
+      return new Response("DNS resolution failed", { status: 400, headers: corsHeaders });
+    }
+
     const response = await fetch(targetUrl.toString(), {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; LovableCatalogProxy/1.0)",
