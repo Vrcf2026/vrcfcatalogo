@@ -24,6 +24,8 @@ const Catalogos = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("categories");
+  const isKiosk = searchParams.get("kiosk") === "1";
+  const [cursorHidden, setCursorHidden] = useState(false);
 
   useEffect(() => {
     const cat = searchParams.get("category");
@@ -31,6 +33,28 @@ const Catalogos = () => {
     if (cat) setSelectedCategory(cat);
     else if (brand) { setSelectedBrand(brand); setActiveTab("brands"); }
   }, [searchParams]);
+
+  // Kiosk mode: hide cursor after inactivity, prevent context menu
+  useEffect(() => {
+    if (!isKiosk) return;
+    let timer: number;
+    const resetTimer = () => {
+      setCursorHidden(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setCursorHidden(true), 5000);
+    };
+    const blockContext = (e: MouseEvent) => e.preventDefault();
+    resetTimer();
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("touchstart", resetTimer);
+    window.addEventListener("contextmenu", blockContext);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("touchstart", resetTimer);
+      window.removeEventListener("contextmenu", blockContext);
+    };
+  }, [isKiosk]);
 
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ["products"],
