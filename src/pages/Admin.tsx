@@ -10,6 +10,7 @@ import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { CatalogManagerDialog } from "@/components/CatalogManagerDialog";
 import { CatalogCustomizationDialog } from "@/components/CatalogCustomizationDialog";
 import { ImageHealthCheckDialog } from "@/components/ImageHealthCheckDialog";
+import { KioskAccessButton } from "@/components/KioskAccessButton";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -220,6 +221,7 @@ const Admin = () => {
               }}
             />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
+            <KioskAccessButton />
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
