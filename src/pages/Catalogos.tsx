@@ -190,7 +190,9 @@ const Catalogos = () => {
     count <= 2 ? "grid-cols-2" : count <= 4 ? "grid-cols-2 grid-rows-2" : count <= 6 ? "grid-cols-3 grid-rows-2" : "grid-cols-3 grid-rows-3";
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div
+      className={`h-screen flex flex-col bg-background overflow-hidden ${cursorHidden ? "cursor-none" : ""} ${isKiosk ? "select-none" : ""}`}
+    >
       <header className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2">
@@ -201,11 +203,17 @@ const Catalogos = () => {
             </div>
           </div>
           <div className="text-center">
-            <h2 className="font-heading text-sm font-bold text-foreground">Os Nossos Catálogos</h2>
+            <h2 className="font-heading text-sm font-bold text-foreground">
+              {isKiosk ? "Showroom VRCF" : "Os Nossos Catálogos"}
+            </h2>
           </div>
-          <Link to="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            ← Voltar
-          </Link>
+          {isKiosk ? (
+            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Modo Recepção</span>
+          ) : (
+            <Link to="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              ← Voltar
+            </Link>
+          )}
         </div>
       </header>
 
