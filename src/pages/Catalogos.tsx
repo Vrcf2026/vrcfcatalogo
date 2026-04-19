@@ -175,7 +175,7 @@ const Catalogos = () => {
               <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
               <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
             </div>
-          </Link>
+          </div>
           <div className="text-center">
             <h2 className="font-heading text-sm font-bold text-foreground">Os Nossos Catálogos</h2>
           </div>
