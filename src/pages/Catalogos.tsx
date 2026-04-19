@@ -24,6 +24,8 @@ const Catalogos = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("categories");
+  const isKiosk = searchParams.get("kiosk") === "1";
+  const [cursorHidden, setCursorHidden] = useState(false);
 
   useEffect(() => {
     const cat = searchParams.get("category");
@@ -31,6 +33,28 @@ const Catalogos = () => {
     if (cat) setSelectedCategory(cat);
     else if (brand) { setSelectedBrand(brand); setActiveTab("brands"); }
   }, [searchParams]);
+
+  // Kiosk mode: hide cursor after inactivity, prevent context menu
+  useEffect(() => {
+    if (!isKiosk) return;
+    let timer: number;
+    const resetTimer = () => {
+      setCursorHidden(false);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setCursorHidden(true), 5000);
+    };
+    const blockContext = (e: MouseEvent) => e.preventDefault();
+    resetTimer();
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("touchstart", resetTimer);
+    window.addEventListener("contextmenu", blockContext);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("touchstart", resetTimer);
+      window.removeEventListener("contextmenu", blockContext);
+    };
+  }, [isKiosk]);
 
   const { data: products = [], isLoading: isLoadingProducts } = useQuery({
     queryKey: ["products"],
@@ -166,7 +190,9 @@ const Catalogos = () => {
     count <= 2 ? "grid-cols-2" : count <= 4 ? "grid-cols-2 grid-rows-2" : count <= 6 ? "grid-cols-3 grid-rows-2" : "grid-cols-3 grid-rows-3";
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
+    <div
+      className={`h-screen flex flex-col bg-background overflow-hidden ${cursorHidden ? "cursor-none" : ""} ${isKiosk ? "select-none" : ""}`}
+    >
       <header className="flex-shrink-0 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="flex items-center justify-between px-4 py-2">
           <div className="flex items-center gap-2">
@@ -177,11 +203,17 @@ const Catalogos = () => {
             </div>
           </div>
           <div className="text-center">
-            <h2 className="font-heading text-sm font-bold text-foreground">Os Nossos Catálogos</h2>
+            <h2 className="font-heading text-sm font-bold text-foreground">
+              {isKiosk ? "Showroom VRCF" : "Os Nossos Catálogos"}
+            </h2>
           </div>
-          <Link to="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            ← Voltar
-          </Link>
+          {isKiosk ? (
+            <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Modo Recepção</span>
+          ) : (
+            <Link to="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              ← Voltar
+            </Link>
+          )}
         </div>
       </header>
 
