@@ -7,6 +7,15 @@ const corsHeaders = {
 
 const RECIPIENT_EMAIL = "geral@vrcf.pt";
 
+function escapeHtml(str: unknown): string {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,14 +24,14 @@ serve(async (req) => {
   try {
     const { customerName, customerEmail, customerPhone, notes, items, sendCopyToCustomer } = await req.json();
 
-    const itemsHtml = items
+    const itemsHtml = (items as any[])
       .map(
         (item: any) =>
           `<tr>
-            <td style="padding:8px;border:1px solid #ddd;">${item.name}</td>
-            <td style="padding:8px;border:1px solid #ddd;text-align:center;">${item.category || "-"}</td>
-            <td style="padding:8px;border:1px solid #ddd;text-align:center;">${item.quantity}</td>
-            <td style="padding:8px;border:1px solid #ddd;text-align:right;">${item.price != null ? `${item.price.toFixed(2).replace(".", ",")} €` : "Sob consulta"}</td>
+            <td style="padding:8px;border:1px solid #ddd;">${escapeHtml(item.name)}</td>
+            <td style="padding:8px;border:1px solid #ddd;text-align:center;">${escapeHtml(item.category || "-")}</td>
+            <td style="padding:8px;border:1px solid #ddd;text-align:center;">${Number(item.quantity) || 0}</td>
+            <td style="padding:8px;border:1px solid #ddd;text-align:right;">${item.price != null ? `${Number(item.price).toFixed(2).replace(".", ",")} €` : "Sob consulta"}</td>
           </tr>`
       )
       .join("");
