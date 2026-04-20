@@ -26,6 +26,7 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
   const { totalItems, setIsOpen } = useCart();
 
   const { data: products, isLoading } = useQuery({
