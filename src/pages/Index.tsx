@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
-import SuggestionButton from "@/components/SuggestionButton";
+import { SuggestionDialog } from "@/components/SuggestionDialog";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
@@ -26,6 +26,7 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
   const { totalItems, setIsOpen } = useCart();
 
   const { data: products, isLoading } = useQuery({
@@ -370,6 +371,12 @@ const Index = () => {
                 <Link to="/politica-de-cookies" className="text-primary hover:underline transition-colors">
                   Política de Cookies
                 </Link>
+                <button
+                  onClick={() => setIsSuggestionOpen(true)}
+                  className="text-primary hover:underline transition-colors"
+                >
+                  Sugestão
+                </button>
               </p>
             </div>
           </div>
@@ -385,7 +392,7 @@ const Index = () => {
       )}
 
       <CartDrawer />
-      <SuggestionButton />
+      <SuggestionDialog open={isSuggestionOpen} onOpenChange={setIsSuggestionOpen} />
       <ScrollToTopButton />
     </div>
   );
