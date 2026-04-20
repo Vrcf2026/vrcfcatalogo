@@ -370,6 +370,12 @@ const Index = () => {
                 <Link to="/politica-de-cookies" className="text-primary hover:underline transition-colors">
                   Política de Cookies
                 </Link>
+                <button
+                  onClick={() => setIsSuggestionOpen(true)}
+                  className="text-primary hover:underline transition-colors"
+                >
+                  Sugestão
+                </button>
               </p>
             </div>
           </div>
@@ -385,7 +391,7 @@ const Index = () => {
       )}
 
       <CartDrawer />
-      <SuggestionButton />
+      <SuggestionDialog open={isSuggestionOpen} onOpenChange={setIsSuggestionOpen} />
       <ScrollToTopButton />
     </div>
   );
