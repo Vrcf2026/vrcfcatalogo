@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { Button } from "@/components/ui/button";
-import SuggestionButton from "@/components/SuggestionButton";
+import { SuggestionDialog } from "@/components/SuggestionDialog";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
