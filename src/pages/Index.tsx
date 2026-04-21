@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductDetailDialog } from "@/components/ProductDetailDialog";
 import { useState, useMemo } from "react";
-import { Package, Loader2, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Package, Loader2, ShoppingCart, ChevronLeft, ChevronRight, Phone, Mail, MapPin } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { ProductFilters } from "@/components/ProductFilters";
 import vrcfLogo from "@/assets/vrcf-logo.png";
@@ -206,6 +206,22 @@ const Index = () => {
         <p className="mt-3 text-lg text-muted-foreground max-w-xl mx-auto">
           Tecnologia e Segurança ao Seu Alcance
         </p>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
+          <a href="tel:+351256666400" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Phone className="h-3.5 w-3.5" />
+            <span>256 666 400</span>
+          </a>
+          <span className="hidden sm:inline text-border">|</span>
+          <a href="mailto:geral@vrcf.pt" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <Mail className="h-3.5 w-3.5" />
+            <span>geral@vrcf.pt</span>
+          </a>
+          <span className="hidden sm:inline text-border">|</span>
+          <a href="https://maps.google.com/?q=Rua+Dr.+Ant6fnio+Ferrereira+Soares+105+4650-618+Felgueiras" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <MapPin className="h-3.5 w-3.5" />
+            <span>Felgueiras</span>
+          </a>
+        </div>
       </section>
 
       <ProductFilters
