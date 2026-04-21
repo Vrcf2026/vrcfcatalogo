@@ -207,9 +207,9 @@ const Index = () => {
           Tecnologia e Segurança ao Seu Alcance
         </p>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-          <a href="tel:+351256666400" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+          <a href="tel:+351911564243" className="flex items-center gap-1.5 hover:text-primary transition-colors">
             <Phone className="h-3.5 w-3.5" />
-            <span>256 666 400</span>
+            <span>+351 911 564 243</span>
           </a>
           <span className="hidden sm:inline text-border">|</span>
           <a href="mailto:geral@vrcf.pt" className="flex items-center gap-1.5 hover:text-primary transition-colors">
@@ -217,9 +217,9 @@ const Index = () => {
             <span>geral@vrcf.pt</span>
           </a>
           <span className="hidden sm:inline text-border">|</span>
-          <a href="https://maps.google.com/?q=Rua+Dr.+Ant6fnio+Ferrereira+Soares+105+4650-618+Felgueiras" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors">
+          <a href="https://maps.google.com/?q=Rua+Luis+Calado+Nunes+15+LJB+2870-350+Montijo" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-primary transition-colors">
             <MapPin className="h-3.5 w-3.5" />
-            <span>Felgueiras</span>
+            <span>Montijo</span>
           </a>
         </div>
       </section>
