@@ -15,7 +15,7 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
   Informatica: { icon: "🖥️", bgImage: "/images/bg-informatica.jpg" },
   "Segurança": { icon: "🔒", bgImage: "/images/bg-seguranca.jpg" },
   Economato: { icon: "📋", bgImage: "/images/bg-economato.jpg" },
-  Kilomat: { icon: "🔧", bgImage: "/kilomat-catalog/page-01.png" },
+  
   Outros: { icon: "🔧", bgImage: "/images/bg-outros.jpg" },
 };
 
@@ -114,8 +114,7 @@ const Catalogos = () => {
   const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
-  const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
-  const categories = dynamicCategories.filter((c) => c !== "Kilomat");
+  const categories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
   const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
   const isCatalogDataLoading =
     isLoadingProducts ||
@@ -230,9 +229,8 @@ const Catalogos = () => {
         {activeTab === "categories" && (
           <div className={`grid ${getGridClass(categories.length)} gap-3 h-full`}>
             {categories.map((category) => {
-              const catProducts = category === "Kilomat" ? [] : catalogProducts.filter((p) => p.category === category);
-              const isKilomat = category === "Kilomat";
-              const productLabel = isKilomat ? "16 páginas" : `${catProducts.length} ${catProducts.length === 1 ? "produto" : "produtos"}`;
+              const catProducts = catalogProducts.filter((p) => p.category === category);
+              const productLabel = `${catProducts.length} ${catProducts.length === 1 ? "produto" : "produtos"}`;
               const theme = CATEGORY_THEMES[category];
               const bgImage = theme?.bgImage || "/images/bg-outros.jpg";
               const icon = theme?.icon || "📦";

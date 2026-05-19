@@ -11,7 +11,7 @@ import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Catalogos from "./pages/Catalogos.tsx";
 import CatalogoDestaques from "./pages/CatalogoDestaques.tsx";
-import CatalogoKilomat from "./pages/CatalogoKilomat.tsx";
+
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
@@ -46,7 +46,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/catalogos" element={<Catalogos />} />
               <Route path="/catalogos/destaques" element={<CatalogoDestaques />} />
-              <Route path="/catalogos/kilomat" element={<CatalogoKilomat />} />
+              
               <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
               <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />

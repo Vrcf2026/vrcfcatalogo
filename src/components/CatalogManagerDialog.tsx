@@ -384,33 +384,6 @@ export function CatalogManagerDialog({ products, imagesByProduct, familyMap, cat
                     </Button>
                   </div>
                 </div>
-                {/* Kilomat */}
-                <div className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/20 transition-colors">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🏷️</span>
-                    <div>
-                      <p className="font-medium text-sm text-foreground">Kilomat</p>
-                      <p className="text-xs text-muted-foreground">Catálogo digitalizado</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Button variant="outline" size="sm" className="gap-1.5" asChild>
-                        <a href={`${appBaseUrl}/catalogos/kilomat`} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        <span className="hidden sm:inline">Abrir</span>
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-                       navigator.clipboard.writeText(`${appBaseUrl}/catalogos/kilomat`);
-                      setCopiedLink("__kilomat__");
-                      toast.success("Link copiado!");
-                      setTimeout(() => setCopiedLink(null), 2000);
-                    }}>
-                      {copiedLink === "__kilomat__" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Link2 className="h-3.5 w-3.5" />}
-                      <span className="hidden sm:inline">{copiedLink === "__kilomat__" ? "Copiado" : "Link"}</span>
-                    </Button>
-                  </div>
-                </div>
               </div>
             </TabsContent>
           </Tabs>

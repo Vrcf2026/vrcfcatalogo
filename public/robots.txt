@@ -3,6 +3,6 @@ Allow: /
 Disallow: /admin
 Disallow: /login
 Disallow: /catalogos/destaques
-Disallow: /catalogos/kilomat
+
 
 Sitemap: https://showroom.vrcf.info/sitemap.xml
