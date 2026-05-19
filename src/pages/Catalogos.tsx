@@ -114,8 +114,7 @@ const Catalogos = () => {
   const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
 
   const catalogProducts = products.filter((p) => p.include_in_catalog);
-  const dynamicCategories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
-  const categories = dynamicCategories.filter((c) => c !== "Kilomat");
+  const categories = [...new Set(catalogProducts.map((p) => p.category).filter(Boolean))] as string[];
   const catalogBrands = brands.filter((b) => catalogProducts.some((p) => p.brand_id === b.id));
   const isCatalogDataLoading =
     isLoadingProducts ||
