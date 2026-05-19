@@ -11,7 +11,7 @@ import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Catalogos from "./pages/Catalogos.tsx";
 import CatalogoDestaques from "./pages/CatalogoDestaques.tsx";
-import CatalogoKilomat from "./pages/CatalogoKilomat.tsx";
+
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
 import Unsubscribe from "./pages/Unsubscribe.tsx";
