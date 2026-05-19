@@ -15,7 +15,7 @@ const CATEGORY_THEMES: Record<string, { icon: string; bgImage: string }> = {
   Informatica: { icon: "🖥️", bgImage: "/images/bg-informatica.jpg" },
   "Segurança": { icon: "🔒", bgImage: "/images/bg-seguranca.jpg" },
   Economato: { icon: "📋", bgImage: "/images/bg-economato.jpg" },
-  Kilomat: { icon: "🔧", bgImage: "/kilomat-catalog/page-01.png" },
+  
   Outros: { icon: "🔧", bgImage: "/images/bg-outros.jpg" },
 };
 
