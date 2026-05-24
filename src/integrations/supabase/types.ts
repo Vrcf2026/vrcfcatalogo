@@ -119,6 +119,33 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_leads: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          phone?: string | null
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -286,44 +313,80 @@ export type Database = {
       products: {
         Row: {
           brand_id: string | null
+          categoria_pai: string | null
           category: string | null
+          conteudo_embalagem: string | null
           created_at: string
           description: string | null
+          destaques: Json | null
+          especificacoes: Json | null
           family_id: string | null
           featured: boolean
+          fornecedor: string | null
           id: string
           image_url: string | null
           include_in_catalog: boolean
+          mundo: string | null
           name: string
           price: number | null
+          produtos_relacionados: string[] | null
+          short_description: string | null
+          sku: string | null
+          slug: string | null
+          sob_encomenda: boolean | null
+          stock_status: string | null
           updated_at: string
         }
         Insert: {
           brand_id?: string | null
+          categoria_pai?: string | null
           category?: string | null
+          conteudo_embalagem?: string | null
           created_at?: string
           description?: string | null
+          destaques?: Json | null
+          especificacoes?: Json | null
           family_id?: string | null
           featured?: boolean
+          fornecedor?: string | null
           id?: string
           image_url?: string | null
           include_in_catalog?: boolean
+          mundo?: string | null
           name: string
           price?: number | null
+          produtos_relacionados?: string[] | null
+          short_description?: string | null
+          sku?: string | null
+          slug?: string | null
+          sob_encomenda?: boolean | null
+          stock_status?: string | null
           updated_at?: string
         }
         Update: {
           brand_id?: string | null
+          categoria_pai?: string | null
           category?: string | null
+          conteudo_embalagem?: string | null
           created_at?: string
           description?: string | null
+          destaques?: Json | null
+          especificacoes?: Json | null
           family_id?: string | null
           featured?: boolean
+          fornecedor?: string | null
           id?: string
           image_url?: string | null
           include_in_catalog?: boolean
+          mundo?: string | null
           name?: string
           price?: number | null
+          produtos_relacionados?: string[] | null
+          short_description?: string | null
+          sku?: string | null
+          slug?: string | null
+          sob_encomenda?: boolean | null
+          stock_status?: string | null
           updated_at?: string
         }
         Relationships: [
