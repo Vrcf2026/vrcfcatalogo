@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { ContactFloatingBubble } from "@/components/ContactFloatingBubble";
+import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
