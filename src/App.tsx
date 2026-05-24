@@ -11,6 +11,9 @@ import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Catalogos from "./pages/Catalogos.tsx";
 import CatalogoDestaques from "./pages/CatalogoDestaques.tsx";
+import Seguranca from "./pages/Seguranca.tsx";
+import Escritorio from "./pages/Escritorio.tsx";
+import Produto from "./pages/Produto.tsx";
 
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
@@ -44,8 +47,12 @@ const App = () => (
           <CartProvider>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/seguranca" element={<Seguranca />} />
+              <Route path="/escritorio" element={<Escritorio />} />
+              <Route path="/produto/:slug" element={<Produto />} />
               <Route path="/catalogos" element={<Catalogos />} />
               <Route path="/catalogos/destaques" element={<CatalogoDestaques />} />
+              
               
               <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
               <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
