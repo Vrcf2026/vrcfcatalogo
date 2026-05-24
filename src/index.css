@@ -116,3 +116,8 @@
 }
 .animate-flip-next { animation: flip-next 0.4s ease-in-out; }
 .animate-flip-prev { animation: flip-prev 0.4s ease-in-out; }
+
+@keyframes vrcf-scroll-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
