@@ -216,12 +216,32 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       </header>
 
       {/* Hero title */}
-      <section className="container mx-auto px-4 py-10 sm:py-12 text-center">
-        <Badge className="bg-primary text-primary-foreground gap-1.5 px-3 py-1">
-          <Icon className="h-3.5 w-3.5" /> {mundo === "seguranca" ? "Segurança & Redes" : "Escritório & IT"}
-        </Badge>
-        <h1 className="mt-4 font-heading text-3xl sm:text-5xl font-bold tracking-tight">{title}</h1>
-        <p className="mt-3 text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
+      <section className={`relative overflow-hidden border-b border-border ${mundo === "seguranca" ? "" : ""}`}>
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-[0.06] dark:opacity-[0.09] pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)",
+            backgroundSize: "44px 44px",
+            maskImage: "radial-gradient(ellipse at center, black 35%, transparent 75%)",
+          }}
+        />
+        <div
+          aria-hidden
+          className={`absolute -top-24 left-1/2 -translate-x-1/2 h-[320px] w-[700px] rounded-full blur-3xl pointer-events-none ${
+            mundo === "seguranca" ? "bg-primary/20" : "bg-blue-500/20"
+          }`}
+        />
+        <div className="relative container mx-auto px-4 py-10 sm:py-14 text-center">
+          <Badge className={`gap-1.5 px-3 py-1 ${mundo === "seguranca" ? "bg-primary text-primary-foreground" : "bg-blue-500 text-white"}`}>
+            <Icon className="h-3.5 w-3.5" /> {mundo === "seguranca" ? "Segurança & Redes" : "Escritório & IT"}
+          </Badge>
+          <h1 className="mt-4 font-heading text-4xl sm:text-6xl font-bold tracking-tight bg-gradient-to-br from-foreground via-foreground to-foreground/60 bg-clip-text text-transparent">
+            {title}
+          </h1>
+          <p className="mt-3 text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
+        </div>
       </section>
 
       {/* Categories strip */}
