@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /login
 
-Sitemap: https://showroom.vrcf.info/sitemap.xml
+Sitemap: https://mgdhclajlcmepdfrkktw.supabase.co/functions/v1/sitemap
