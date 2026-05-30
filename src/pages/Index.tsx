@@ -155,8 +155,20 @@ const Index = () => {
           </h1>
           <p className="mt-5 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
             Tecnologia e Segurança ao seu alcance.<br className="hidden sm:block" />
-            <span className="text-foreground/80">Escolha o seu mundo.</span>
+            <span className="text-foreground/80">Pesquise em todos os catálogos ou escolha o seu mundo.</span>
           </p>
+          <form onSubmit={submitSearch} className="relative mt-8 max-w-2xl mx-auto">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar em todo o catálogo VRCF..."
+              value={heroQuery}
+              onChange={(e) => setHeroQuery(e.target.value)}
+              className="pl-12 pr-28 h-14 text-base bg-card/80 backdrop-blur border-border shadow-lg rounded-2xl"
+            />
+            <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-10 px-4 rounded-xl">
+              Pesquisar
+            </Button>
+          </form>
         </div>
       </section>
 
