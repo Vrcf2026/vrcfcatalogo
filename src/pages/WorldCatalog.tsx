@@ -30,7 +30,16 @@ interface Props {
 const PAGE_SIZE = 24;
 
 const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
+  const navigate = useNavigate();
   const { totalItems, setIsOpen } = useCart();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [globalQuery, setGlobalQuery] = useState("");
+  const submitGlobalSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = globalQuery.trim();
+    if (!q) return;
+    navigate(`/pesquisa?q=${encodeURIComponent(q)}`);
+  };
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [searchInput, setSearchInput] = useState("");
