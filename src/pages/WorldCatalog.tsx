@@ -40,7 +40,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     if (!q) return;
     navigate(`/pesquisa?q=${encodeURIComponent(q)}`);
   };
-  const [searchParams, setSearchParams] = useSearchParams();
+
+
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
