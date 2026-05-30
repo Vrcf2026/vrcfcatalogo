@@ -78,10 +78,19 @@ const useFeaturedProducts = () =>
 const Index = () => {
   const { totalItems, setIsOpen } = useCart();
   const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [heroQuery, setHeroQuery] = useState("");
+  const navigate = useNavigate();
   const segCount = useCount("seguranca");
   const escCount = useCount("escritorio");
   const highlights = useHighlightedCategories();
   const featured = useFeaturedProducts();
+
+  const submitSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = heroQuery.trim();
+    if (!q) return;
+    navigate(`/pesquisa?q=${encodeURIComponent(q)}`);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
