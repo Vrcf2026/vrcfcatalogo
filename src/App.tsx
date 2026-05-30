@@ -14,6 +14,7 @@ import Escritorio from "./pages/Escritorio.tsx";
 import Produto from "./pages/Produto.tsx";
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
+import Pesquisa from "./pages/Pesquisa.tsx";
 import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
 import { Loader2 } from "lucide-react";
 
