@@ -9,15 +9,11 @@ import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
 import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import Catalogos from "./pages/Catalogos.tsx";
-import CatalogoDestaques from "./pages/CatalogoDestaques.tsx";
 import Seguranca from "./pages/Seguranca.tsx";
 import Escritorio from "./pages/Escritorio.tsx";
 import Produto from "./pages/Produto.tsx";
-
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
-import Unsubscribe from "./pages/Unsubscribe.tsx";
 import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
 import { Loader2 } from "lucide-react";
 
@@ -50,13 +46,8 @@ const App = () => (
               <Route path="/seguranca" element={<Seguranca />} />
               <Route path="/escritorio" element={<Escritorio />} />
               <Route path="/produto/:slug" element={<Produto />} />
-              <Route path="/catalogos" element={<Catalogos />} />
-              <Route path="/catalogos/destaques" element={<CatalogoDestaques />} />
-              
-              
               <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
               <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
-              <Route path="/unsubscribe" element={<Unsubscribe />} />
               <Route path="/login" element={<Login />} />
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

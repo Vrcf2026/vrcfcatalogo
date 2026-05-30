@@ -1,19 +1,22 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft } from "lucide-react";
+import {
+  Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, LayoutGrid, ShieldCheck, Monitor,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { fetchAllProducts } from "@/lib/fetchAllRows";
 import { ProductCard } from "@/components/ProductCard";
-import { ProductFilters } from "@/components/ProductFilters";
-import { TechnicalFilters } from "@/components/TechnicalFilters";
 import BrandsStrip from "@/components/BrandsStrip";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { CartDrawer } from "@/components/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
+import { getCategoryMeta } from "@/lib/categoryIcons";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
 type Mundo = "seguranca" | "escritorio";
@@ -22,26 +25,45 @@ interface Props {
   mundo: Mundo;
   title: string;
   subtitle: string;
-  accentClass: string;
 }
 
 const PAGE_SIZE = 24;
 
-const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
+const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const { totalItems, setIsOpen } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState(searchParams.get("marca") ?? "all");
   const [sortBy, setSortBy] = useState("featured");
-  const [techFilters, setTechFilters] = useState<Record<string, string>>({});
-  const [currentPage, setCurrentPage] = useState(1);
+  const [page, setPage] = useState(1);
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products", mundo],
-    queryFn: () => fetchAllProducts(mundo),
+  // debounce search
+  useEffect(() => {
+    const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 400);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  // reset page when filters change
+  useEffect(() => { setPage(1); }, [categoryFilter, familyFilter, brandFilter, sortBy]);
+
+  // categories for this mundo (visible only, ordered)
+  const { data: categories = [] } = useQuery({
+    queryKey: ["world-categories", mundo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("visivel", true)
+        .in("mundo", [mundo, "todos"])
+        .order("ordem", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: families = [] } = useQuery({
@@ -51,6 +73,7 @@ const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: brands = [] } = useQuery({
@@ -60,15 +83,68 @@ const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000,
   });
 
-  const { data: productImages = [] } = useQuery({
-    queryKey: ["product_images"],
+  const allowedCategoryNames = useMemo(() => categories.map((c: any) => c.name), [categories]);
+
+  // server-side paginated products
+  const productsQuery = useQuery({
+    queryKey: ["world-products", mundo, search, categoryFilter, familyFilter, brandFilter, sortBy, page, allowedCategoryNames],
     queryFn: async () => {
-      const { data, error } = await supabase.from("product_images").select("*").order("position");
+      const from = (page - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      let q = supabase.from("products").select("*", { count: "exact" });
+
+      if (categoryFilter !== "all") {
+        q = q.eq("category", categoryFilter);
+      } else if (allowedCategoryNames.length > 0) {
+        q = q.in("category", allowedCategoryNames);
+      }
+      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
+      if (brandFilter !== "all") q = q.eq("brand_id", brandFilter);
+      if (search.trim()) {
+        const term = `%${search.trim()}%`;
+        q = q.or(`name.ilike.${term},sku.ilike.${term}`);
+      }
+
+      switch (sortBy) {
+        case "name-asc": q = q.order("name", { ascending: true }); break;
+        case "name-desc": q = q.order("name", { ascending: false }); break;
+        case "newest": q = q.order("created_at", { ascending: false }); break;
+        default:
+          q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
+      }
+
+      const { data, error, count } = await q.range(from, to);
+      if (error) throw error;
+      return { rows: data ?? [], count: count ?? 0 };
+    },
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000,
+    enabled: categories.length > 0 || allowedCategoryNames.length === 0,
+  });
+
+  const products = productsQuery.data?.rows ?? [];
+  const total = productsQuery.data?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // images only for visible products
+  const visibleIds = useMemo(() => products.map((p) => p.id), [products]);
+  const { data: productImages = [] } = useQuery({
+    queryKey: ["world-product-images", visibleIds],
+    queryFn: async () => {
+      if (visibleIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("product_images")
+        .select("*")
+        .in("product_id", visibleIds)
+        .order("position");
       if (error) throw error;
       return data;
     },
+    staleTime: 5 * 60 * 1000,
+    enabled: visibleIds.length > 0,
   });
 
   const imagesByProduct = useMemo(() => {
@@ -80,57 +156,23 @@ const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
     return acc;
   }, [productImages]);
 
-  const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
-  const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
+  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
 
-  const filtered = useMemo(() => {
-    const result = products.filter((p) => {
-      const terms = normalize(search).split(/\s+/).filter(Boolean);
-      const txt = normalize(`${p.name} ${p.description ?? ""} ${p.short_description ?? ""}`);
-      const matchesSearch = terms.length === 0 || terms.every((t) => txt.includes(t));
-      const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
-      const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
-      const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
-      const matchesTech = Object.entries(techFilters).every(([k, v]) => {
-        if (!v) return true;
-        const specs = (p.especificacoes ?? {}) as Record<string, unknown>;
-        return String(specs[k] ?? "") === v;
-      });
-      return matchesSearch && matchesCategory && matchesFamily && matchesBrand && matchesTech;
-    });
+  const hasPrices = products.some((p: any) => p.price != null);
 
-    return result.sort((a, b) => {
-      if (a.featured && !b.featured) return -1;
-      if (!a.featured && b.featured) return 1;
-      switch (sortBy) {
-        case "price-asc": return (a.price ?? 0) - (b.price ?? 0);
-        case "price-desc": return (b.price ?? 0) - (a.price ?? 0);
-        case "name-asc": return a.name.localeCompare(b.name, "pt");
-        case "name-desc": return b.name.localeCompare(a.name, "pt");
-        case "newest": return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        default: return 0;
-      }
-    });
-  }, [products, search, categoryFilter, familyFilter, brandFilter, sortBy, techFilters]);
+  // category strip scroller
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollBy = (delta: number) => scrollRef.current?.scrollBy({ left: delta, behavior: "smooth" });
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))] as string[];
-  const visibleFamilies = families.filter((f) =>
-    categoryFilter === "all" || f.category === categoryFilter
-  );
-  const visibleBrands = brands.filter((b) => products.some((p) => p.brand_id === b.id));
-
-  const updateTechFilter = (key: string, value: string | null) => {
-    setTechFilters((prev) => {
-      const next = { ...prev };
-      if (value == null) delete next[key];
-      else next[key] = value;
-      return next;
-    });
-    setCurrentPage(1);
+  const setCategory = (name: string) => {
+    setCategoryFilter(name);
+    setFamilyFilter("all");
+    if (name === "all") searchParams.delete("categoria"); else searchParams.set("categoria", name);
+    setSearchParams(searchParams, { replace: true });
   };
+
+  const Icon = mundo === "seguranca" ? ShieldCheck : Monitor;
 
   return (
     <div className="min-h-screen bg-background">
@@ -140,21 +182,29 @@ const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
         <link rel="canonical" href={`https://showroom.vrcf.info/${mundo}`} />
       </Helmet>
 
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <Link to="/">
-              <img src={vrcfLogo} alt="VRCF" className="h-10 sm:h-14 w-auto" />
-            </Link>
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-lg">
+        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3">
+          <Link to="/" className="shrink-0 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Voltar</span>
+          </Link>
+          <Link to="/" className="shrink-0">
+            <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-12 w-auto" />
+          </Link>
+          <div className="relative flex-1 max-w-xl mx-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar por nome ou referência..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-10 bg-card"
+            />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
             <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
               <ShoppingCart className="h-4 w-4" />
-              Orçamento
+              <span className="hidden sm:inline">Orçamento</span>
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {totalItems}
@@ -165,93 +215,149 @@ const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
         </div>
       </header>
 
-      <section className={`relative overflow-hidden border-b border-border ${accentClass}`}>
-        <div className="container mx-auto px-4 py-12 sm:py-16 text-center">
-          <h1 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight">{title}</h1>
-          <p className="mt-3 text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
-        </div>
+      {/* Hero title */}
+      <section className="container mx-auto px-4 py-10 sm:py-12 text-center">
+        <Badge className="bg-primary text-primary-foreground gap-1.5 px-3 py-1">
+          <Icon className="h-3.5 w-3.5" /> {mundo === "seguranca" ? "Segurança & Redes" : "Escritório & IT"}
+        </Badge>
+        <h1 className="mt-4 font-heading text-3xl sm:text-5xl font-bold tracking-tight">{title}</h1>
+        <p className="mt-3 text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">{subtitle}</p>
       </section>
+
+      {/* Categories strip */}
+      {categories.length > 0 && (
+        <section className="container mx-auto px-4 pb-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Explorar por categoria</h2>
+            <div className="hidden sm:flex gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scrollBy(-300)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scrollBy(300)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent z-10" />
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent z-10" />
+            <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x">
+              <CategoryTile
+                active={categoryFilter === "all"}
+                onClick={() => setCategory("all")}
+                icon={LayoutGrid}
+                color="text-primary"
+                bg="bg-primary/10"
+                label="Todos"
+              />
+              {categories.map((cat: any) => {
+                const meta = getCategoryMeta(cat.name);
+                return (
+                  <CategoryTile
+                    key={cat.id}
+                    active={categoryFilter === cat.name}
+                    onClick={() => setCategory(cat.name)}
+                    icon={meta.icon}
+                    color={meta.color}
+                    bg={meta.bg}
+                    label={cat.name}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
       <BrandsStrip mundo={mundo} />
 
-      <ProductFilters
-        search={search}
-        onSearchChange={(v) => { setSearch(v); setCurrentPage(1); }}
-        categoryFilter={categoryFilter}
-        onCategoryChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setCurrentPage(1); if (v === "all") { searchParams.delete("categoria"); } else { searchParams.set("categoria", v); } setSearchParams(searchParams); }}
-        familyFilter={familyFilter}
-        onFamilyChange={(v) => { setFamilyFilter(v); setCurrentPage(1); }}
-        brandFilter={brandFilter}
-        onBrandChange={(v) => { setBrandFilter(v); setCurrentPage(1); if (v === "all") { searchParams.delete("marca"); } else { searchParams.set("marca", v); } setSearchParams(searchParams); }}
-        sortBy={sortBy}
-        onSortChange={(v) => { setSortBy(v); setCurrentPage(1); }}
-        categories={categories}
-        visibleFamilies={visibleFamilies}
-        visibleBrands={visibleBrands}
-      />
+      {/* Filters row */}
+      <section className="container mx-auto px-4 pb-4">
+        <div className="flex flex-wrap gap-2 items-center justify-between">
+          <div className="flex flex-wrap gap-2">
+            {visibleFamilies.length > 0 && (
+              <Select value={familyFilter} onValueChange={setFamilyFilter}>
+                <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Famílias" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as Famílias</SelectItem>
+                  {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={brandFilter} onValueChange={(v) => {
+              setBrandFilter(v);
+              if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
+              setSearchParams(searchParams, { replace: true });
+            }}>
+              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Marcas" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Marcas</SelectItem>
+                {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Select value={sortBy} onValueChange={setSortBy}>
+            <SelectTrigger className="w-[180px] h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="featured">Destaques</SelectItem>
+              <SelectItem value="newest">Mais recentes</SelectItem>
+              <SelectItem value="name-asc">Nome (A-Z)</SelectItem>
+              <SelectItem value="name-desc">Nome (Z-A)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
 
+      {/* Grid */}
       <section className="container mx-auto px-4 pb-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
-          <aside className="lg:sticky lg:top-24 lg:self-start">
-            <TechnicalFilters
-              products={filtered}
-              activeFilters={techFilters}
-              onFilterChange={updateTechFilter}
-            />
-          </aside>
-
-          <div>
-            {!isLoading && (
-              <p className="mb-4 text-sm text-muted-foreground text-center">
-                {filtered.length} produto{filtered.length !== 1 ? "s" : ""}
-                {totalPages > 1 && ` — Página ${currentPage} de ${totalPages}`}
-              </p>
-            )}
-
-            {isLoading ? (
-              <div className="flex justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : paginated.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {paginated.map((product) => (
-                  <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
-                    <ProductCard
-                      id={product.id}
-                      name={product.name}
-                      description={product.short_description ?? product.description}
-                      category={product.category}
-                      price={product.price}
-                      imageUrl={product.image_url}
-                      images={imagesByProduct[product.id] || []}
-                      familyName={product.family_id ? familyMap[product.family_id] || null : null}
-                      featured={product.featured}
-                    />
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20">
-                <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
-                <h3 className="mt-4 font-heading text-lg font-semibold">Nenhum produto encontrado</h3>
-              </div>
-            )}
-
+        {productsQuery.isLoading ? (
+          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+        ) : products.length > 0 ? (
+          <>
+            <p className="mb-4 text-sm text-muted-foreground text-center">
+              {total} produto{total !== 1 ? "s" : ""} — Página {page} de {totalPages}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {products.map((product: any) => (
+                <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
+                  <ProductCard
+                    id={product.id}
+                    name={product.name}
+                    description={product.short_description ?? product.description}
+                    category={product.category}
+                    price={product.price}
+                    imageUrl={product.image_url}
+                    images={imagesByProduct[product.id] || []}
+                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                    featured={product.featured}
+                  />
+                </Link>
+              ))}
+            </div>
             {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-8">
-                <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>
+              <div className="flex justify-center items-center gap-2 mt-10">
+                <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm text-muted-foreground px-2">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>
+                <span className="text-sm text-muted-foreground px-3">{page} / {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             )}
+            {hasPrices && (
+              <p className="mt-8 text-center text-xs text-muted-foreground">
+                Preços indicativos em Euro (€). IVA incluído à taxa legal em vigor.
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-20">
+            <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
+            <h3 className="mt-4 font-heading text-lg font-semibold">Nenhum produto encontrado</h3>
+            <p className="mt-1 text-sm text-muted-foreground">Tente ajustar a pesquisa ou os filtros.</p>
           </div>
-        </div>
+        )}
       </section>
 
       <CartDrawer />
@@ -259,5 +365,34 @@ const WorldCatalog = ({ mundo, title, subtitle, accentClass }: Props) => {
     </div>
   );
 };
+
+function CategoryTile({
+  active, onClick, icon: Icon, color, bg, label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ElementType;
+  color: string;
+  bg: string;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group snap-start shrink-0 w-[100px] sm:w-[120px] h-[100px] sm:h-[120px] rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 p-2 ${
+        active
+          ? "border-primary ring-2 ring-primary/40 bg-primary/5"
+          : "border-border hover:border-primary/40 bg-card"
+      }`}
+    >
+      <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${bg}`}>
+        <Icon className={`h-5 w-5 ${color}`} />
+      </div>
+      <span className="text-[11px] sm:text-xs font-medium text-foreground text-center leading-tight line-clamp-2 px-1">
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export default WorldCatalog;
