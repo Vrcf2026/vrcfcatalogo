@@ -1,64 +1,69 @@
-## Visão geral
+## Importação Kilomat → VRCF Showroom
 
-Transformar o `vrcfcatalogo` num showroom de 2 mundos (Segurança & Redes / Escritório & IT), com homepage de entrada, catálogos dedicados por mundo, filtros técnicos contextuais, página de produto com URL único e bubble de contacto. Reutilizar componentes do projecto `catalogokilomat` (BrandsStrip, ContactFloatingBubble, fetchAllRows, antiBot, GenerateDescriptionsDialog).
+Trazer 4 blocos funcionais do projecto Catalogo Kilomat, adaptados à estrutura de 2 mundos (Segurança & Redes / Escritório & IT).
 
-Dada a dimensão (16+ ficheiros novos/modificados, 1 migration grande, 1 tabela nova), proponho **faseamento em 3 entregas** para validares cada bloco antes de avançar — evita re-trabalho se algo precisar ajuste.
+---
 
-## Fase 1 — Base de dados + infraestrutura (1 migration + libs)
+### 1. Pipeline de imagens (storage interno)
 
-**Migration Supabase** (1 chamada):
-- `products`: + colunas `mundo`, `fornecedor`, `slug`, `stock_status`, `short_description`, `especificacoes` (jsonb), `destaques` (jsonb), `conteudo_embalagem`, `produtos_relacionados` (text[]), `categoria_pai`, `sob_encomenda` + 3 índices
-- Nova tabela `contact_leads` (id, name, email, phone, message, created_at) com RLS: insert público, select/update/delete só admin
-- Adicionar `sku` à tabela `products` (referenciado em PRODUCT_COLUMNS do fetchAllRows)
+**Edge functions novas:**
+- `supabase/functions/download-and-store-image/index.ts` — descarrega URL externo, redimensiona (max 1200 px), comprime JPEG q85, sobe para o bucket `product-images`. Inclui proteções SSRF (bloqueio de IPs privados, DNS rebinding, redirects), limite 25 MB, validação de content-type, requer admin via JWT.
+- `supabase/functions/reprocess-all-images/index.ts` — apaga todas as `product_images` e relança `search-product-images` produto a produto, em background via `EdgeRuntime.waitUntil`.
 
-**Ficheiros copiados do catalogokilomat**:
-- `src/lib/fetchAllRows.ts` (paginação 1000 + concorrência 3 + retry)
-- `src/lib/antiBot.ts` (honeypot + time-trap)
-- `src/components/BrandsStrip.tsx` (adaptado: texto, animação `vrcf-scroll-x`, prop `mundo`, links contextuais)
-- `src/components/ContactFloatingBubble.tsx` (adaptado: ShieldCheck, textos VRCF, grava em `contact_leads`, botão WhatsApp 911564243)
-- `src/components/GenerateDescriptionsDialog.tsx` (admin)
+**Componentes admin novos:**
+- `src/components/MigrateImagesDialog.tsx` — botão "Migrar imagens externas": detecta `product_images` com host ≠ Supabase, chama `download-and-store-image` em loop, mostra progresso, pausa/retomar/parar, contador de MB poupados.
+- `src/components/BulkImageSearchDialog.tsx` — botão "Buscar Imagens (Web)": carrega todos os produtos com `fetchAllRows`, filtra por famílias e/ou "sem imagens", chama `search-product-images` (já existe) com throttling adaptativo (0.8-1.8s + pausa 15s/50, backoff 30s em erros). Grava resultados em `product_images`.
+- `src/components/ReprocessAllImagesButton.tsx` — botão único com AlertDialog que invoca `reprocess-all-images`.
 
-**CSS**: adicionar keyframe `vrcf-scroll-x` em `index.css`.
+Bucket `product-images` já existe e é público — sem migração necessária.
 
-## Fase 2 — Páginas novas e routing
+### 2. Sitemap dinâmico
 
-**Novas páginas**:
-- `src/pages/Seguranca.tsx` — catálogo `mundo="seguranca"`, tabs de categoria horizontal, sidebar `TechnicalFilters` quando categoria seleccionada, grid 4/2/1, pesquisa, ordenação, paginação client-side 24/pág, leitura de `?marca=` `?categoria=` `?pesquisa=`
-- `src/pages/Escritorio.tsx` — igual mas `mundo="escritorio"` e filtros simples (marca/preço/stock)
-- `src/pages/Produto.tsx` — `/produto/:slug`, breadcrumb, URL bar com copiar, galeria + info, 4 specs chave, WhatsApp pré-preenchido, botão "Instalação VRCF" (só segurança), tabs (Descrição/Specs/Embalagem/Relacionados), `<Helmet>` SEO dinâmico
-- `src/components/TechnicalFilters.tsx` — sidebar contextual por categoria (Videovigilância/Alarmes/Controlo Acessos têm filtros específicos lidos de `destaques` JSONB; resto = marca+preço+stock), pills removíveis
+**Edge function nova:** `supabase/functions/sitemap/index.ts` — adaptada de `showroom.kilomat.pt` para `showroom.vrcf.info`. Devolve sitemap-index + sub-sitemaps paginados (1000 produtos/página) com `/produto/:slug`. Caminhos estáticos: `/`, `/seguranca`, `/escritorio`, `/termos-e-condicoes`, `/politica-de-cookies`. Cache 24h.
 
-**App.tsx**: + 3 rotas (`/seguranca`, `/escritorio`, `/produto/:slug`) + `HelmetProvider` em main.tsx.
+**`public/robots.txt`** — actualizar `Sitemap:` para `https://mgdhclajlcmepdfrkktw.supabase.co/functions/v1/sitemap`.
 
-**Homepage (`Index.tsx`)**: substituir hero + grid por:
-- Header existente (mantido)
-- Hero novo (título "O seu parceiro em tecnologia e segurança" + contactos)
-- 2 cards grandes (Segurança / Escritório) max-width 800px
-- BrandsStrip (sem filtro mundo)
-- ContactFloatingBubble
-- Manter: CartDrawer, SuggestionDialog, ScrollToTopButton, footer
-- Remover: ProductFilters, grid de produtos, paginação (movem para `/seguranca` e `/escritorio`)
+**`public/sitemap.xml`** — manter estático mínimo (fallback), ou remover se preferires.
 
-## Fase 3 — Enriquecimento de componentes existentes
+### 3. Destaques editáveis na homepage
 
-- `ProductCard.tsx`: + badge resolução (canto sup. dir., só segurança, lido de `destaques`), + badge stock colorido, + 3 pills de specs resumidas
-- `ProductDetailDialog.tsx`: + tabs Specs/Embalagem condicionais, + botão WhatsApp se tem `slug`, + `short_description` como subtítulo
-- `AdminDashboard.tsx`: + botão "Gerar Descrições" (abre dialog), + colunas/filtros Mundo e Fornecedor
-- `ImportProductsDialog.tsx`: mapear novos campos no parser CSV (incluindo slug auto-gerado, JSON.parse para jsonb, split por vírgula para arrays)
+**Nova tabela `public.homepage_highlights`** (migração):
+- `id uuid`, `type text` (`brand|category`), `ref_id text`, `label text`, `position int`, `active bool`, timestamps.
+- Unique `(type, ref_id)`.
+- RLS: SELECT público; INSERT/UPDATE/DELETE só admin via `has_role`.
+- GRANTs: `SELECT` a `anon` + `authenticated`; full a `authenticated` admin via policies; `ALL` a `service_role`.
 
-## Design (recap)
+**Componente novo:** `src/components/HomepageHighlightsDialog.tsx` — toggles por marca e por categoria, máx. 8 marcas / 9 categorias, upsert para a tabela. Adicionado ao header do Admin.
 
-Mantém identidade VRCF: laranja `#E87722` primário, `#1a1a2e` autoridade, dark mode preservado. Badges com paleta definida (resolução azul, stock verde/amarelo/cinza). Pills de filtro activo `#FAEEDA`/`#854F0B`. Todas as cores via tokens semânticos do design system existente onde possível.
+**Integração na homepage:** `src/pages/Index.tsx` lê `homepage_highlights` activos e mostra marcas em destaque (em vez de todas) e categorias em destaque por baixo dos 2 mundos.
 
-## Não mexer
+### 4. Página de produto melhorada
 
-CartDrawer, CartContext, useAuth, Login, TermosCondicoes, PoliticaCookies, Unsubscribe, CookieConsentBanner, CatalogPdfRenderer, CatalogViewer, CatalogA4Pages, Catalogos, CatalogoDestaques, todo `components/ui/`, `integrations/supabase/client.ts`.
+Substituir `src/pages/Produto.tsx` por versão consolidada que adopta do Kilomat:
+- Botão **WhatsApp** (+351 911 564 243) com mensagem pré-preenchida.
+- Botão **Copiar link**.
+- **Galeria com thumbnails** clicáveis (selector `selectedIdx`).
+- **Selector de quantidade** ± com botão "Adicionar ao orçamento".
+- **JSON-LD BreadcrumbList** além do Product já existente.
+- Mantém: especificações (`especificacoes`), destaques (`destaques`), conteúdo embalagem, stock badges, suporte aos 2 mundos para o link "Voltar" (`/seguranca` ou `/escritorio` conforme `product.mundo`).
 
-## Pontos a confirmar antes de começar
+### Ficheiros a editar
 
-1. **Faseamento**: ok avançar fase a fase (com validação tua entre fases), ou queres tudo numa entrega? Recomendo faseado — 16+ ficheiros de uma vez é alto risco.
-2. **Coluna `sku`**: não existe em `products` mas `PRODUCT_COLUMNS` do catalogokilomat referencia-a. Adiciono na migration (TEXT nullable)?
-3. **`contact_leads`**: confirmas que queres tabela nova (em vez de reutilizar `quote_requests` ou enviar email via edge function como o resto do projecto faz)?
-4. **Categorias dos mundos**: vou usar as categorias existentes na tabela `categories` filtradas por mundo (via produtos). As 7 categorias de segurança (Videovigilância, Alarmes, etc.) e 5 de escritório que listaste — crio-as automaticamente se não existirem, ou esperas que as crie/importe manualmente?
+- `src/pages/Admin.tsx` — adicionar 4 botões no header: `BulkImageSearchDialog`, `MigrateImagesDialog`, `ReprocessAllImagesButton`, `HomepageHighlightsDialog`.
+- `src/pages/Index.tsx` — consumir `homepage_highlights` para marcas/categorias em destaque.
+- `src/pages/Produto.tsx` — reescrita integrando melhorias.
+- `public/robots.txt` — apontar `Sitemap:` ao novo endpoint.
 
-Confirma e arranco pela Fase 1.
+### Não tocar (conforme já estabelecido)
+
+`ProductCard`, `CheckoutDialog`, `CartDrawer`, `BrandsStrip`, `ContactFloatingBubble`, `CookieConsentBanner`, `ProductDetailDialog`, autenticação.
+
+### Ordem de execução
+
+1. Migração SQL (`homepage_highlights`) — esperar aprovação.
+2. Criar 3 edge functions (`download-and-store-image`, `reprocess-all-images`, `sitemap`).
+3. Criar 4 componentes admin (`MigrateImagesDialog`, `BulkImageSearchDialog`, `ReprocessAllImagesButton`, `HomepageHighlightsDialog`).
+4. Reescrever `Produto.tsx`.
+5. Editar `Admin.tsx`, `Index.tsx`, `robots.txt`.
+
+Tempo estimado: 1 ciclo de build.
