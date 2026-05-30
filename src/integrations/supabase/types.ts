@@ -242,6 +242,39 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_highlights: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+          position: number
+          ref_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          position?: number
+          ref_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          position?: number
+          ref_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_analytics: {
         Row: {
           created_at: string

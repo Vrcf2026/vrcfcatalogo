@@ -8,6 +8,10 @@ import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
 import { ManageBrandsDialog } from "@/components/ManageBrandsDialog";
 import { ImportProductsDialog } from "@/components/ImportProductsDialog";
 import { ImageHealthCheckDialog } from "@/components/ImageHealthCheckDialog";
+import { BulkImageSearchDialog } from "@/components/BulkImageSearchDialog";
+import { MigrateImagesDialog } from "@/components/MigrateImagesDialog";
+import { ReprocessAllImagesButton } from "@/components/ReprocessAllImagesButton";
+import HomepageHighlightsDialog from "@/components/HomepageHighlightsDialog";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -208,6 +212,10 @@ const Admin = () => {
                 queryClient.invalidateQueries({ queryKey: ["product_images"] });
               }}
             />
+            <BulkImageSearchDialog />
+            <MigrateImagesDialog />
+            <ReprocessAllImagesButton />
+            <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
