@@ -103,17 +103,28 @@ const Index = () => {
       <WelcomeBanner />
 
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3">
-          <img src={vrcfLogo} alt="VRCF" className="h-10 sm:h-14 w-auto" />
-          <div className="flex items-center gap-2">
+        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3">
+          <Link to="/" className="shrink-0">
+            <img src={vrcfLogo} alt="VRCF" className="h-10 sm:h-14 w-auto" />
+          </Link>
+          <form onSubmit={submitSearch} className="relative flex-1 max-w-xl mx-auto hidden sm:block">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar em todo o catálogo..."
+              value={heroQuery}
+              onChange={(e) => setHeroQuery(e.target.value)}
+              className="pl-10 bg-card"
+            />
+          </form>
+          <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
             <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
-              <ShoppingCart className="h-4 w-4" /> Orçamento
+              <ShoppingCart className="h-4 w-4" /> <span className="hidden sm:inline">Orçamento</span>
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">{totalItems}</span>
               )}
             </Button>
-            <Link to="/login" className="text-xs text-muted-foreground hover:text-foreground">Admin</Link>
+            <Link to="/login" className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground">Admin</Link>
           </div>
         </div>
       </header>
