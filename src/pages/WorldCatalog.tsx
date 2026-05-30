@@ -301,6 +301,19 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
       <BrandsStrip mundo={mundo} />
 
+      {/* In-selection search */}
+      <section className="container mx-auto px-4 pb-3">
+        <div className="relative max-w-2xl mx-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={`Pesquisar nesta selecção (${mundo === "seguranca" ? "Segurança & Redes" : "Escritório & IT"})...`}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-10 h-10 bg-card border-dashed"
+          />
+        </div>
+      </section>
+
       {/* Filters row */}
       <section className="container mx-auto px-4 pb-4">
         <div className="flex flex-wrap gap-2 items-center justify-between">
