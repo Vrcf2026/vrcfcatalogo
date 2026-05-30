@@ -1,5 +1,5 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import {
@@ -30,8 +30,18 @@ interface Props {
 const PAGE_SIZE = 24;
 
 const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
+  const navigate = useNavigate();
   const { totalItems, setIsOpen } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [globalQuery, setGlobalQuery] = useState("");
+  const submitGlobalSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = globalQuery.trim();
+    if (!q) return;
+    navigate(`/pesquisa?q=${encodeURIComponent(q)}`);
+  };
+
+
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -191,15 +201,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <Link to="/" className="shrink-0">
             <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-12 w-auto" />
           </Link>
-          <div className="relative flex-1 max-w-xl mx-auto">
+          <form onSubmit={submitGlobalSearch} className="relative flex-1 max-w-xl mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar por nome ou referência..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Pesquisar em todo o catálogo VRCF..."
+              value={globalQuery}
+              onChange={(e) => setGlobalQuery(e.target.value)}
               className="pl-10 bg-card"
             />
-          </div>
+          </form>
           <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
             <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
@@ -290,6 +300,19 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       )}
 
       <BrandsStrip mundo={mundo} />
+
+      {/* In-selection search */}
+      <section className="container mx-auto px-4 pb-3">
+        <div className="relative max-w-2xl mx-auto">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={`Pesquisar nesta selecção (${mundo === "seguranca" ? "Segurança & Redes" : "Escritório & IT"})...`}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-10 h-10 bg-card border-dashed"
+          />
+        </div>
+      </section>
 
       {/* Filters row */}
       <section className="container mx-auto px-4 pb-4">
