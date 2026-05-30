@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Loader2, ArrowLeft, ShoppingCart, Minus, Plus, ShieldCheck, Package2 } from "lucide-react";
+import { Loader2, ArrowLeft, ShoppingCart, Minus, Plus, ShieldCheck, Package2, MessageCircle, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,28 @@ const Produto = () => {
   const destaques = (product.destaques ?? []) as string[];
   const worldPath = product.mundo === "escritorio" ? "/escritorio" : "/seguranca";
   const worldLabel = product.mundo === "escritorio" ? "Escritório & IT" : "Segurança & Redes";
+  const productUrl = `https://showroom.vrcf.info/produto/${product.slug ?? product.id}`;
+  const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Link copiado!");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: "https://showroom.vrcf.info/" },
+      { "@type": "ListItem", position: 2, name: worldLabel, item: `https://showroom.vrcf.info${worldPath}` },
+      ...(product.category ? [{ "@type": "ListItem", position: 3, name: product.category, item: productUrl }] : []),
+      { "@type": "ListItem", position: product.category ? 4 : 3, name: product.name, item: productUrl },
+    ],
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,6 +110,7 @@ const Produto = () => {
             availability: product.stock_status === "high" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
           } : undefined,
         })}</script>
+        <script type="application/ld+json">{JSON.stringify(breadcrumbJsonLd)}</script>
       </Helmet>
 
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
