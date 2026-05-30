@@ -198,6 +198,21 @@ const Produto = () => {
             </Button>
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+            <a
+              href={`https://wa.me/351911564243?text=${waText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 h-10 rounded-md border border-border bg-card hover:bg-accent transition-colors text-sm font-medium"
+            >
+              <MessageCircle className="h-4 w-4 text-green-600" />
+              WhatsApp
+            </a>
+            <Button variant="outline" className="gap-2 h-10" onClick={copyLink}>
+              <Copy className="h-4 w-4" /> Copiar link
+            </Button>
+          </div>
+
           {product.description && (
             <div className="pt-6 border-t border-border">
               <h2 className="font-heading text-lg font-bold mb-2">Descrição</h2>
