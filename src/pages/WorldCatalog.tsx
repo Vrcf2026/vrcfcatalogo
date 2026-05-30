@@ -201,15 +201,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <Link to="/" className="shrink-0">
             <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-12 w-auto" />
           </Link>
-          <div className="relative flex-1 max-w-xl mx-auto">
+          <form onSubmit={submitGlobalSearch} className="relative flex-1 max-w-xl mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Pesquisar por nome ou referência..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Pesquisar em todo o catálogo VRCF..."
+              value={globalQuery}
+              onChange={(e) => setGlobalQuery(e.target.value)}
               className="pl-10 bg-card"
             />
-          </div>
+          </form>
           <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
             <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
