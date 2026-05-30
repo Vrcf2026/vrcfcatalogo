@@ -34,11 +34,37 @@ const useCount = (mundo: "seguranca" | "escritorio") =>
     staleTime: 5 * 60 * 1000,
   });
 
+const useHighlightedCategories = () =>
+  useQuery({
+    queryKey: ["highlights-categories-with-mundo"],
+    queryFn: async () => {
+      const { data: highlights } = await (supabase as any)
+        .from("homepage_highlights")
+        .select("ref_id, label, position")
+        .eq("type", "category")
+        .eq("active", true)
+        .order("position", { ascending: true });
+      const names = (highlights ?? []).map((h: any) => h.ref_id);
+      if (names.length === 0) return [] as { name: string; mundo: string }[];
+      const { data: cats } = await supabase
+        .from("categories")
+        .select("name, mundo")
+        .in("name", names);
+      const mundoByName = new Map<string, string>((cats ?? []).map((c: any) => [c.name, c.mundo ?? "todos"]));
+      return (highlights ?? []).map((h: any) => ({
+        name: h.label,
+        mundo: mundoByName.get(h.ref_id) ?? "todos",
+      }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
 const Index = () => {
   const { totalItems, setIsOpen } = useCart();
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const segCount = useCount("seguranca");
   const escCount = useCount("escritorio");
+  const highlights = useHighlightedCategories();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -116,6 +142,27 @@ const Index = () => {
       </section>
 
       <BrandsStrip />
+
+      {highlights.data && highlights.data.length > 0 && (
+        <section className="container mx-auto px-4 py-12">
+          <h3 className="text-center font-heading text-2xl sm:text-3xl font-bold mb-8">Categorias em destaque</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-5xl mx-auto">
+            {highlights.data.map((c) => {
+              const path = c.mundo === "escritorio" ? "/escritorio" : "/seguranca";
+              return (
+                <Link
+                  key={c.name}
+                  to={`${path}?categoria=${encodeURIComponent(c.name)}`}
+                  className="group rounded-xl border border-border bg-card p-4 text-center hover:border-primary/40 hover:bg-primary/5 transition-all"
+                >
+                  <span className="text-sm font-medium group-hover:text-primary">{c.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
 
       {/* How it works */}
       <section className="bg-zinc-900 text-white py-12">
