@@ -1,0 +1,79 @@
+name: Diginova — Importação Diária
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # todos os dias às 06:00 UTC (07:00 Lisboa)
+  workflow_dispatch:        # permite correr manualmente quando quiseres
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repositório
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install requests supabase python-slugify
+
+      - name: Correr script de importação
+        id: importacao
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python scripts/diginova_import.py 2>&1 | tee importacao_log.txt
+          echo "log<<EOF" >> $GITHUB_OUTPUT
+          cat importacao_log.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Enviar email de confirmação
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASSWORD }}
+          subject: "✅ VRCF Catálogo — Importação Diginova concluída"
+          to: geral@vrcf.pt
+          from: VRCF Catálogo <${{ secrets.GMAIL_USER }}>
+          body: |
+            Importação Diginova concluída com sucesso.
+
+            Data: ${{ github.run_started_at }}
+
+            Relatório:
+            ${{ steps.importacao.outputs.log }}
+
+            ---
+            VRCF — Informática & Segurança
+            showroom.vrcf.info
+
+      - name: Enviar email de erro
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASSWORD }}
+          subject: "❌ VRCF Catálogo — Erro na importação Diginova"
+          to: geral@vrcf.pt
+          from: VRCF Catálogo <${{ secrets.GMAIL_USER }}>
+          body: |
+            Ocorreu um erro na importação Diginova.
+
+            Data: ${{ github.run_started_at }}
+
+            Verifica os logs em:
+            https://github.com/Vrcf2026/vrcfcatalogo/actions
+
+            ---
+            VRCF — Informática & Segurança
