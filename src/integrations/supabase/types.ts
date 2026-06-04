@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      banners: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          id: string
+          image_url: string
+          link: string | null
+          mundo: string | null
+          ordem: number | null
+          titulo: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          image_url: string
+          link?: string | null
+          mundo?: string | null
+          ordem?: number | null
+          titulo?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          link?: string | null
+          mundo?: string | null
+          ordem?: number | null
+          titulo?: string | null
+        }
+        Relationships: []
+      }
       brand_families: {
         Row: {
           brand_id: string
@@ -373,6 +406,7 @@ export type Database = {
           price: number | null
           produtos_relacionados: string[] | null
           short_description: string | null
+          show_on_homepage: boolean | null
           sku: string | null
           slug: string | null
           sob_encomenda: boolean | null
@@ -399,6 +433,7 @@ export type Database = {
           price?: number | null
           produtos_relacionados?: string[] | null
           short_description?: string | null
+          show_on_homepage?: boolean | null
           sku?: string | null
           slug?: string | null
           sob_encomenda?: boolean | null
@@ -425,6 +460,7 @@ export type Database = {
           price?: number | null
           produtos_relacionados?: string[] | null
           short_description?: string | null
+          show_on_homepage?: boolean | null
           sku?: string | null
           slug?: string | null
           sob_encomenda?: boolean | null
@@ -475,6 +511,30 @@ export type Database = {
           id?: string
           items?: Json
           status?: string
+        }
+        Relationships: []
+      }
+      shipping_config: {
+        Row: {
+          ativo: boolean | null
+          fornecedor: string
+          id: string
+          preco_primeira_unidade: number | null
+          preco_unidade_adicional: number | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          fornecedor: string
+          id?: string
+          preco_primeira_unidade?: number | null
+          preco_unidade_adicional?: number | null
+        }
+        Update: {
+          ativo?: boolean | null
+          fornecedor?: string
+          id?: string
+          preco_primeira_unidade?: number | null
+          preco_unidade_adicional?: number | null
         }
         Relationships: []
       }
