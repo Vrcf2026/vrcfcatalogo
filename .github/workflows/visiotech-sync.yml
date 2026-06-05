@@ -24,8 +24,8 @@ jobs:
       - name: Correr script de importação
         id: importacao
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          IMPORT_URL: ${{ secrets.IMPORT_URL }}
+          IMPORT_API_KEY: ${{ secrets.IMPORT_API_KEY }}
         run: |
           python scripts/visiotech_import.py 2>&1 | tee importacao_log.txt
           echo "log<<EOF" >> $GITHUB_OUTPUT
