@@ -535,7 +535,7 @@ def main(usar_ficheiros_locais=False):
     print(f"  Sem stock: {sum(1 for p in produtos if p['stock_status'] == 'out')}")
 
     # 3. Upsert no Supabase
-   if not IMPORT_API_KEY:
+    if not IMPORT_API_KEY:
         print("\n⚠️  IMPORT_API_KEY não definida — a guardar em ficheiro local para teste")
         with open("diginova_produtos_preview.json", "w", encoding="utf-8") as f:
             json.dump(produtos[:5], f, ensure_ascii=False, indent=2)
