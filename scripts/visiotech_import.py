@@ -1,4 +1,4 @@
-scripts/visiotech_import.py#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Script de importação Visiotech → Supabase (VRCF Catálogo)
 Corre manualmente ou via GitHub Actions
@@ -7,8 +7,8 @@ Requer:
   pip install requests python-slugify
 
 Variáveis de ambiente necessárias:
-  SUPABASE_URL
-  SUPABASE_SERVICE_ROLE_KEY
+  IMPORT_URL        → URL da edge function
+  IMPORT_API_KEY    → chave secreta definida no Lovable
 """
 
 import csv
@@ -24,8 +24,8 @@ from slugify import slugify
 # CONFIGURAÇÃO
 # ─────────────────────────────────────────────
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://mgdhclajlcmepdfrkktw.supabase.co")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+IMPORT_URL = os.environ.get("IMPORT_URL", "https://mgdhclajlcmepdfrkktw.supabase.co/functions/v1/import-products")
+IMPORT_API_KEY = os.environ.get("IMPORT_API_KEY", "")
 
 # Link Visiotech (credenciais VRCF)
 URL_CSV_VISIOTECH = "https://www.visiotechsecurity.com/?option=com_csvgeneration&task=generate.generateCSV&token=4ac478b94365bdda557f071779349874&username=VT5771STW"
@@ -184,29 +184,28 @@ def carregar_csv(filepath_ou_url: str) -> list:
     return rows
 
 
-def supabase_upsert(produtos: list):
-    """Faz upsert dos produtos no Supabase."""
+def supabase_upsert(produtos: list, fornecedor: str = "visiotech"):
+    """Envia produtos para a edge function que faz upsert no Supabase."""
     headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "x-import-key": IMPORT_API_KEY,
         "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates",
     }
 
-    batch_size = 50
+    batch_size = 100
     total = len(produtos)
     inseridos = 0
 
     for i in range(0, total, batch_size):
         batch = produtos[i:i + batch_size]
         resp = requests.post(
-            f"{SUPABASE_URL}/rest/v1/products",
+            IMPORT_URL,
             headers=headers,
-            json=batch,
-            timeout=30,
+            json={"fornecedor": fornecedor, "produtos": batch},
+            timeout=60,
         )
-        if resp.status_code in (200, 201):
-            inseridos += len(batch)
+        if resp.status_code == 200:
+            result = resp.json()
+            inseridos += result.get("count", len(batch))
             print(f"  ✅ Upsert {i + 1}-{min(i + batch_size, total)}/{total}")
         else:
             print(f"  ❌ Erro lote {i}: {resp.status_code} — {resp.text[:200]}")
@@ -215,39 +214,27 @@ def supabase_upsert(produtos: list):
     return inseridos
 
 
-def marcar_inactivos(skus_activos: list):
-    """Marca como include_in_catalog=false produtos descontinuados."""
+def marcar_inactivos(skus_activos: list, fornecedor: str = "visiotech"):
+    """Envia lista de SKUs activos para a edge function marcar inactivos."""
     headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
+        "x-import-key": IMPORT_API_KEY,
         "Content-Type": "application/json",
     }
-
-    resp = requests.get(
-        f"{SUPABASE_URL}/rest/v1/products?fornecedor=eq.visiotech&select=sku",
+    resp = requests.post(
+        IMPORT_URL,
         headers=headers,
+        json={"fornecedor": fornecedor, "skus_activos": skus_activos, "action": "marcar_inactivos"},
         timeout=30,
     )
-    if resp.status_code != 200:
-        print(f"  ⚠ Não foi possível verificar inactivos")
-        return
-
-    skus_supabase = {r["sku"] for r in resp.json()}
-    skus_csv = set(skus_activos)
-    inactivos = skus_supabase - skus_csv
-
-    if not inactivos:
-        print("  ✅ Sem produtos a desactivar")
-        return
-
-    print(f"  ⚠ {len(inactivos)} produtos a desactivar...")
-    for sku in inactivos:
-        requests.patch(
-            f"{SUPABASE_URL}/rest/v1/products?sku=eq.{sku}&fornecedor=eq.visiotech",
-            headers=headers,
-            json={"include_in_catalog": False},
-            timeout=10,
-        )
+    if resp.status_code == 200:
+        result = resp.json()
+        inactivos = result.get("inactivos", 0)
+        if inactivos:
+            print(f"  ⚠ {inactivos} produtos desactivados")
+        else:
+            print("  ✅ Sem produtos a desactivar")
+    else:
+        print(f"  ⚠ Não foi possível verificar inactivos: {resp.status_code}")
 
 
 # ─────────────────────────────────────────────
