@@ -1,5 +1,8 @@
 project_id = "mgdhclajlcmepdfrkktw"
 
+[functions.import-products]
+verify_jwt = false
+
 [functions.generate-product-image]
 verify_jwt = false
 
