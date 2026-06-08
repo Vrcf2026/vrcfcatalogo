@@ -143,6 +143,39 @@ TRADUCOES = {
     "Equipos comprobados y testeados completamente": "Equipamento testado e verificado completamente",
     "Pueden tener signos de desgaste o arañazos en su carcasa, pero son completamente funcionales":
         "Pode apresentar sinais de desgaste ou riscos na carcaça, mas é completamente funcional",
+    "Pueden tener signos de desgaste o arañazos en su carcasa, o pantalla, pero son completamente funcionales":
+        "Pode apresentar sinais de desgaste ou riscos na carcaça ou ecrã, mas é completamente funcional",
+    "signos de desgaste":   "sinais de desgaste",
+    "arañazos":             "riscos",
+    "carcasa":              "carcaça",
+    "pantalla":             "ecrã",
+    "pero son completamente funcionales": "mas são completamente funcionais",
+    "Pueden tener":         "Pode apresentar",
+    "pueden tener":         "pode apresentar",
+    "Webcam":               "Webcam",
+    "Zócalos":              "Slots",
+    "zócalo":               "slot",
+    "Zócalo":               "Slot",
+    "ranuras":              "ranhuras",
+    "ranura":               "ranhura",
+    "unidad óptica":        "unidade óptica",
+    "lector de tarjetas":   "leitor de cartões",
+    "Lector de tarjetas":   "Leitor de cartões",
+    "huella dactilar":      "impressão digital",
+    "lector de huellas":    "leitor de impressões digitais",
+    "puertos":              "portas",
+    "puerto":               "porta",
+    "Puertos":              "Portas",
+    "Puerto":               "Porta",
+    "velocidad":            "velocidade",
+    "Velocidad":            "Velocidade",
+    "frecuencia":           "frequência",
+    "Frecuencia":           "Frequência",
+    "caché":                "cache",
+    "rendimiento":          "desempenho",
+    "Rendimiento":          "Desempenho",
+    "subprocesos":          "threads",
+    "núcleos de procesador": "núcleos do processador",
     "Estos equipos incluyen licencia de":  "Este equipamento inclui licença de",
     "Estos equipos incluyen licencia":     "Este equipamento inclui licença de",
     "Este equipamento inclui licença Windows": "Este equipamento inclui licença de Windows",
@@ -160,6 +193,38 @@ def traduzir_texto(texto: str) -> str:
     for es, pt in TRADUCOES.items():
         texto = texto.replace(es, pt)
     return texto
+
+def limpar_html(html: str) -> str:
+    """Converte HTML em texto limpo."""
+    import re as _re
+    text = _re.sub(r'<br[^>]*>', ' ', html)
+    text = _re.sub(r'<[^>]+>', '', text)
+    text = _re.sub(r'  +', ' ', text)
+    return text.strip()
+
+# Mapeamento família Diginova → nome PT para a tabela product_families
+FAMILIA_NOME_PT = {
+    "Portátiles I3":          "Portáteis Intel i3",
+    "Portátiles I5":          "Portáteis Intel i5",
+    "Portátiles I7":          "Portáteis Intel i7",
+    "Portátiles AMD":         "Portáteis AMD",
+    "Portátiles Workstation": "Portáteis Workstation",
+    "Otros Portátiles":       "Outros Portáteis",
+    "Sobremesas SFF":         "Desktops SFF",
+    "Mini pc/Tiny":           "Mini PC / Tiny",
+    "Torres":                 "Torres",
+    "All in One":             "Tudo-em-Um",
+    "Servidores":             "Servidores",
+    "Apple":                  "Apple",
+    "TPV":                    "TPV",
+    "Informática Premium":    "Informática Premium",
+    'Monitores 22"':          'Monitores 22"',
+    'Monitores 23"':          'Monitores 23"',
+    'Monitores 24"':          'Monitores 24"',
+    "Impresoras / Escáneres": "Impressoras / Scanners",
+    "Tablets":                "Tablets",
+    "Otros":                  "Outros",
+}
 
 def traduzir_com_claude(nome_es: str, descricao_es: str) -> dict:
     """
@@ -505,13 +570,22 @@ def main(usar_ficheiros_locais=False):
         familia_pt = traduzir_texto(familia)
         categoria_pt = traduzir_texto(categoria) if categoria else "Computadores"
 
+        # Família — mapear para nome PT
+        familia_nome = FAMILIA_NOME_PT.get(familia.strip(), traduzir_texto(familia))
+
+        # Descrição limpa (sem HTML) para short_description
+        desc_limpa = limpar_html(desc_pt)
+        # Usar primeiras 2 linhas como short_description
+        # Short description = nome do produto (mais útil que excerto da descrição)
+        short_desc = nome_pt
+
         produto = {
             "sku": ref,
             "slug": slug_base,
             "name": nome_pt,
-            "short_description": nome_pt,
+            "short_description": short_desc,
             "description": desc_pt,
-            "brand_id": None,           # será mapeado pelo admin depois
+            "brand_id": None,
             "price": preco,
             "stock_status": stock_status,
             "sob_encomenda": sob_encomenda,
@@ -522,6 +596,8 @@ def main(usar_ficheiros_locais=False):
             "fornecedor": "diginova",
             "mundo": "escritorio",
             "category": categoria_pt,
+            "family": familia_nome,
+            "brand": marca,
             "especificacoes": specs,
             "destaques": [],
         }
