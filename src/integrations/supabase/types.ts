@@ -387,6 +387,7 @@ export type Database = {
       }
       products: {
         Row: {
+          brand: string | null
           brand_id: string | null
           categoria_pai: string | null
           category: string | null
@@ -395,6 +396,7 @@ export type Database = {
           description: string | null
           destaques: Json | null
           especificacoes: Json | null
+          family: string | null
           family_id: string | null
           featured: boolean
           fornecedor: string | null
@@ -414,6 +416,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          brand?: string | null
           brand_id?: string | null
           categoria_pai?: string | null
           category?: string | null
@@ -422,6 +425,7 @@ export type Database = {
           description?: string | null
           destaques?: Json | null
           especificacoes?: Json | null
+          family?: string | null
           family_id?: string | null
           featured?: boolean
           fornecedor?: string | null
@@ -441,6 +445,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          brand?: string | null
           brand_id?: string | null
           categoria_pai?: string | null
           category?: string | null
@@ -449,6 +454,7 @@ export type Database = {
           description?: string | null
           destaques?: Json | null
           especificacoes?: Json | null
+          family?: string | null
           family_id?: string | null
           featured?: boolean
           fornecedor?: string | null
