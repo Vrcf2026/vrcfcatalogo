@@ -146,6 +146,18 @@ TRADUCOES = {
     "Pueden tener signos de desgaste o arañazos en su carcasa, o pantalla, pero son completamente funcionales":
         "Pode apresentar sinais de desgaste ou riscos na carcaça ou ecrã, mas é completamente funcional",
     "signos de desgaste":   "sinais de desgaste",
+    "Estos equipos NO incluyen licencia de Windows": "Este equipamento NÃO inclui licença de Windows",
+    "Estos equipos NÃO incluyen licencia de Windows": "Este equipamento NÃO inclui licença de Windows",
+    "Estos equipos no incluyen licencia de Windows": "Este equipamento não inclui licença de Windows",
+    "incluyen licencia de Windows": "inclui licença de Windows",
+    "no incluyen": "não inclui",
+    "NO incluyen": "NÃO inclui",
+    "NÃO incluyen": "NÃO inclui",
+    "Estos equipos": "Este equipamento",
+    "estos equipos": "este equipamento",
+    "o pantalla": "ou ecrã",
+    "su carcasa, o pantalla": "carcaça ou ecrã",
+    "son completamente funcionales": "são completamente funcionais",
     "arañazos":             "riscos",
     "carcasa":              "carcaça",
     "pantalla":             "ecrã",
@@ -365,25 +377,34 @@ def extrair_specs(nome: str, descricao: str, familia: str) -> dict:
 # CÁLCULO DE PREÇO
 # ─────────────────────────────────────────────
 
-def calcular_preco(precio_es: str, familia: str) -> float:
+def calcular_precos(precio_es: str, familia: str) -> dict:
     """
-    Calcula preço de venda (sem IVA PT).
-    precio_es = PVP espanhol com IVA 21%
+    Calcula todos os preços a partir do PVP espanhol (com IVA 21%).
+    Retorna dict com purchase_price, purchase_price_vat, price
     """
     try:
         pvp_es = float(precio_es)
     except (ValueError, TypeError):
         return None
 
-    custo = (pvp_es / IVA_ES) * (1 - DESCONTO_DIGINOVA)
-    margem_euros = custo * MARGEM
+    # Preço de compra sem IVA ES
+    compra_sem_iva = round(pvp_es / IVA_ES, 2)
+    # Preço de compra com IVA ES (= pvp_es)
+    compra_com_iva = round(pvp_es, 2)
+    # Aplicar desconto negociado
+    custo = round(compra_sem_iva * (1 - DESCONTO_DIGINOVA), 2)
 
-    # Margem mínima por grupo
+    margem_euros = custo * MARGEM
     grupo = FAMILIA_GRUPO.get(familia.strip(), "componentes")
     minimo = MARGEM_MINIMA[grupo]
     margem_euros = max(margem_euros, minimo)
+    preco_venda = round(custo + margem_euros, 2)
 
-    return round(custo + margem_euros, 2)
+    return {
+        "purchase_price":     compra_sem_iva,   # custo sem IVA
+        "purchase_price_vat": compra_com_iva,   # custo com IVA 21% ES
+        "price":              preco_venda,       # preço de venda sem IVA PT
+    }
 
 # ─────────────────────────────────────────────
 # CARREGAR CSVs
@@ -512,11 +533,14 @@ def main(usar_ficheiros_locais=False):
         stock_raw = row.get("STOCK", "0").strip()
         imagem = row.get("IMAGEN", "").strip()
 
-        # Preço
-        preco = calcular_preco(precio, familia)
-        if preco is None:
+        # Preços
+        precos = calcular_precos(precio, familia)
+        if precos is None:
             print(f"  ⚠ Preço inválido: {ref}")
             continue
+        preco = precos["price"]
+        purchase_price = precos["purchase_price"]
+        purchase_price_vat = precos["purchase_price_vat"]
 
         # Stock
         try:
@@ -573,33 +597,45 @@ def main(usar_ficheiros_locais=False):
         # Família — mapear para nome PT
         familia_nome = FAMILIA_NOME_PT.get(familia.strip(), traduzir_texto(familia))
 
-        # Descrição limpa (sem HTML) para short_description
-        desc_limpa = limpar_html(desc_pt)
-        # Usar primeiras 2 linhas como short_description
-        # Short description = nome do produto (mais útil que excerto da descrição)
+        # Descrição — cortar a partir das especificações
+        # Separadores possíveis no texto
+        cortes = ["Especificações:", "Especificaciones:", "· Marca ", "·Marca "]
+        desc_intro = desc_pt
+        for corte in cortes:
+            if corte in desc_pt:
+                desc_intro = desc_pt[:desc_pt.index(corte)].strip()
+                break
+        # Limpar HTML da introdução
+        desc_intro_limpa = limpar_html(desc_intro).strip()
+        # Se ficou vazio usa texto genérico
+        if not desc_intro_limpa:
+            desc_intro_limpa = "Equipamento recondicionado testado e verificado completamente."
         short_desc = nome_pt
 
         produto = {
-            "sku": ref,
-            "slug": slug_base,
-            "name": nome_pt,
-            "short_description": short_desc,
-            "description": desc_pt,
-            "brand_id": None,
-            "price": preco,
-            "stock_status": stock_status,
-            "sob_encomenda": sob_encomenda,
+            "sku":                ref,
+            "slug":               slug_base,
+            "name":               nome_pt,
+            "short_description":  short_desc,
+            "description":        desc_intro_limpa,
+            "brand_id":           None,
+            "price":              preco,
+            "purchase_price":     purchase_price,
+            "purchase_price_vat": purchase_price_vat,
+            "stock_status":       stock_status,
+            "sob_encomenda":      sob_encomenda,
             "include_in_catalog": True,
-            "featured": False,
-            "show_on_homepage": False,
-            "image_url": imagem,
-            "fornecedor": "diginova",
-            "mundo": "escritorio",
-            "category": categoria_pt,
-            "family": familia_nome,
-            "brand": marca,
-            "especificacoes": specs,
-            "destaques": [],
+            "featured":           False,
+            "show_on_homepage":   False,
+            "image_url":          imagem,
+            "weight":             float(row.get("PESO", 0) or 0),
+            "fornecedor":         "diginova",
+            "mundo":              "escritorio",
+            "category":           categoria_pt,
+            "family":             familia_nome,
+            "brand":              marca,
+            "especificacoes":     specs,
+            "destaques":          [],
         }
 
         produtos.append(produto)
