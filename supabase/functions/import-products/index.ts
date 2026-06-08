@@ -52,6 +52,7 @@ Deno.serve(async (req) => {
 
     // Ensure fornecedor is set on each product
     const rows = produtos.map((p) => ({ ...p, fornecedor: p.fornecedor ?? fornecedor }));
+    console.log("First row payload:", JSON.stringify(rows[0]));
 
     // Upsert in batches of 100 by sku
     const batchSize = 100;
