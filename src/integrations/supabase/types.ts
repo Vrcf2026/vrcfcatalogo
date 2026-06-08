@@ -407,6 +407,8 @@ export type Database = {
           name: string
           price: number | null
           produtos_relacionados: string[] | null
+          purchase_price: number | null
+          purchase_price_vat: number | null
           short_description: string | null
           show_on_homepage: boolean | null
           sku: string | null
@@ -414,6 +416,7 @@ export type Database = {
           sob_encomenda: boolean | null
           stock_status: string | null
           updated_at: string
+          weight: number | null
         }
         Insert: {
           brand?: string | null
@@ -436,6 +439,8 @@ export type Database = {
           name: string
           price?: number | null
           produtos_relacionados?: string[] | null
+          purchase_price?: number | null
+          purchase_price_vat?: number | null
           short_description?: string | null
           show_on_homepage?: boolean | null
           sku?: string | null
@@ -443,6 +448,7 @@ export type Database = {
           sob_encomenda?: boolean | null
           stock_status?: string | null
           updated_at?: string
+          weight?: number | null
         }
         Update: {
           brand?: string | null
@@ -465,6 +471,8 @@ export type Database = {
           name?: string
           price?: number | null
           produtos_relacionados?: string[] | null
+          purchase_price?: number | null
+          purchase_price_vat?: number | null
           short_description?: string | null
           show_on_homepage?: boolean | null
           sku?: string | null
@@ -472,6 +480,7 @@ export type Database = {
           sob_encomenda?: boolean | null
           stock_status?: string | null
           updated_at?: string
+          weight?: number | null
         }
         Relationships: [
           {
