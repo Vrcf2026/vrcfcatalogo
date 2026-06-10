@@ -329,10 +329,10 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
               <div key={key} className="grid grid-cols-2 gap-3 items-center">
                 <Label className="text-sm">{label}</Label>
                 {options ? (
-                  <Select value={specs[key] || ""} onValueChange={(v) => updateSpec(key, v)}>
+                  <Select value={specs[key] || ""} onValueChange={(v) => updateSpec(key, v === "_none" ? "" : v)}>
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">—</SelectItem>
+                      <SelectItem value="_none">—</SelectItem>
                       {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                     </SelectContent>
                   </Select>
