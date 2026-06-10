@@ -141,6 +141,11 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onCli
               {familyName}
             </span>
           )}
+          {brandName && (
+            <span className="inline-block text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {brandName}
+            </span>
+          )}
         </div>
         <h3 className="font-heading font-semibold text-card-foreground line-clamp-1">{name}</h3>
         {description && (
