@@ -48,6 +48,7 @@ interface ProductCardProps {
   imageUrl: string | null;
   images: { id: string; image_url: string; position: number }[];
   familyName: string | null;
+  brandName?: string | null;
   featured?: boolean;
   includeInCatalog?: boolean;
   onEdit?: () => void;
