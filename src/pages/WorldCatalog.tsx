@@ -380,7 +380,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                     price={product.price}
                     imageUrl={product.image_url}
                     images={imagesByProduct[product.id] || []}
-                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                    familyName={product.family ?? null}
+                    brandName={product.brand ?? null}
                     featured={product.featured}
                   />
                 </Link>
