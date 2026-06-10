@@ -1,39 +1,45 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductCard } from "@/components/ProductCard";
-import { AddProductDialog } from "@/components/AddProductDialog";
-import { EditProductDialog } from "@/components/EditProductDialog";
 import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
 import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
 import { ManageBrandsDialog } from "@/components/ManageBrandsDialog";
-import { ImportProductsDialog } from "@/components/ImportProductsDialog";
-import { ImageHealthCheckDialog } from "@/components/ImageHealthCheckDialog";
-import { BulkImageSearchDialog } from "@/components/BulkImageSearchDialog";
-import { MigrateImagesDialog } from "@/components/MigrateImagesDialog";
-import { ReprocessAllImagesButton } from "@/components/ReprocessAllImagesButton";
 import HomepageHighlightsDialog from "@/components/HomepageHighlightsDialog";
 import { AdminDashboard } from "@/components/AdminDashboard";
+import { EditProductSheet } from "@/components/EditProductSheet";
+import { AddProductDialog } from "@/components/AddProductDialog";
+import { BannersManager } from "@/components/BannersManager";
+import { ShippingConfig } from "@/components/ShippingConfig";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo } from "react";
-import { Search, ShieldCheck, Package, Loader2, LogOut, Trash2, CheckSquare, Square, XSquare } from "lucide-react";
+import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+
+const FORNECEDORES = ["diginova", "visiotech", "bydemes", "manual"];
+const PAGE_SIZE = 50;
 
 const Admin = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
+  const [fornecedorFilter, setFornecedorFilter] = useState("all");
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const [stockFilter, setStockFilter] = useState("all");
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const { signOut, user } = useAuth();
+  const [sortCol, setSortCol] = useState("created_at");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(1);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("produtos");
+  const { signOut } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -42,7 +48,7 @@ const Admin = () => {
     navigate("/");
   };
 
-  const { data: products, isLoading } = useQuery({
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -57,10 +63,7 @@ const Admin = () => {
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("product_families")
-        .select("*")
-        .order("category", { ascending: true });
+      const { data, error } = await supabase.from("product_families").select("*").order("name");
       if (error) throw error;
       return data;
     },
@@ -69,10 +72,7 @@ const Admin = () => {
   const { data: dbCategories = [] } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("name", { ascending: true });
+      const { data, error } = await supabase.from("categories").select("*").order("name");
       if (error) throw error;
       return data;
     },
@@ -81,140 +81,113 @@ const Admin = () => {
   const { data: brands = [] } = useQuery({
     queryKey: ["brands"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("brands")
-        .select("*")
-        .order("name", { ascending: true });
+      const { data, error } = await supabase.from("brands").select("*").order("name");
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: productImages = [] } = useQuery({
-    queryKey: ["product_images"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("product_images")
-        .select("*")
-        .order("position", { ascending: true });
-      if (error) throw error;
-      return data;
-    },
-  });
+  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
+  const brandMap = Object.fromEntries(brands.map((b: any) => [b.id, b.name]));
+  const categoryNames = dbCategories.map((c: any) => c.name);
 
-  const imagesByProduct = productImages.reduce((acc: Record<string, typeof productImages>, img) => {
-    if (!acc[img.product_id]) acc[img.product_id] = [];
-    acc[img.product_id].push(img);
-    return acc;
-  }, {});
+  const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  const familyMap = Object.fromEntries(families.map((f) => [f.id, f.name]));
-  const brandMap = Object.fromEntries(brands.map((b) => [b.id, b.name]));
-
-  const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-  const filtered = products?.filter((p) => {
-    const searchTerms = normalize(search).split(/\s+/).filter(Boolean);
-    const nameNorm = normalize(p.name);
-    const descNorm = normalize(p.description || "");
-    const matchesSearch = searchTerms.length === 0 || searchTerms.every((term) =>
-      nameNorm.includes(term) || descNorm.includes(term)
-    );
-    const matchesCategory = categoryFilter === "all" || p.category === categoryFilter;
-    const matchesFamily = familyFilter === "all" || p.family_id === familyFilter;
-    const matchesBrand = brandFilter === "all" || p.brand_id === brandFilter;
-    return matchesSearch && matchesCategory && matchesFamily && matchesBrand;
-  });
-  const filteredIds = useMemo(() => new Set(filtered?.map(p => p.id) || []), [filtered]);
-  
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+  const filtered = useMemo(() => {
+    let result = products.filter((p: any) => {
+      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
+      if (familyFilter !== "all" && p.family_id !== familyFilter && p.family !== familyFilter) return false;
+      if (brandFilter !== "all" && p.brand_id !== brandFilter && p.brand !== brandFilter) return false;
+      if (fornecedorFilter !== "all" && p.fornecedor !== fornecedorFilter) return false;
+      if (mundoFilter !== "all" && p.mundo !== mundoFilter) return false;
+      if (stockFilter === "out" && p.stock_status !== "out") return false;
+      if (stockFilter === "low" && p.stock_status !== "low") return false;
+      if (stockFilter === "in" && p.stock_status === "out") return false;
+      if (search) {
+        const q = normalize(search);
+        return normalize(p.name || "").includes(q) || normalize(p.sku || "").includes(q);
+      }
+      return true;
     });
+
+    result = [...result].sort((a: any, b: any) => {
+      const va = a[sortCol] ?? "";
+      const vb = b[sortCol] ?? "";
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [products, categoryFilter, familyFilter, brandFilter, fornecedorFilter, mundoFilter, stockFilter, search, sortCol, sortDir]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const handleSort = (col: string) => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+    setPage(1);
   };
 
-  const toggleSelectAll = () => {
-    if (!filtered) return;
-    const allSelected = filtered.every(p => selectedIds.has(p.id));
-    if (allSelected) {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        filtered.forEach(p => next.delete(p.id));
-        return next;
-      });
-    } else {
-      setSelectedIds(prev => {
-        const next = new Set(prev);
-        filtered.forEach(p => next.add(p.id));
-        return next;
-      });
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    const count = selectedIds.size;
-    if (!count) return;
-    if (!confirm(`Tens a certeza que queres apagar ${count} produto(s)? Esta ação não pode ser revertida.`)) return;
-    
-    setDeleting(true);
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Eliminar este produto?")) return;
+    setDeleting(id);
     try {
-      const ids = Array.from(selectedIds);
-      // Delete gallery images first
-      await supabase.from("product_images").delete().in("product_id", ids);
-      // Delete products
-      const { error } = await supabase.from("products").delete().in("id", ids);
+      await supabase.from("product_images").delete().eq("product_id", id);
+      const { error } = await supabase.from("products").delete().eq("id", id);
       if (error) throw error;
-      
-      toast.success(`${count} produto(s) apagado(s) com sucesso`);
-      setSelectedIds(new Set());
-      setSelectionMode(false);
+      toast.success("Produto eliminado");
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      queryClient.invalidateQueries({ queryKey: ["product_images"] });
-    } catch (error) {
-      toast.error("Erro ao apagar produtos");
+    } catch {
+      toast.error("Erro ao eliminar");
     } finally {
-      setDeleting(false);
+      setDeleting(null);
     }
   };
 
-  const categoryNames = dbCategories.map((c) => c.name);
-  const visibleFamilies = families.filter((f) => (categoryFilter === "all" || f.category === categoryFilter) && (brandFilter === "all" || products?.some((p) => p.family_id === f.id && p.brand_id === brandFilter)));
-  const visibleBrands = brands.filter((b) => products?.some((p) => p.brand_id === b.id && (categoryFilter === "all" || p.category === categoryFilter) && (familyFilter === "all" || p.family_id === familyFilter)));
+  const handleToggle = async (id: string, field: string, val: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await supabase.from("products").update({ [field]: val }).eq("id", id);
+    queryClient.invalidateQueries({ queryKey: ["products"] });
+  };
+
+  const SortIcon = ({ col }: { col: string }) => {
+    if (sortCol !== col) return null;
+    return sortDir === "asc" ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />;
+  };
+
+  const stockBadge = (status: string) => {
+    if (status === "high") return <Badge className="bg-green-500/15 text-green-700 border-green-300 text-[10px]">Stock</Badge>;
+    if (status === "low") return <Badge className="bg-amber-500/15 text-amber-700 border-amber-300 text-[10px]">Baixo</Badge>;
+    return <Badge className="bg-red-500/15 text-red-700 border-red-300 text-[10px]">Esgot.</Badge>;
+  };
+
+  const tecladoBadge = (specs: any) => {
+    if (!specs?.teclado) return null;
+    const t = specs.teclado;
+    if (t === "PT") return <Badge className="bg-blue-500/15 text-blue-700 text-[10px]">PT</Badge>;
+    if (t === "ES") return <Badge className="bg-orange-500/15 text-orange-700 text-[10px]">ES</Badge>;
+    if (t === "Personalizável") return <Badge className="bg-purple-500/15 text-purple-700 text-[10px]">Pers.</Badge>;
+    return <Badge className="bg-muted text-muted-foreground text-[10px]">INT</Badge>;
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-lg">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <ShieldCheck className="h-7 w-7 text-primary" />
+            <ShieldCheck className="h-6 w-6 text-primary" />
             <div>
-              <h1 className="font-heading text-xl font-bold text-foreground leading-tight">VRCF</h1>
-              <p className="text-[10px] font-medium text-muted-foreground tracking-wider uppercase">Informática & Segurança</p>
+              <h1 className="font-heading text-lg font-bold leading-tight">VRCF Admin</h1>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Informática & Segurança</p>
             </div>
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">Admin</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="flex items-center gap-2">
             <ManageCategoriesDialog categories={dbCategories} />
             <ManageFamiliesDialog families={families} categories={categoryNames} />
             <ManageBrandsDialog brands={brands} />
-            <ImportProductsDialog families={families} categories={categoryNames} brands={brands} />
-            <ImageHealthCheckDialog
-              products={products || []}
-              productImages={productImages}
-              onEditProduct={(productId) => {
-                const product = products?.find(p => p.id === productId);
-                if (product) setEditingProduct(product);
-              }}
-              onImagesRemoved={() => {
-                queryClient.invalidateQueries({ queryKey: ["products"] });
-                queryClient.invalidateQueries({ queryKey: ["product_images"] });
-              }}
-            />
-            <BulkImageSearchDialog />
-            <MigrateImagesDialog />
-            <ReprocessAllImagesButton />
             <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
             <DarkModeToggle />
@@ -225,143 +198,217 @@ const Admin = () => {
         </div>
       </header>
 
-      <section className="container mx-auto px-4 py-6">
-        <AdminDashboard
-          products={products || []}
-          productImages={productImages}
-          families={families}
-          brands={brands}
-        />
-      </section>
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Dashboard */}
+        <AdminDashboard products={products} productImages={[]} families={families} brands={brands} />
 
-      <section className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row gap-3 max-w-3xl mx-auto flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Buscar produtos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
-          </div>
-          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setBrandFilter("all"); }}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Categorias" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Categorias</SelectItem>
-              {categoryNames.map((cat) => (
-                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {visibleFamilies.length > 0 && (
-            <Select value={familyFilter} onValueChange={setFamilyFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Famílias" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Famílias</SelectItem>
-                {visibleFamilies.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {visibleBrands.length > 0 && (
-            <Select value={brandFilter} onValueChange={setBrandFilter}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="Marcas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Marcas</SelectItem>
-                {visibleBrands.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-      </section>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="produtos" className="gap-1.5">
+              <Package className="h-4 w-4" /> Produtos ({products.length})
+            </TabsTrigger>
+            <TabsTrigger value="banners" className="gap-1.5">
+              <Image className="h-4 w-4" /> Banners
+            </TabsTrigger>
+            <TabsTrigger value="portes" className="gap-1.5">
+              <Truck className="h-4 w-4" /> Portes
+            </TabsTrigger>
+          </TabsList>
 
-      <section className="container mx-auto px-4 pb-16">
-        {/* Selection toolbar */}
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Button
-            variant={selectionMode ? "default" : "outline"}
-            size="sm"
-            className="gap-1.5"
-            onClick={() => {
-              setSelectionMode(!selectionMode);
-              if (selectionMode) setSelectedIds(new Set());
-            }}
-          >
-            {selectionMode ? <XSquare className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
-            {selectionMode ? "Cancelar" : "Selecionar"}
-          </Button>
-          {selectionMode && (
-            <>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={toggleSelectAll}>
-                {filtered && filtered.length > 0 && filtered.every(p => selectedIds.has(p.id))
-                  ? <><Square className="h-4 w-4" /> Desselecionar todos</>
-                  : <><CheckSquare className="h-4 w-4" /> Selecionar todos ({filtered?.length || 0})</>
-                }
-              </Button>
-              {selectedIds.size > 0 && (
-                <Button variant="destructive" size="sm" className="gap-1.5" onClick={handleBulkDelete} disabled={deleting}>
-                  {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  Apagar {selectedIds.size} selecionado{selectedIds.size !== 1 ? "s" : ""}
-                </Button>
+          {/* ── PRODUTOS ── */}
+          <TabsContent value="produtos" className="space-y-4 mt-4">
+            {/* Filtros */}
+            <div className="flex flex-wrap gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Pesquisar nome ou SKU..." value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-9 h-9" />
+              </div>
+              <Select value={fornecedorFilter} onValueChange={(v) => { setFornecedorFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[130px] h-9"><SelectValue placeholder="Fornecedor" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Fornecedor</SelectItem>
+                  {FORNECEDORES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={mundoFilter} onValueChange={(v) => { setMundoFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[120px] h-9"><SelectValue placeholder="Mundo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Mundo</SelectItem>
+                  <SelectItem value="escritorio">Escritório</SelectItem>
+                  <SelectItem value="seguranca">Segurança</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setPage(1); }}>
+                <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Categoria</SelectItem>
+                  {categoryNames.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={familyFilter} onValueChange={(v) => { setFamilyFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Família" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Família</SelectItem>
+                  {families.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={brandFilter} onValueChange={(v) => { setBrandFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[120px] h-9"><SelectValue placeholder="Marca" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Marca</SelectItem>
+                  {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={stockFilter} onValueChange={(v) => { setStockFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[110px] h-9"><SelectValue placeholder="Stock" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Stock</SelectItem>
+                  <SelectItem value="in">Com stock</SelectItem>
+                  <SelectItem value="low">Stock baixo</SelectItem>
+                  <SelectItem value="out">Esgotado</SelectItem>
+                </SelectContent>
+              </Select>
+              {(search || categoryFilter !== "all" || familyFilter !== "all" || brandFilter !== "all" || fornecedorFilter !== "all" || mundoFilter !== "all" || stockFilter !== "all") && (
+                <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => {
+                  setSearch(""); setCategoryFilter("all"); setFamilyFilter("all");
+                  setBrandFilter("all"); setFornecedorFilter("all"); setMundoFilter("all"); setStockFilter("all"); setPage(1);
+                }}>Limpar filtros</Button>
               )}
-            </>
-          )}
-        </div>
+            </div>
 
-        {isLoading ? (
-          <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : filtered && filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filtered.map((product) => (
-              <div key={product.id} className="relative">
-                {selectionMode && (
-                  <div
-                    className="absolute top-2 left-2 z-20 cursor-pointer"
-                    onClick={(e) => { e.stopPropagation(); toggleSelect(product.id); }}
-                  >
-                    <Checkbox
-                      checked={selectedIds.has(product.id)}
-                      className="h-5 w-5 bg-background/80 backdrop-blur-sm border-2"
-                    />
-                  </div>
-                )}
-                <div className={selectionMode && selectedIds.has(product.id) ? "ring-2 ring-primary rounded-lg" : ""}>
-                  <ProductCard
-                    id={product.id}
-                    name={product.name}
-                    description={product.description}
-                    category={product.category}
-                    price={product.price}
-                    imageUrl={product.image_url}
-                    images={imagesByProduct[product.id] || []}
-                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
-                    featured={product.featured}
-                    includeInCatalog={product.include_in_catalog}
-                    onEdit={() => !selectionMode && setEditingProduct(product)}
-                    isAdmin
-                  />
+            {/* Contador */}
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>{filtered.length} produto{filtered.length !== 1 ? "s" : ""} {filtered.length !== products.length && `(de ${products.length})`}</span>
+              <span>Página {page} de {totalPages || 1}</span>
+            </div>
+
+            {/* Tabela */}
+            {isLoading ? (
+              <div className="flex justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50 border-b border-border">
+                      <tr>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground cursor-pointer hover:text-foreground whitespace-nowrap" onClick={() => handleSort("name")}>
+                          Nome <SortIcon col="name" />
+                        </th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">SKU</th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Fornecedor</th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Família</th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Marca</th>
+                        <th className="text-right px-3 py-2.5 font-medium text-muted-foreground cursor-pointer hover:text-foreground whitespace-nowrap" onClick={() => handleSort("purchase_price")}>
+                          Compra <SortIcon col="purchase_price" />
+                        </th>
+                        <th className="text-right px-3 py-2.5 font-medium text-muted-foreground cursor-pointer hover:text-foreground whitespace-nowrap" onClick={() => handleSort("price")}>
+                          Venda <SortIcon col="price" />
+                        </th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Stock</th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Teclado</th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Catálogo</th>
+                        <th className="text-center px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Destaque</th>
+                        <th className="px-3 py-2.5"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {paginated.length === 0 ? (
+                        <tr>
+                          <td colSpan={12} className="text-center py-16 text-muted-foreground">
+                            <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                            Nenhum produto encontrado
+                          </td>
+                        </tr>
+                      ) : paginated.map((p: any) => {
+                        const specs = typeof p.especificacoes === "string" ? JSON.parse(p.especificacoes || "{}") : (p.especificacoes || {});
+                        const familyName = p.family || (p.family_id ? familyMap[p.family_id] : null) || "—";
+                        const brandName = p.brand || (p.brand_id ? brandMap[p.brand_id] : null) || "—";
+                        return (
+                          <tr key={p.id}
+                            className="hover:bg-muted/30 cursor-pointer transition-colors"
+                            onClick={() => setEditingProduct(p)}>
+                            <td className="px-3 py-2.5 max-w-[220px]">
+                              <div className="flex items-center gap-2">
+                                {p.image_url && (
+                                  <img src={p.image_url} alt="" className="h-8 w-8 object-contain rounded flex-shrink-0 bg-muted" />
+                                )}
+                                <span className="truncate font-medium text-foreground" title={p.name}>{p.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-muted-foreground font-mono text-xs whitespace-nowrap">{p.sku || "—"}</td>
+                            <td className="px-3 py-2.5">
+                              {p.fornecedor ? (
+                                <Badge variant="outline" className="text-[10px] capitalize">{p.fornecedor}</Badge>
+                              ) : "—"}
+                            </td>
+                            <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[120px] truncate" title={familyName}>{familyName}</td>
+                            <td className="px-3 py-2.5 text-muted-foreground text-xs">{brandName}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-xs text-muted-foreground whitespace-nowrap">
+                              {p.purchase_price ? `${p.purchase_price.toFixed(2)}€` : "—"}
+                            </td>
+                            <td className="px-3 py-2.5 text-right tabular-nums font-medium text-foreground whitespace-nowrap">
+                              {p.price ? `${p.price.toFixed(2)}€` : "—"}
+                            </td>
+                            <td className="px-3 py-2.5 text-center">{stockBadge(p.stock_status)}</td>
+                            <td className="px-3 py-2.5 text-center">{tecladoBadge(specs)}</td>
+                            <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                              <Switch
+                                checked={!!p.include_in_catalog}
+                                onCheckedChange={(v) => handleToggle(p.id, "include_in_catalog", v, { stopPropagation: () => {} } as any)}
+                                className="scale-75"
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                              <Switch
+                                checked={!!p.featured}
+                                onCheckedChange={(v) => handleToggle(p.id, "featured", v, { stopPropagation: () => {} } as any)}
+                                className="scale-75"
+                              />
+                            </td>
+                            <td className="px-3 py-2.5 text-right" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                onClick={(e) => handleDelete(p.id, e)} disabled={deleting === p.id}>
+                                {deleting === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-20">
-            <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
-            <h3 className="mt-4 font-heading text-lg font-semibold text-foreground">Nenhum produto encontrado</h3>
-            <p className="mt-1 text-muted-foreground">Adicione seu primeiro produto clicando em "Novo Produto"</p>
-          </div>
-        )}
-      </section>
+            )}
 
+            {/* Paginação */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Anterior</Button>
+                <span className="text-sm text-muted-foreground px-2">{page} / {totalPages}</span>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Seguinte</Button>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ── BANNERS ── */}
+          <TabsContent value="banners" className="mt-4">
+            <BannersManager />
+          </TabsContent>
+
+          {/* ── PORTES ── */}
+          <TabsContent value="portes" className="mt-4">
+            <ShippingConfig />
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Painel de edição */}
       {editingProduct && (
-        <EditProductDialog
+        <EditProductSheet
           open={!!editingProduct}
           onOpenChange={(open) => !open && setEditingProduct(null)}
           product={editingProduct}
