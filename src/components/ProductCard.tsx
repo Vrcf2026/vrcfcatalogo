@@ -55,7 +55,7 @@ interface ProductCardProps {
   isAdmin?: boolean;
 }
 
-export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onClick?: () => void }>(function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick, featured, includeInCatalog }, ref) {
+export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onClick?: () => void }>(function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, brandName, onEdit, isAdmin, onClick, featured, includeInCatalog }, ref) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const queryClient = useQueryClient();
