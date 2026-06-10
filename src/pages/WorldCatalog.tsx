@@ -121,8 +121,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       } else if (allowedCategoryNames.length > 0) {
         q = q.in("category", allowedCategoryNames);
       }
-      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
-      if (brandFilter !== "all") q = q.eq("brand_id", brandFilter);
+      if (familyFilter !== "all") q = q.eq("family", familyFilter);
+      if (brandFilter !== "all") q = q.eq("brand", brandFilter);
       if (search.trim()) {
         const term = `%${search.trim()}%`;
         q = q.or(`name.ilike.${term},sku.ilike.${term}`);
