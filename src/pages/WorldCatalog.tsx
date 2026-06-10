@@ -76,25 +76,35 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: families = [] } = useQuery({
-    queryKey: ["families"],
+  // Distinct family / brand text values present in products for this mundo
+  const { data: facetRows = [] } = useQuery({
+    queryKey: ["world-facets", mundo],
     queryFn: async () => {
-      const { data, error } = await supabase.from("product_families").select("*");
+      const { data, error } = await supabase
+        .from("products")
+        .select("family, brand, category")
+        .eq("mundo", mundo);
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: brands = [] } = useQuery({
-    queryKey: ["brands"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("brands").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const families = useMemo(() => {
+    const map = new Map<string, string>();
+    facetRows.forEach((r: any) => {
+      if (r.family && (categoryFilter === "all" || r.category === categoryFilter)) {
+        map.set(r.family, r.category ?? "");
+      }
+    });
+    return Array.from(map.entries()).map(([name, category]) => ({ name, category })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [facetRows, categoryFilter]);
+
+  const brands = useMemo(() => {
+    const set = new Set<string>();
+    facetRows.forEach((r: any) => { if (r.brand) set.add(r.brand); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b)).map((name) => ({ name }));
+  }, [facetRows]);
 
   const allowedCategoryNames = useMemo(() => categories.map((c: any) => c.name), [categories]);
 
