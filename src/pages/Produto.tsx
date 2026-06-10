@@ -158,6 +158,8 @@ const Produto = () => {
         <div className="space-y-5">
           <div className="flex flex-wrap items-center gap-2">
             {product.category && <Badge variant="secondary">{product.category}</Badge>}
+            {product.family && <Badge variant="outline">{product.family}</Badge>}
+            {product.brand && <Badge variant="outline">{product.brand}</Badge>}
             <Badge variant="outline" className={stock.className}>{stock.label}</Badge>
             {product.featured && <Badge className="bg-primary text-primary-foreground">★ Destaque</Badge>}
           </div>

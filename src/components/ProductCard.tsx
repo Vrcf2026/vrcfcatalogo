@@ -48,13 +48,14 @@ interface ProductCardProps {
   imageUrl: string | null;
   images: { id: string; image_url: string; position: number }[];
   familyName: string | null;
+  brandName?: string | null;
   featured?: boolean;
   includeInCatalog?: boolean;
   onEdit?: () => void;
   isAdmin?: boolean;
 }
 
-export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onClick?: () => void }>(function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, onEdit, isAdmin, onClick, featured, includeInCatalog }, ref) {
+export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onClick?: () => void }>(function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, brandName, onEdit, isAdmin, onClick, featured, includeInCatalog }, ref) {
   const { addItem } = useCart();
   const [quantity, setQuantity] = useState(1);
   const queryClient = useQueryClient();
@@ -138,6 +139,11 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onCli
           {familyName && (
             <span className="inline-block text-[11px] font-medium text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full">
               {familyName}
+            </span>
+          )}
+          {brandName && (
+            <span className="inline-block text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+              {brandName}
             </span>
           )}
         </div>

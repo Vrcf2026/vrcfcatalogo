@@ -76,25 +76,35 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: families = [] } = useQuery({
-    queryKey: ["families"],
+  // Distinct family / brand text values present in products for this mundo
+  const { data: facetRows = [] } = useQuery({
+    queryKey: ["world-facets", mundo],
     queryFn: async () => {
-      const { data, error } = await supabase.from("product_families").select("*");
+      const { data, error } = await supabase
+        .from("products")
+        .select("family, brand, category")
+        .eq("mundo", mundo);
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: brands = [] } = useQuery({
-    queryKey: ["brands"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("brands").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  const families = useMemo(() => {
+    const map = new Map<string, string>();
+    facetRows.forEach((r: any) => {
+      if (r.family && (categoryFilter === "all" || r.category === categoryFilter)) {
+        map.set(r.family, r.category ?? "");
+      }
+    });
+    return Array.from(map.entries()).map(([name, category]) => ({ name, category })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [facetRows, categoryFilter]);
+
+  const brands = useMemo(() => {
+    const set = new Set<string>();
+    facetRows.forEach((r: any) => { if (r.brand) set.add(r.brand); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b)).map((name) => ({ name }));
+  }, [facetRows]);
 
   const allowedCategoryNames = useMemo(() => categories.map((c: any) => c.name), [categories]);
 
@@ -111,8 +121,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       } else if (allowedCategoryNames.length > 0) {
         q = q.in("category", allowedCategoryNames);
       }
-      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
-      if (brandFilter !== "all") q = q.eq("brand_id", brandFilter);
+      if (familyFilter !== "all") q = q.eq("family", familyFilter);
+      if (brandFilter !== "all") q = q.eq("brand", brandFilter);
       if (search.trim()) {
         const term = `%${search.trim()}%`;
         q = q.or(`name.ilike.${term},sku.ilike.${term}`);
@@ -166,8 +176,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     return acc;
   }, [productImages]);
 
-  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleFamilies = families;
 
   const hasPrices = products.some((p: any) => p.price != null);
 
@@ -323,7 +332,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Famílias" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Famílias</SelectItem>
-                  {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  {visibleFamilies.map((f: any) => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
@@ -335,7 +344,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
               <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Marcas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as Marcas</SelectItem>
-                {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                {brands.map((b: any) => <SelectItem key={b.name} value={b.name}>{b.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -371,7 +380,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                     price={product.price}
                     imageUrl={product.image_url}
                     images={imagesByProduct[product.id] || []}
-                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                    familyName={product.family ?? null}
+                    brandName={product.brand ?? null}
                     featured={product.featured}
                   />
                 </Link>
