@@ -176,8 +176,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     return acc;
   }, [productImages]);
 
-  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleFamilies = families;
 
   const hasPrices = products.some((p: any) => p.price != null);
 
