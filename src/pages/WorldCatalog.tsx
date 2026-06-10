@@ -332,7 +332,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 <SelectTrigger className="w-[180px] h-9"><SelectValue placeholder="Famílias" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Famílias</SelectItem>
-                  {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  {visibleFamilies.map((f: any) => <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             )}
