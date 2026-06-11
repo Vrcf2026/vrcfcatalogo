@@ -259,9 +259,21 @@ const Produto = () => {
 
           {/* Teclado nota */}
           {teclado_nota && (
-            <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-blue-700 flex items-start gap-2">
-              <Info className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>{teclado_nota}</span>
+            <div className="rounded-xl border-2 border-amber-400/60 bg-amber-50 dark:bg-amber-950/20 p-4 space-y-1.5">
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 uppercase tracking-wide">
+                ⌨️ Informação sobre o teclado
+              </p>
+              <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
+                {teclado_nota.includes("/escritorio") ? (
+                  <>
+                    {teclado_nota.split("— ver em")[0]}—{" "}
+                    <a href="/escritorio?categoria=acessorios&familia=acessorios-portateis"
+                      className="underline font-semibold hover:text-amber-900 transition-colors">
+                      ver acessórios de teclado
+                    </a>
+                  </>
+                ) : teclado_nota}
+              </p>
             </div>
           )}
 
