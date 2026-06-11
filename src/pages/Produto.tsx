@@ -243,7 +243,7 @@ const Produto = () => {
               <>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Truck className="h-3.5 w-3.5 text-primary" />
-                  <span>Portes: <strong className="text-foreground">11,00 € fixo</strong> (Visiotech) · calculado no orçamento (outros)</span>
+                  <span>Portes calculados no orçamento final</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5 text-primary" />
