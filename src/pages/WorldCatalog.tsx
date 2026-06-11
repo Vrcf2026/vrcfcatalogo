@@ -428,6 +428,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                       weight={product.weight ?? null}
                       fornecedor={product.fornecedor ?? null}
                       envioEspecial={product.envio_especial ?? false}
+                      teclado={(product.especificacoes as any)?.teclado ?? null}
                     />
                   </Link>
                 ))}
