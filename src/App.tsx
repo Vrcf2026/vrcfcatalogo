@@ -1,65 +1,56 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider, useAuth } from "@/hooks/useAuth";
-import { CartProvider } from "@/contexts/CartContext";
-import Index from "./pages/Index.tsx";
-import Login from "./pages/Login.tsx";
-import Admin from "./pages/Admin.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import Seguranca from "./pages/Seguranca.tsx";
-import Escritorio from "./pages/Escritorio.tsx";
-import Produto from "./pages/Produto.tsx";
-import TermosCondicoes from "./pages/TermosCondicoes.tsx";
-import PoliticaCookies from "./pages/PoliticaCookies.tsx";
-import Pesquisa from "./pages/Pesquisa.tsx";
-import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
-import { Loader2 } from "lucide-react";
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import Index from "./pages/Index";
+import Seguranca from "./pages/Seguranca";
+import Escritorio from "./pages/Escritorio";
+import Economato from "./pages/Economato";
+import Produto from "./pages/Produto";
+import Admin from "./pages/Admin";
+import Login from "./pages/Login";
+import Pesquisa from "./pages/Pesquisa";
+import TermosCondicoes from "./pages/TermosCondicoes";
+import PoliticaCookies from "./pages/PoliticaCookies";
+import NotFound from "./pages/NotFound";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin, loading, user } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (!user || !isAdmin) return <Navigate to="/login" replace />;
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthenticated(!!session);
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthenticated(!!session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) return null;
+  if (!authenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <CartProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/seguranca" element={<Seguranca />} />
-              <Route path="/escritorio" element={<Escritorio />} />
-              <Route path="/produto/:slug" element={<Produto />} />
-              <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
-              <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
-              <Route path="/pesquisa" element={<Pesquisa />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-            <CookieConsentBanner />
-          </CartProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/seguranca" element={<Seguranca />} />
+        <Route path="/escritorio" element={<Escritorio />} />
+        <Route path="/economato" element={<Economato />} />
+        <Route path="/produto/:slug" element={<Produto />} />
+        <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
+        <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
+        <Route path="/pesquisa" element={<Pesquisa />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
 
 export default App;
