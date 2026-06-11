@@ -80,6 +80,63 @@ INSTALACAO_MAP = {
     "Int/Ext": "Interior/Exterior", "interior": "Interior", "exterior": "Exterior",
 }
 
+
+# ─────────────────────────────────────────────
+# MAPEAMENTO CATEGORIA (2 níveis)
+# category_parent → Categoria Nível 1
+# category        → Família Nível 2
+# ─────────────────────────────────────────────
+CATEGORIA_MAP = {
+    # CCTV IP
+    'Hikvision': 'CCTV IP', 'Ajax CCTV': 'CCTV IP', 'Safire Smart': 'CCTV IP',
+    'Safire': 'CCTV IP', 'Uniview - Uniarch': 'CCTV IP', 'X-Security': 'CCTV IP',
+    'Câmaras': 'CCTV IP', 'NVRs Profissionais': 'CCTV IP', 'IP Home': 'CCTV IP',
+    'Imou': 'CCTV IP', 'Descodificadores': 'CCTV IP', 'Kits Profissionais': 'CCTV IP',
+    'HiLook': 'CCTV IP', 'VCA Technology': 'CCTV IP', 'Soluções IP': 'CCTV IP',
+    'Eufy': 'CCTV IP', 'Ezviz': 'CCTV IP', 'VicoHome': 'CCTV IP',
+    'Térmicas': 'CCTV IP', 'Temperatura Corporal Febre': 'CCTV IP',
+    # CCTV Analógico
+    'CCTV analógico': 'CCTV Analógico', 'Câmaras AHD': 'CCTV Analógico', 'XVRs': 'CCTV Analógico',
+    # Intrusão
+    'Intrusão': 'Intrusão', 'Ajax Wireless': 'Intrusão', 'Detectores Cablados': 'Intrusão',
+    'Pyronix Cablado': 'Intrusão', 'Hikvision - Pyronix': 'Intrusão', 'Wireless': 'Intrusão',
+    'Chuango': 'Intrusão', 'DMTech': 'Intrusão', 'Jade Bird': 'Intrusão',
+    'Sopras': 'Intrusão', 'Smanos': 'Intrusão', 'Home8': 'Intrusão',
+    'Autónomos': 'Intrusão', 'Antirroubo': 'Intrusão',
+    # Incêndio e Evacuação
+    'Sonorização e áudio': 'Incêndio e Evacuação', 'Wizmart': 'Incêndio e Evacuação',
+    # Controlo de Acessos
+    'ZKTeco': 'Controlo de Acessos', 'Anviz': 'Controlo de Acessos',
+    'Akuvox': 'Controlo de Acessos', 'iLOQ': 'Controlo de Acessos',
+    'EasyClocking': 'Controlo de Acessos', 'Fechaduras': 'Controlo de Acessos',
+    'Torniquetes': 'Controlo de Acessos', 'Estacionamento': 'Controlo de Acessos',
+    'Easy-P': 'Controlo de Acessos', 'Hotel': 'Controlo de Acessos',
+    'Hysoon': 'Controlo de Acessos', 'Virdi': 'Controlo de Acessos',
+    'Akubela': 'Controlo de Acessos', 'Yale': 'Controlo de Acessos',
+    'Contagem e Controlo de lotação máxima permitida': 'Controlo de Acessos',
+    # Networking
+    'Networking': 'Networking', 'Switching': 'Networking',
+    'Routing': 'Networking', 'NGFW': 'Networking', 'Comunicação e redes': 'Networking',
+    # Smart Home
+    'Smart Home': 'Smart Home', 'AQARA': 'Smart Home', 'Shelly': 'Smart Home', 'Fibaro': 'Smart Home',
+    # Energia
+    'Alimentação': 'Energia', 'Baterias': 'Energia', 'Instalações solares': 'Energia',
+    'Energía portátil': 'Energia', 'Veículos eléctricos': 'Energia',
+    # Acessórios IT e Segurança
+    'Acessórios IT e Segurança': 'Acessórios IT e Segurança',
+    'Acessórios': 'Acessórios IT e Segurança', 'Suportes para Câmaras': 'Acessórios IT e Segurança',
+    'Armazenagem': 'Acessórios IT e Segurança', 'Gestão de Sinal': 'Acessórios IT e Segurança',
+    'Periféricos': 'Acessórios IT e Segurança', 'Adaptador de encaixe (clip-on)': 'Acessórios IT e Segurança',
+    'ONVIF': 'Acessórios IT e Segurança', 'Software': 'Acessórios IT e Segurança',
+    # Smartphone e Escritório
+    'Smartphone e escritório': 'Smartphone e Escritório', 'Monitores': 'Smartphone e Escritório',
+    'Videoconferencia': 'Smartphone e Escritório', 'Soluções LED': 'Smartphone e Escritório',
+    # Mobilidade
+    'Trackers': 'Mobilidade', 'Equipamento de bordo': 'Mobilidade',
+    # Outros
+    'Servicios': 'Outros', 'Promoções': 'Promoções', 'Merchandising': 'Merchandising',
+    'Saúde': 'Outros', 'Câmara de vigilância para caça': 'Outdoor',
+}
 # ─────────────────────────────────────────────
 # FUNÇÕES DE EXTRACÇÃO
 # ─────────────────────────────────────────────
@@ -424,8 +481,8 @@ def main(local=False):
             "description":        description,
             "brand_id":           None,
             "brand":              brand,
-            "category":           row.get("category", "").strip(),
-            "family":             row.get("category_parent", "").strip(),
+            "category":           CATEGORIA_MAP.get(row.get("category_parent", "").strip(), row.get("category_parent", "").strip()),
+            "family":             f"{CATEGORIA_MAP.get(row.get('category_parent', '').strip(), row.get('category_parent', '').strip())} — {row.get('category', '').strip()}" if row.get('category', '').strip() else CATEGORIA_MAP.get(row.get('category_parent', '').strip(), row.get('category_parent', '').strip()),
             "price":              precos["price"],
             "price_tier2":        precos["price_tier2"],
             "price_tier3":        precos["price_tier3"],
