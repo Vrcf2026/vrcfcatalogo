@@ -1,40 +1,26 @@
-import { useState, useCallback, forwardRef } from "react";
-import { Package, ImageOff, Pencil, ShoppingCart, Minus, Plus, Star, BookOpen } from "lucide-react";
+import { useState, forwardRef } from "react";
+import { ImageOff, ShoppingCart, Star, Zap } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
 import { trackEvent } from "@/lib/trackEvent";
+import { Badge } from "@/components/ui/badge";
 
 function ProductImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center gap-2 text-muted-foreground w-full h-full justify-center">
-        <ImageOff className="h-10 w-10" />
-        <span className="text-xs">Erro ao carregar</span>
-      </div>
-    );
-  }
-
+  if (error) return (
+    <div className="flex flex-col items-center gap-1.5 text-muted-foreground/50 w-full h-full justify-center">
+      <ImageOff className="h-8 w-8" />
+      <span className="text-[10px]">Sem imagem</span>
+    </div>
+  );
   return (
     <>
-      {!loaded && (
-        <div className="absolute inset-0 bg-secondary animate-pulse" />
-      )}
-      <img
-        src={src}
-        alt={alt}
-        className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${loaded ? 'opacity-100' : 'opacity-0'}`}
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setLoaded(true)}
-        onError={() => setError(true)}
-      />
+      {!loaded && <div className="absolute inset-0 bg-muted animate-pulse rounded-t-xl" />}
+      <img src={src} alt={alt}
+        className={`w-full h-full object-contain transition-all duration-300 group-hover:scale-[1.04] p-2 ${loaded ? "opacity-100" : "opacity-0"}`}
+        loading="lazy" decoding="async"
+        onLoad={() => setLoaded(true)} onError={() => setError(true)} />
     </>
   );
 }
@@ -42,6 +28,8 @@ function ProductImage({ src, alt }: { src: string; alt: string }) {
 interface ProductCardProps {
   id: string;
   name: string;
+  sku?: string | null;
+  slug?: string | null;
   description: string | null;
   category: string | null;
   price: number | null;
@@ -50,166 +38,109 @@ interface ProductCardProps {
   familyName: string | null;
   brandName?: string | null;
   featured?: boolean;
+  stockStatus?: string | null;
+  sobEncomenda?: boolean;
   includeInCatalog?: boolean;
   onEdit?: () => void;
   isAdmin?: boolean;
+  onClick?: () => void;
 }
 
-export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps & { onClick?: () => void }>(function ProductCard({ id, name, description, category, price, imageUrl, images, familyName, brandName, onEdit, isAdmin, onClick, featured, includeInCatalog }, ref) {
-  const { addItem } = useCart();
-  const [quantity, setQuantity] = useState(1);
-  const queryClient = useQueryClient();
-  const allImages = images.length > 0
-    ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
-    : imageUrl ? [imageUrl] : [];
+export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
+  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, onEdit, isAdmin, onClick }, ref) {
+    const { addItem } = useCart();
+    const allImages = images.length > 0
+      ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
+      : imageUrl ? [imageUrl] : [];
+    const currentImage = allImages[0] || null;
+    const isNew = false; // pode ser derivado de created_at no futuro
 
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const currentImage = allImages[selectedIndex] || null;
+    const handleAddToCart = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category }, 1);
+      toast.success(`${name} adicionado ao orçamento`);
+      trackEvent(id, "quote");
+    };
 
-  const toggleField = async (field: "featured" | "include_in_catalog", value: boolean) => {
-    const updateData: any = {};
-    updateData[field] = value;
-    const { error } = await supabase.from("products").update(updateData).eq("id", id);
-    if (error) {
-      toast.error("Erro ao atualizar produto");
-    } else {
-      queryClient.invalidateQueries({ queryKey: ["products"] });
-    }
-  };
+    return (
+      <div ref={ref}
+        className={`group relative flex flex-col bg-card rounded-2xl border overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/30 ${featured && !isAdmin ? "border-primary/40 shadow-primary/10 shadow-sm" : "border-border"}`}
+        onClick={() => { if (isAdmin) onEdit?.(); else { trackEvent(id, "click"); onClick?.(); } }}>
 
-  return (
-    <div
-      ref={ref}
-      className={`group product-card-shadow rounded-xl bg-card overflow-hidden cursor-pointer ${featured && !isAdmin ? 'border-2 border-primary ring-1 ring-primary/20' : 'border border-border'}`}
-      onClick={() => { if (isAdmin) { onEdit?.(); } else { trackEvent(id, "click"); onClick?.(); } }}
-    >
-      <div className="relative aspect-square bg-secondary flex items-center justify-center overflow-hidden">
-        {currentImage ? (
-          <ProductImage src={currentImage} alt={name} />
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            <ImageOff className="h-10 w-10" />
-            <span className="text-xs">Sem imagem</span>
-          </div>
-        )}
-        {isAdmin && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="bg-background/80 backdrop-blur-sm rounded-full p-1.5">
-              <Pencil className="h-3.5 w-3.5 text-foreground" />
-            </div>
-          </div>
-        )}
-        {featured && !isAdmin && (
-          <div className="absolute top-0 left-0 z-20 px-2 py-0.5 rounded-br-lg text-[9px] font-bold uppercase tracking-wider text-primary-foreground bg-primary">
-            ★ Destaque
-          </div>
-        )}
-        {featured && isAdmin && (
-          <div className="absolute top-2 left-2">
-            <div className="bg-amber-500 text-white rounded-full p-1">
-              <Star className="h-3 w-3 fill-current" />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {allImages.length > 1 && (
-        <div className="flex gap-1.5 px-3 py-2 bg-secondary/50">
-          {allImages.map((img, idx) => (
-            <button
-              key={idx}
-              onClick={(e) => { e.stopPropagation(); setSelectedIndex(idx); }}
-              className={`w-10 h-10 rounded-md overflow-hidden border-2 transition-all flex-shrink-0 ${
-                idx === selectedIndex ? 'border-primary ring-1 ring-primary' : 'border-transparent opacity-60 hover:opacity-100'
-              }`}
-            >
-              <img src={img} alt={`${name} ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" decoding="async" />
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="p-4 space-y-2">
-        <div className="flex items-center gap-2">
-          {category && (
-            <span className="inline-block text-[11px] font-medium uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-              {category}
+        {/* Badges */}
+        <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1.5">
+          {featured && !isAdmin && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wide">
+              <Star className="h-2.5 w-2.5 fill-current" /> Destaque
             </span>
           )}
-          {familyName && (
-            <span className="inline-block text-[11px] font-medium text-accent-foreground bg-accent/15 px-2 py-0.5 rounded-full">
-              {familyName}
+          {stockStatus === "low" && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold uppercase tracking-wide">
+              <Zap className="h-2.5 w-2.5" /> Últimas unidades
             </span>
           )}
-          {brandName && (
-            <span className="inline-block text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-              {brandName}
+          {sobEncomenda && stockStatus === "out" && (
+            <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium">
+              Sob encomenda
             </span>
           )}
         </div>
-        <h3 className="font-heading font-semibold text-card-foreground line-clamp-1">{name}</h3>
-        {description && (
-          <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
-        )}
-        {price != null && (
-          <p className="font-heading font-bold text-lg text-foreground">
-            {price.toFixed(2).replace(".", ",")} €
-          </p>
-        )}
 
-        {/* Admin toggles */}
-        {isAdmin && (
-          <div className="flex flex-col gap-2 pt-2 border-t border-border" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <BookOpen className="h-3 w-3" />
-                Catálogo
-              </label>
-              <Switch
-                checked={!!includeInCatalog}
-                onCheckedChange={(v) => toggleField("include_in_catalog", v)}
-              />
+        {/* Imagem */}
+        <div className="relative bg-muted/30 aspect-square overflow-hidden rounded-t-2xl flex items-center justify-center">
+          {currentImage ? <ProductImage src={currentImage} alt={name} /> : (
+            <div className="flex flex-col items-center gap-1.5 text-muted-foreground/40">
+              <ImageOff className="h-10 w-10" />
             </div>
-            <div className="flex items-center justify-between">
-              <label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Star className="h-3 w-3" />
-                Destaque
-              </label>
-              <Switch
-                checked={!!featured}
-                onCheckedChange={(v) => toggleField("featured", v)}
-              />
+          )}
+          {/* Quick add overlay */}
+          {!isAdmin && (
+            <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 p-2">
+              <button
+                onClick={handleAddToCart}
+                className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 active:scale-95 transition-all">
+                <ShoppingCart className="h-3.5 w-3.5" /> Adicionar ao orçamento
+              </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {!isAdmin && (
-          <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center border border-border rounded-md">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-r-none" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
-                <Minus className="h-3 w-3" />
-              </Button>
-              <span className="w-8 text-center text-sm font-medium">{quantity}</span>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-l-none" onClick={() => setQuantity((q) => q + 1)}>
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 flex-1"
-              onClick={() => {
-                addItem({ id, name, price, imageUrl: allImages[0] || imageUrl, category }, quantity);
-                toast.success(`${quantity}x ${name} adicionado ao carrinho`);
-                setQuantity(1);
-              }}
-            >
-              <ShoppingCart className="h-3.5 w-3.5" />
-              Adicionar
-            </Button>
+        {/* Info */}
+        <div className="flex flex-col flex-1 p-3 gap-1.5">
+          {/* Categoria / Família */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {category && (
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-primary/80 truncate">{category}</span>
+            )}
+            {brandName && (
+              <>
+                <span className="text-muted-foreground/40 text-[10px]">·</span>
+                <span className="text-[10px] text-muted-foreground truncate">{brandName}</span>
+              </>
+            )}
           </div>
-        )}
+
+          {/* Nome */}
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug">{name}</h3>
+
+          {/* SKU */}
+          {sku && <p className="text-[10px] text-muted-foreground/60 font-mono">{sku}</p>}
+
+          {/* Preço */}
+          <div className="mt-auto pt-2">
+            {price != null ? (
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-bold text-foreground tabular-nums">
+                  {(price * 1.23).toFixed(2).replace(".", ",")} €
+                </span>
+                <span className="text-[10px] text-muted-foreground">c/ IVA</span>
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground italic">Preço sob consulta</span>
+            )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);

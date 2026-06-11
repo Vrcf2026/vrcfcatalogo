@@ -1,11 +1,13 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ShieldCheck, Monitor, ArrowRight, ShoppingCart, Phone, Mail, MapPin,
-  Search, Send, Sparkles, Star, Package, ChevronLeft, ChevronRight, Zap,
+  ShieldCheck, Monitor, Search, ShoppingCart, Phone, Mail, MapPin,
+  ArrowRight, ChevronLeft, ChevronRight, Star, Package, Send, Zap,
+  Wifi, Camera, Lock, Cpu, Printer, Tablet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { CartDrawer } from "@/components/CartDrawer";
@@ -13,64 +15,74 @@ import { ProductCard } from "@/components/ProductCard";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { useCart } from "@/contexts/CartContext";
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { SuggestionDialog } from "@/components/SuggestionDialog";
-import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { getCategoryMeta } from "@/lib/categoryIcons";
+import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import vrcfShield from "@/assets/vrcf-shield.png";
 
-// ── DATA HOOKS ──────────────────────────────────────────────────────────────
+// ── HOOKS ────────────────────────────────────────────────────────────────────
 
-const useWorldData = (mundo: "seguranca" | "escritorio") =>
+const useFeaturedProducts = (mundo?: string) =>
   useQuery({
-    queryKey: ["world-data", mundo],
+    queryKey: ["hp-featured", mundo],
     queryFn: async () => {
-      const [{ count }, { data: cats }] = await Promise.all([
-        supabase.from("products").select("*", { count: "exact", head: true })
-          .eq("mundo", mundo).eq("include_in_catalog", true),
-        supabase.from("categories").select("name, mundo")
-          .in("mundo", [mundo, "todos"]).eq("visivel", true).order("ordem").limit(6),
-      ]);
-      return { count: count ?? 0, categories: cats ?? [] };
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-const useFeaturedProducts = () =>
-  useQuery({
-    queryKey: ["homepage-featured-v3"],
-    queryFn: async () => {
-      const { data } = await supabase.from("products").select("*")
-        .eq("show_on_homepage", true).eq("include_in_catalog", true)
-        .order("created_at", { ascending: false }).limit(8);
+      let q = supabase.from("products").select("*")
+        .eq("include_in_catalog", true)
+        .eq("show_on_homepage", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (mundo) q = (q as any).eq("mundo", mundo);
+      const { data } = await q;
       if (data && data.length > 0) return data;
-      const { data: fb } = await supabase.from("products").select("*")
-        .eq("featured", true).eq("include_in_catalog", true)
-        .order("created_at", { ascending: false }).limit(8);
+      let q2 = supabase.from("products").select("*")
+        .eq("include_in_catalog", true)
+        .eq("featured", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (mundo) q2 = (q2 as any).eq("mundo", mundo);
+      const { data: fb } = await q2;
       return fb ?? [];
     },
     staleTime: 5 * 60 * 1000,
   });
 
-const useBrands = () =>
+const useCategories = (mundo: string) =>
   useQuery({
-    queryKey: ["homepage-brands-v3"],
+    queryKey: ["hp-categories", mundo],
     queryFn: async () => {
-      const { data: highlights } = await (supabase as any)
-        .from("homepage_highlights").select("ref_id, label, position")
-        .eq("type", "brand").eq("active", true).order("position").limit(12);
-      if (highlights && highlights.length > 0) return highlights;
-      const { data: brands } = await supabase.from("brands").select("id, name, logo_url").order("name").limit(12);
-      return (brands ?? []).map((b: any) => ({ ref_id: b.id, label: b.name, logo: b.logo_url }));
+      const { data } = await supabase.from("categories").select("*")
+        .in("mundo", [mundo, "todos"]).eq("visivel", true)
+        .order("ordem").limit(8);
+      return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
   });
 
+const useWorldCount = (mundo: string) =>
+  useQuery({
+    queryKey: ["hp-count", mundo],
+    queryFn: async () => {
+      const { count } = await supabase.from("products").select("*", { count: "exact", head: true })
+        .eq("mundo", mundo).eq("include_in_catalog", true);
+      return count ?? 0;
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+const useBrands = () =>
+  useQuery({
+    queryKey: ["hp-brands"],
+    queryFn: async () => {
+      const { data } = await supabase.from("brands").select("id,name,logo_url").order("name").limit(16);
+      return data ?? [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
 const useBanners = () =>
   useQuery({
-    queryKey: ["banners-home-v3"],
+    queryKey: ["hp-banners"],
     queryFn: async () => {
       const { data } = await supabase.from("banners").select("*")
         .eq("ativo", true).in("mundo", ["todos"]).order("ordem");
@@ -79,20 +91,24 @@ const useBanners = () =>
     staleTime: 5 * 60 * 1000,
   });
 
-// ── COMPONENT ───────────────────────────────────────────────────────────────
+// ── COMPONENT ─────────────────────────────────────────────────────────────────
 
 const Index = () => {
   const { totalItems, setIsOpen } = useCart();
+  const [query, setQuery] = useState("");
   const [suggestionOpen, setSuggestionOpen] = useState(false);
-  const [heroQuery, setHeroQuery] = useState("");
   const [bannerIdx, setBannerIdx] = useState(0);
+  const [activeMundo, setActiveMundo] = useState<"seguranca" | "escritorio">("seguranca");
   const navigate = useNavigate();
-  const seg = useWorldData("seguranca");
-  const esc = useWorldData("escritorio");
-  const featured = useFeaturedProducts();
-  const brands = useBrands();
-  const banners = useBanners();
   const timerRef = useRef<any>(null);
+
+  const banners = useBanners();
+  const brands = useBrands();
+  const segCount = useWorldCount("seguranca");
+  const escCount = useWorldCount("escritorio");
+  const segCats = useCategories("seguranca");
+  const escCats = useCategories("escritorio");
+  const featured = useFeaturedProducts();
 
   useEffect(() => {
     if (!banners.data || banners.data.length <= 1) return;
@@ -100,103 +116,98 @@ const Index = () => {
     return () => clearInterval(timerRef.current);
   }, [banners.data]);
 
-  const submitSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = heroQuery.trim();
-    if (!q) return;
-    navigate(`/pesquisa?q=${encodeURIComponent(q)}`);
+    if (query.trim()) navigate(`/pesquisa?q=${encodeURIComponent(query.trim())}`);
   };
+
+  const cats = activeMundo === "seguranca" ? segCats.data ?? [] : escCats.data ?? [];
+  const worldPath = activeMundo === "seguranca" ? "/seguranca" : "/escritorio";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Helmet>
         <title>VRCF Showroom — Segurança, Redes, Escritório & IT | Montijo</title>
-        <meta name="description" content="Catálogo profissional VRCF: videovigilância, redes, equipamento informático recondicionado e soluções de segurança. Peça orçamento online." />
-        <link rel="canonical" href="https://showroom.vrcf.info/" />
+        <meta name="description" content="Catálogo VRCF: câmaras, alarmes, redes, computadores recondicionados. Peça orçamento online." />
       </Helmet>
 
       <WelcomeBanner />
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-2.5">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
+        <div className="flex items-center gap-2 px-3 py-2 max-w-screen-xl mx-auto">
           <Link to="/" className="shrink-0">
-            <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" />
+            <img src={vrcfLogo} alt="VRCF" className="h-8 sm:h-10 w-auto" />
           </Link>
-          <form onSubmit={submitSearch} className="relative flex-1 max-w-2xl mx-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Pesquisar câmaras, portáteis, switches, alarmes..."
-              value={heroQuery} onChange={e => setHeroQuery(e.target.value)}
-              className="pl-9 h-9 bg-muted/50 border-border focus:bg-card text-sm" />
+          <form onSubmit={handleSearch} className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Input
+              value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Pesquisar câmaras, portáteis, switches..."
+              className="pl-9 h-9 text-sm bg-muted/60 border-transparent focus:bg-card focus:border-border rounded-xl"
+            />
           </form>
-          <div className="flex items-center gap-2 shrink-0">
-            <DarkModeToggle />
-            <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline text-sm">Orçamento</span>
-              {totalItems > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center">{totalItems}</span>
-              )}
-            </Button>
-            <Link to="/login" className="hidden md:inline text-xs text-muted-foreground hover:text-foreground transition-colors">Admin</Link>
-          </div>
+          <DarkModeToggle />
+          <button onClick={() => setIsOpen(true)} className="relative p-2 rounded-xl hover:bg-muted transition-colors">
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && (
+              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+          </button>
         </div>
       </header>
 
       {/* ── BANNERS ── */}
-      {banners.data && banners.data.length > 0 && (
-        <div className="relative">
-          <div className="relative overflow-hidden" style={{ maxHeight: "280px" }}>
-            {banners.data.map((b: any, i: number) => (
-              <div key={b.id} className={`transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0 absolute inset-0"}`}>
-                {b.link ? (
-                  <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: "280px" }} /></Link>
-                ) : (
-                  <img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: "280px" }} />
-                )}
-              </div>
-            ))}
-            {banners.data.length > 1 && (
-              <>
-                <button onClick={() => setBannerIdx(i => (i - 1 + banners.data!.length) % banners.data!.length)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button onClick={() => setBannerIdx(i => (i + 1) % banners.data!.length)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                  {banners.data.map((_: any, i: number) => (
-                    <button key={i} onClick={() => setBannerIdx(i)}
-                      className={`h-1.5 rounded-full transition-all ${i === bannerIdx ? "w-5 bg-white" : "w-1.5 bg-white/50"}`} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── HERO ── */}
-      {(!banners.data || banners.data.length === 0) && (
-        <section className="border-b border-border bg-gradient-to-br from-background via-background to-muted/40 py-10 sm:py-14">
-          <div className="container mx-auto px-4 text-center max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium mb-5">
-              <Zap className="h-3 w-3" /> Catálogo Online · VRCF Montijo
+      {banners.data && banners.data.length > 0 ? (
+        <div className="relative overflow-hidden bg-black" style={{ maxHeight: 240 }}>
+          {banners.data.map((b: any, i: number) => (
+            <div key={b.id} className={`transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0 absolute inset-0"}`}>
+              {b.link
+                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} /></Link>
+                : <img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} />
+              }
             </div>
-            <h1 className="font-heading text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-              Tecnologia &<br className="sm:hidden" /> Segurança
+          ))}
+          {banners.data.length > 1 && (
+            <>
+              <button onClick={() => setBannerIdx(i => (i - 1 + banners.data!.length) % banners.data!.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button onClick={() => setBannerIdx(i => (i + 1) % banners.data!.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {banners.data.map((_: any, i: number) => (
+                  <button key={i} onClick={() => setBannerIdx(i)}
+                    className={`h-1 rounded-full transition-all ${i === bannerIdx ? "w-5 bg-white" : "w-1 bg-white/50"}`} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        /* Hero compacto quando não há banners */
+        <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/50 border-b border-border py-8 px-4">
+          <div aria-hidden className="absolute inset-0 opacity-[0.035]"
+            style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+          <div className="relative max-w-xl mx-auto text-center">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-4">
+              <Zap className="h-3 w-3" /> Catálogo Online VRCF · Montijo
+            </div>
+            <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+              Tecnologia & Segurança
             </h1>
-            <p className="text-muted-foreground text-base sm:text-lg mb-7 max-w-xl mx-auto">
-              Câmaras, alarmes, redes, computadores recondicionados e muito mais. Peça orçamento online.
-            </p>
-            <form onSubmit={submitSearch} className="relative max-w-xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input placeholder="O que procura? Ex: câmara Hikvision, portátil HP..."
-                value={heroQuery} onChange={e => setHeroQuery(e.target.value)}
-                className="pl-12 pr-32 h-12 text-sm bg-card border-border shadow-sm rounded-xl" />
-              <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 rounded-lg text-xs">
+            <p className="text-muted-foreground text-sm mb-5">Câmaras, alarmes, redes e IT recondicionado. Peça orçamento online.</p>
+            <form onSubmit={handleSearch} className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={query} onChange={e => setQuery(e.target.value)}
+                placeholder="O que procura?"
+                className="pl-11 pr-28 h-11 rounded-2xl bg-card border-border shadow-sm text-sm" />
+              <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-xl text-xs">
                 Pesquisar
               </Button>
             </form>
@@ -204,85 +215,137 @@ const Index = () => {
         </section>
       )}
 
-      {/* ── WORLD CARDS ── */}
-      <section className="container mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <WorldCard
-          to="/seguranca"
-          mundo="seguranca"
-          title="Segurança & Redes"
-          subtitle="Videovigilância, alarmes, controlo de acessos e redes profissionais."
-          count={seg.data?.count}
-          categories={seg.data?.categories ?? []}
-        />
-        <WorldCard
-          to="/escritorio"
-          mundo="escritorio"
-          title="Escritório & IT"
-          subtitle="Computadores recondicionados, periféricos e soluções IT."
-          count={esc.data?.count}
-          categories={esc.data?.categories ?? []}
-        />
+      {/* ── WORLD SELECTOR ── */}
+      <section className="px-3 pt-4 pb-2 max-w-screen-xl mx-auto w-full">
+        <div className="grid grid-cols-2 gap-3">
+          <WorldBtn
+            active={activeMundo === "seguranca"}
+            onClick={() => setActiveMundo("seguranca")}
+            to="/seguranca"
+            icon={ShieldCheck}
+            label="Segurança & Redes"
+            count={segCount.data}
+            color="orange"
+          />
+          <WorldBtn
+            active={activeMundo === "escritorio"}
+            onClick={() => setActiveMundo("escritorio")}
+            to="/escritorio"
+            icon={Monitor}
+            label="Escritório & IT"
+            count={escCount.data}
+            color="blue"
+          />
+        </div>
       </section>
 
-      {/* ── MARCAS ── */}
-      {brands.data && brands.data.length > 0 && (
-        <section className="border-t border-border bg-muted/20 py-8">
-          <div className="container mx-auto px-4">
-            <p className="text-center text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-6">Marcas que trabalhamos</p>
-            <div className="flex flex-wrap justify-center gap-3">
-              {brands.data.map((b: any) => (
-                <Link key={b.ref_id} to={`/seguranca?marca=${b.ref_id}`}
-                  className="group px-4 py-2.5 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all">
-                  <span className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors">{b.label}</span>
+      {/* ── CATEGORIES STRIP ── */}
+      {cats.length > 0 && (
+        <section className="px-3 pb-3 max-w-screen-xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Categorias</p>
+            <Link to={worldPath} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+              Ver tudo <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {cats.map((c: any) => {
+              const meta = getCategoryMeta(c.name);
+              const Icon = meta.icon;
+              return (
+                <Link key={c.id} to={`${worldPath}?categoria=${encodeURIComponent(c.name)}`}
+                  className="shrink-0 flex flex-col items-center gap-1.5 p-2.5 w-[76px] h-[76px] rounded-2xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all">
+                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${meta.bg}`}>
+                    <Icon className={`h-4 w-4 ${meta.color}`} />
+                  </div>
+                  <span className="text-[9px] font-semibold text-foreground text-center leading-tight line-clamp-2">{c.name}</span>
                 </Link>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      {/* ── PRODUTOS EM DESTAQUE ── */}
+      {/* ── FEATURED PRODUCTS ── */}
       {featured.data && featured.data.length > 0 && (
-        <section className="container mx-auto px-4 py-10">
-          <div className="flex items-center gap-3 mb-6 max-w-6xl mx-auto">
-            <div className="h-px flex-1 bg-border" />
-            <h2 className="text-xs uppercase tracking-widest text-muted-foreground font-semibold inline-flex items-center gap-1.5">
-              <Star className="h-3.5 w-3.5 text-primary" /> Em destaque
+        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Star className="h-4 w-4 text-primary fill-primary" /> Em destaque
             </h2>
-            <div className="h-px flex-1 bg-border" />
+            <Link to="/seguranca" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+              Ver mais <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-            {featured.data.slice(0, 8).map((p: any) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {featured.data.slice(0, 6).map((p: any) => (
               <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
-                <ProductCard id={p.id} name={p.name}
+                <ProductCard
+                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
                   description={p.short_description ?? p.description}
                   category={p.category} price={p.price}
                   imageUrl={p.image_url} images={[]}
-                  familyName={null} featured={p.featured} />
+                  familyName={null} brandName={p.brand || null}
+                  featured={p.featured} stockStatus={p.stock_status}
+                />
               </Link>
             ))}
           </div>
         </section>
       )}
 
-      {/* ── COMO FUNCIONA ── */}
-      <section className="bg-zinc-900 dark:bg-black text-white py-14 mt-4">
-        <div className="container mx-auto px-4 max-w-4xl">
-          <h3 className="text-center font-heading text-2xl sm:text-3xl font-bold mb-2">Como funciona</h3>
-          <p className="text-center text-zinc-400 text-sm mb-10 max-w-md mx-auto">Orçamento rápido, sem complicações.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* ── BRANDS ── */}
+      {brands.data && brands.data.length > 0 && (
+        <section className="border-t border-border bg-muted/30 py-5 px-3">
+          <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Marcas disponíveis</p>
+          <div className="flex flex-wrap justify-center gap-2 max-w-screen-xl mx-auto">
+            {brands.data.map((b: any) => (
+              <Link key={b.id} to={`/seguranca?marca=${b.id}`}
+                className="px-3.5 py-2 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground">
+                {b.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── TRUST STRIP ── */}
+      <section className="border-t border-border py-5 px-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-screen-xl mx-auto">
+          {[
+            { icon: "🛡️", title: "Instalação incluída", desc: "Apoio técnico especializado" },
+            { icon: "📋", title: "Orçamento gratuito", desc: "Resposta rápida e sem compromisso" },
+            { icon: "🔧", title: "Suporte pós-venda", desc: "Acompanhamento contínuo" },
+            { icon: "📍", title: "Montijo & região", desc: "Atendimento presencial disponível" },
+          ].map((t, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border">
+              <span className="text-xl shrink-0">{t.icon}</span>
+              <div>
+                <p className="text-xs font-bold text-foreground leading-tight">{t.title}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{t.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="bg-zinc-900 dark:bg-zinc-950 text-white py-10 px-4">
+        <div className="max-w-screen-xl mx-auto">
+          <h3 className="font-heading text-xl font-bold text-center mb-1">Como funciona</h3>
+          <p className="text-center text-zinc-400 text-xs mb-6">Orçamento sem compromisso em 3 passos.</p>
+          <div className="grid grid-cols-3 gap-3">
             {[
-              { icon: Search, title: "Explore", desc: "Pesquise ou navegue por categoria ou marca.", n: "01" },
-              { icon: ShoppingCart, title: "Seleccione", desc: "Adicione produtos ao pedido de orçamento.", n: "02" },
-              { icon: Send, title: "Receba", desc: "Enviamos proposta com preços actualizados.", n: "03" },
+              { n: "1", icon: Search, t: "Explore", d: "Pesquise ou navegue por categoria ou marca." },
+              { n: "2", icon: ShoppingCart, t: "Seleccione", d: "Adicione produtos ao pedido de orçamento." },
+              { n: "3", icon: Send, t: "Receba", d: "Enviamos proposta com preços actualizados." },
             ].map((s, i) => (
-              <div key={i} className="group rounded-2xl border border-white/10 bg-white/[0.03] p-6 hover:border-primary/50 hover:bg-white/[0.05] transition-all relative overflow-hidden">
-                <span className="absolute top-3 right-4 text-4xl font-bold text-white/[0.04] group-hover:text-primary/15 transition-colors font-heading">{s.n}</span>
-                <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center mb-4">
-                  <s.icon className="h-5 w-5 text-primary" />
+              <div key={i} className="flex flex-col items-center text-center gap-2 p-3 rounded-2xl border border-white/10 bg-white/[0.03]">
+                <div className="h-9 w-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+                  <s.icon className="h-4 w-4 text-primary" />
                 </div>
-                <h4 className="font-semibold text-base mb-1">{s.title}</h4>
-                <p className="text-sm text-zinc-400 leading-relaxed">{s.desc}</p>
+                <p className="text-xs font-bold">{s.t}</p>
+                <p className="text-[10px] text-zinc-400 leading-relaxed hidden sm:block">{s.d}</p>
               </div>
             ))}
           </div>
@@ -290,33 +353,70 @@ const Index = () => {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-border py-8 bg-background">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <footer className="border-t border-border py-7 px-4 bg-background">
+        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
           <div className="flex items-center gap-3">
-            <img src={vrcfShield} alt="VRCF" className="h-10 w-auto" />
+            <img src={vrcfShield} alt="VRCF" className="h-9 w-auto" />
             <div>
               <p className="font-bold text-sm">VRCF — Informática & Segurança</p>
-              <p className="text-xs text-muted-foreground">NIF 515237205 · Montijo, Portugal</p>
+              <p className="text-xs text-muted-foreground">NIF 515237205 · Montijo</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-            <a href="tel:+351911564243" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-sm">
+            <a href="tel:+351911564243" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
               <Phone className="h-3.5 w-3.5" /> +351 911 564 243
             </a>
-            <a href="mailto:geral@vrcf.pt" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
+            <a href="mailto:geral@vrcf.pt" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
               <Mail className="h-3.5 w-3.5" /> geral@vrcf.pt
             </a>
             <a href="https://maps.google.com/?q=Rua+Luis+Calado+Nunes+15+Montijo" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors">
-              <MapPin className="h-3.5 w-3.5" /> Rua Luis Calado Nunes 15 LJ B
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
+              <MapPin className="h-3.5 w-3.5" /> R. Luis Calado Nunes 15 LJ B
             </a>
           </div>
-          <div className="text-xs text-muted-foreground flex gap-3">
-            <Link to="/termos-e-condicoes" className="hover:text-primary transition-colors">Termos</Link>
-            <Link to="/politica-de-cookies" className="hover:text-primary transition-colors">Cookies</Link>
+          <div className="flex gap-3 text-xs text-muted-foreground">
+            <Link to="/termos-e-condicoes" className="hover:text-primary">Termos</Link>
+            <Link to="/politica-de-cookies" className="hover:text-primary">Cookies</Link>
+            <button onClick={() => setSuggestionOpen(true)} className="hover:text-primary">Sugestão</button>
           </div>
         </div>
       </footer>
+
+      {/* ── MOBILE BOTTOM NAV ── */}
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+        <div className="grid grid-cols-5 h-14">
+          <Link to="/" className="flex flex-col items-center justify-center gap-0.5 text-primary">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+            <span className="text-[9px] font-semibold">Início</span>
+          </Link>
+          <Link to="/seguranca" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
+            <ShieldCheck className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Segurança</span>
+          </Link>
+          <Link to="/escritorio" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
+            <Monitor className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Escritório</span>
+          </Link>
+          <Link to="/pesquisa" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
+            <Search className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Pesquisa</span>
+          </Link>
+          <button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors relative">
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && (
+              <span className="absolute top-1.5 right-3 bg-primary text-primary-foreground text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center">
+                {totalItems}
+              </span>
+            )}
+            <span className="text-[9px] font-medium">Orçamento</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* Espaço para a bottom nav no mobile */}
+      <div className="h-14 sm:hidden" />
 
       <CartDrawer />
       <ContactFloatingBubble />
@@ -325,196 +425,41 @@ const Index = () => {
   );
 };
 
-// ── WORLD CARD ───────────────────────────────────────────────────────────────
+// ── WORLD BUTTON ──────────────────────────────────────────────────────────────
 
-function WorldCard({ to, mundo, title, subtitle, count, categories }: {
-  to: string; mundo: "seguranca" | "escritorio";
-  title: string; subtitle: string; count?: number; categories: any[];
+function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
+  active: boolean; onClick: () => void; to: string;
+  icon: any; label: string; count?: number; color: "orange" | "blue";
 }) {
-  const isS = mundo === "seguranca";
+  const isOrange = color === "orange";
   return (
-    <div className={`group relative overflow-hidden rounded-3xl border border-border min-h-[340px] flex flex-col transition-all hover:shadow-xl hover:border-${isS ? "primary" : "blue-500"}/40`}>
-
-      {/* Ilustração SVG */}
-      <div className="absolute inset-0">
-        {isS ? <SecurityIllustration /> : <OfficeIllustration />}
-      </div>
-
-      {/* Overlay gradiente */}
-      <div className={`absolute inset-0 ${isS
-        ? "bg-gradient-to-t from-[#2d0e00]/95 via-[#2d0e00]/65 to-[#2d0e00]/20"
-        : "bg-gradient-to-t from-[#001433]/95 via-[#001433]/65 to-[#001433]/20"
-      }`} />
-
-      {/* Conteúdo */}
-      <div className="relative flex flex-col h-full p-7 sm:p-8 justify-between">
-        {/* Topo */}
-        <div>
-          <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border mb-4 ${isS
-            ? "bg-primary/20 border-primary/40 text-primary"
-            : "bg-blue-500/20 border-blue-400/40 text-blue-400"
-          }`}>
-            {isS ? <ShieldCheck className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
-          </div>
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-white tracking-tight">{title}</h2>
-          <p className="mt-2 text-sm text-white/65 max-w-xs leading-relaxed">{subtitle}</p>
-          {count != null && (
-            <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 border border-white/15 w-fit">
-              <Package className="h-3 w-3 text-white/60" />
-              <span className="text-xs font-medium text-white/80">{count.toLocaleString()} produtos</span>
-            </div>
-          )}
+    <div className={`relative rounded-2xl border-2 transition-all overflow-hidden cursor-pointer ${
+      active
+        ? isOrange ? "border-primary bg-primary/8 shadow-primary/15 shadow-md" : "border-blue-500 bg-blue-500/8 shadow-blue-500/15 shadow-md"
+        : "border-border bg-card hover:border-muted-foreground/30"
+    }`} onClick={onClick}>
+      <div className="p-4">
+        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl mb-3 ${
+          isOrange ? "bg-primary/15 text-primary" : "bg-blue-500/15 text-blue-500"
+        }`}>
+          <Icon className="h-5 w-5" />
         </div>
-
-        {/* Categorias rápidas */}
-        {categories.length > 0 && (
-          <div className="mt-5">
-            <p className="text-[10px] uppercase tracking-widest text-white/40 font-semibold mb-2.5">Categorias</p>
-            <div className="flex flex-wrap gap-2">
-              {categories.slice(0, 5).map((c: any) => {
-                const meta = getCategoryMeta(c.name);
-                return (
-                  <Link key={c.name} to={`${to}?categoria=${encodeURIComponent(c.name)}`}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/10 border border-white/15 hover:bg-white/20 transition-all text-xs font-medium text-white/80 hover:text-white">
-                    <span>{c.name}</span>
-                  </Link>
-                );
-              })}
-              <Link to={to} className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${isS
-                ? "bg-primary/25 border border-primary/40 text-primary hover:bg-primary/35"
-                : "bg-blue-500/25 border border-blue-400/40 text-blue-300 hover:bg-blue-500/35"
-              }`}>
-                Ver tudo <ArrowRight className="h-3 w-3" />
-              </Link>
-            </div>
-          </div>
+        <p className="font-bold text-sm text-foreground leading-tight">{label}</p>
+        {count != null && (
+          <p className="text-[10px] text-muted-foreground mt-1">{count.toLocaleString()} produtos</p>
         )}
-
-        {/* CTA */}
-        <Link to={to} className={`mt-5 inline-flex items-center gap-2 font-semibold text-sm transition-all group-hover:gap-3 ${isS ? "text-primary" : "text-blue-400"}`}>
-          Explorar catálogo <ArrowRight className="h-4 w-4" />
+        <Link to={to}
+          onClick={e => e.stopPropagation()}
+          className={`mt-3 inline-flex items-center gap-1 text-[11px] font-bold transition-colors ${
+            isOrange ? "text-primary hover:text-primary/80" : "text-blue-500 hover:text-blue-400"
+          }`}>
+          Explorar <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
+      {active && (
+        <div className={`absolute top-2 right-2 h-2 w-2 rounded-full ${isOrange ? "bg-primary" : "bg-blue-500"}`} />
+      )}
     </div>
-  );
-}
-
-// ── SVG ILLUSTRATIONS ────────────────────────────────────────────────────────
-
-function SecurityIllustration() {
-  return (
-    <svg width="100%" height="100%" viewBox="0 0 600 340" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <rect width="600" height="340" fill="#1c0500"/>
-      {/* Grid */}
-      <g opacity="0.08" stroke="#E87722" strokeWidth="0.5">
-        {[1,2,3,4,5,6,7,8,9,10,11].map(i=><line key={`h${i}`} x1="0" y1={i*30} x2="600" y2={i*30}/>)}
-        {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19].map(i=><line key={`v${i}`} x1={i*32} y1="0" x2={i*32} y2="340"/>)}
-      </g>
-      {/* Camera dome body */}
-      <ellipse cx="430" cy="105" rx="60" ry="22" fill="#E87722" fillOpacity="0.1" stroke="#E87722" strokeOpacity="0.35" strokeWidth="1.5"/>
-      <path d="M390 105 Q390 145 430 155 Q470 145 470 105 Z" fill="#E87722" fillOpacity="0.15" stroke="#E87722" strokeOpacity="0.4" strokeWidth="1.5"/>
-      {/* Lens */}
-      <circle cx="430" cy="122" r="14" fill="#E87722" fillOpacity="0.25" stroke="#E87722" strokeOpacity="0.6" strokeWidth="2"/>
-      <circle cx="430" cy="122" r="8" fill="#E87722" fillOpacity="0.5" stroke="#E87722" strokeOpacity="0.8" strokeWidth="1.5"/>
-      <circle cx="430" cy="122" r="4" fill="#E87722" fillOpacity="0.9"/>
-      <circle cx="425" cy="117" r="2.5" fill="white" fillOpacity="0.3"/>
-      {/* Mount */}
-      <rect x="427" y="155" width="6" height="22" rx="2" fill="#E87722" fillOpacity="0.4"/>
-      {/* Signal rings */}
-      <ellipse cx="430" cy="92" rx="30" ry="12" fill="none" stroke="#E87722" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="5 4"/>
-      <ellipse cx="430" cy="85" rx="50" ry="20" fill="none" stroke="#E87722" strokeOpacity="0.11" strokeWidth="1" strokeDasharray="5 4"/>
-      <ellipse cx="430" cy="78" rx="72" ry="28" fill="none" stroke="#E87722" strokeOpacity="0.07" strokeWidth="1" strokeDasharray="5 4"/>
-      {/* Shield */}
-      <path d="M115 72 L155 58 L195 72 L195 122 Q195 148 155 162 Q115 148 115 122 Z" fill="#E87722" fillOpacity="0.08" stroke="#E87722" strokeOpacity="0.4" strokeWidth="1.5"/>
-      <path d="M134 108 L148 122 L176 94" fill="none" stroke="#E87722" strokeOpacity="0.85" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      {/* Network hub */}
-      <circle cx="300" cy="205" r="10" fill="#E87722" fillOpacity="0.2" stroke="#E87722" strokeOpacity="0.5" strokeWidth="2"/>
-      <circle cx="300" cy="205" r="4" fill="#E87722" fillOpacity="0.7"/>
-      {/* Nodes */}
-      {[[220,250],[380,250],[160,215],[440,220],[260,285],[340,285]].map(([x,y],i)=>(
-        <g key={`n${i}`}>
-          <circle cx={x} cy={y} r={i<2?7:5} fill="#E87722" fillOpacity="0.15" stroke="#E87722" strokeOpacity="0.3" strokeWidth="1"/>
-          <circle cx={x} cy={y} r={i<2?3:2} fill="#E87722" fillOpacity="0.5"/>
-        </g>
-      ))}
-      {/* Network lines */}
-      {[[300,205,220,250],[300,205,380,250],[220,250,160,215],[380,250,440,220],[220,250,260,285],[380,250,340,285]].map(([x1,y1,x2,y2],i)=>(
-        <line key={`l${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#E87722" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="5 3"/>
-      ))}
-      <line x1="300" y1="205" x2="430" y2="177" stroke="#E87722" strokeOpacity="0.15" strokeWidth="1" strokeDasharray="5 3"/>
-      {/* Lock */}
-      <rect x="268" y="275" width="64" height="44" rx="8" fill="#E87722" fillOpacity="0.1" stroke="#E87722" strokeOpacity="0.35" strokeWidth="1.5"/>
-      <path d="M283 275 Q283 257 300 257 Q317 257 317 275" fill="none" stroke="#E87722" strokeOpacity="0.45" strokeWidth="2.5" strokeLinecap="round"/>
-      <circle cx="300" cy="294" r="6" fill="#E87722" fillOpacity="0.5"/>
-      <rect x="297" y="294" width="6" height="9" rx="2" fill="#E87722" fillOpacity="0.5"/>
-      {/* Accent dots */}
-      {[[45,35],[555,55],[55,300],[545,285],[300,30],[520,175]].map(([x,y],i)=>(
-        <circle key={`d${i}`} cx={x} cy={y} r={i%2===0?2.5:1.5} fill="#E87722" fillOpacity="0.25"/>
-      ))}
-      {/* Glow */}
-      <ellipse cx="430" cy="110" rx="100" ry="50" fill="#E87722" fillOpacity="0.04"/>
-    </svg>
-  );
-}
-
-function OfficeIllustration() {
-  return (
-    <svg width="100%" height="100%" viewBox="0 0 600 340" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <rect width="600" height="340" fill="#000d1f"/>
-      {/* Grid */}
-      <g opacity="0.08" stroke="#3B82F6" strokeWidth="0.5">
-        {[1,2,3,4,5,6,7,8,9,10,11].map(i=><line key={`h${i}`} x1="0" y1={i*30} x2="600" y2={i*30}/>)}
-        {[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19].map(i=><line key={`v${i}`} x1={i*32} y1="0" x2={i*32} y2="340"/>)}
-      </g>
-      {/* Monitor */}
-      <rect x="220" y="70" width="160" height="108" rx="7" fill="#3B82F6" fillOpacity="0.09" stroke="#3B82F6" strokeOpacity="0.4" strokeWidth="1.5"/>
-      <rect x="230" y="80" width="140" height="82" rx="4" fill="#3B82F6" fillOpacity="0.06" stroke="#3B82F6" strokeOpacity="0.2" strokeWidth="0.5"/>
-      {/* Screen content */}
-      {[[0,70,0.45],[10,65,0.3],[0,55,0.38],[15,80,0.25],[0,48,0.35]].map(([off,w,op],i)=>(
-        <rect key={`sc${i}`} x={240+off} y={90+i*13} width={w} height="3.5" rx="1.75" fill="#3B82F6" fillOpacity={op}/>
-      ))}
-      <rect x="240" y="148" width="45" height="8" rx="4" fill="#3B82F6" fillOpacity="0.55"/>
-      {/* Stand */}
-      <rect x="293" y="178" width="14" height="20" rx="3" fill="#3B82F6" fillOpacity="0.25"/>
-      <rect x="278" y="198" width="44" height="6" rx="3" fill="#3B82F6" fillOpacity="0.2"/>
-      {/* Laptop */}
-      <rect x="72" y="148" width="120" height="78" rx="5" fill="#3B82F6" fillOpacity="0.08" stroke="#3B82F6" strokeOpacity="0.35" strokeWidth="1.5"/>
-      <rect x="82" y="157" width="100" height="60" rx="3" fill="#3B82F6" fillOpacity="0.05"/>
-      {[[0,52],[0,68],[10,44]].map(([off,w],i)=>(
-        <rect key={`ls${i}`} x={92} y={165+i*11} width={w} height="2.5" rx="1.25" fill="#3B82F6" fillOpacity="0.25"/>
-      ))}
-      <rect x="72" y="226" width="120" height="10" rx="3" fill="#3B82F6" fillOpacity="0.12" stroke="#3B82F6" strokeOpacity="0.25" strokeWidth="1"/>
-      {/* Keyboard dots */}
-      {[0,1,2,3,4,5,6,7,8].map(i=>(
-        <rect key={`kb${i}`} x={82+i*12} y="231" width="9" height="5" rx="1.5" fill="#3B82F6" fillOpacity="0.12"/>
-      ))}
-      {/* Server */}
-      <rect x="418" y="90" width="80" height="125" rx="7" fill="#3B82F6" fillOpacity="0.07" stroke="#3B82F6" strokeOpacity="0.35" strokeWidth="1.5"/>
-      {[0,1,2,3,4].map(i=>(
-        <rect key={`sv${i}`} x="428" y={103+i*19} width="60" height="12" rx="2.5" fill="#3B82F6" fillOpacity="0.12" stroke="#3B82F6" strokeOpacity="0.2" strokeWidth="0.5"/>
-      ))}
-      <circle cx="458" cy="205" r="6" fill="#3B82F6" fillOpacity="0.25" stroke="#3B82F6" strokeOpacity="0.4" strokeWidth="1"/>
-      <circle cx="455" cy="202" r="2" fill="white" fillOpacity="0.2"/>
-      {/* Connection lines */}
-      <line x1="192" y1="187" x2="220" y2="127" stroke="#3B82F6" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="5 3"/>
-      <line x1="380" y1="127" x2="418" y2="155" stroke="#3B82F6" strokeOpacity="0.18" strokeWidth="1" strokeDasharray="5 3"/>
-      {/* Chip */}
-      <rect x="462" y="32" width="70" height="70" rx="5" fill="#3B82F6" fillOpacity="0.07" stroke="#3B82F6" strokeOpacity="0.25" strokeWidth="1"/>
-      <rect x="475" y="45" width="44" height="44" rx="4" fill="#3B82F6" fillOpacity="0.09" stroke="#3B82F6" strokeOpacity="0.35" strokeWidth="1"/>
-      <rect x="485" y="55" width="24" height="24" rx="3" fill="#3B82F6" fillOpacity="0.18"/>
-      {[0,1,2].map(i=>(
-        <g key={`cp${i}`}>
-          <line x1="464" y1={52+i*12} x2="475" y2={52+i*12} stroke="#3B82F6" strokeOpacity="0.4" strokeWidth="1"/>
-          <line x1="519" y1={52+i*12} x2="532" y2={52+i*12} stroke="#3B82F6" strokeOpacity="0.4" strokeWidth="1"/>
-        </g>
-      ))}
-      {/* Glow */}
-      <ellipse cx="300" cy="155" rx="160" ry="90" fill="#3B82F6" fillOpacity="0.03"/>
-      {/* Accent dots */}
-      {[[35,35],[560,50],[55,290],[550,280],[300,25],[415,275]].map(([x,y],i)=>(
-        <circle key={`d${i}`} cx={x} cy={y} r={i%2===0?2.5:1.5} fill="#3B82F6" fillOpacity="0.22"/>
-      ))}
-    </svg>
   );
 }
 

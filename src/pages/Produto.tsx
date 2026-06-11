@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useState } from "react";
-import { Loader2, ArrowLeft, ShoppingCart, Minus, Plus, ShieldCheck, Package2, MessageCircle, Copy } from "lucide-react";
+import {
+  Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2,
+  MessageCircle, Copy, Truck, Clock, Info, ChevronLeft, ChevronRight,
+  ZoomIn, Star,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,24 +17,47 @@ import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
-const stockLabels: Record<string, { label: string; className: string }> = {
-  high: { label: "Em stock", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
-  medium: { label: "Stock limitado", className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
-  low: { label: "Últimas unidades", className: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30" },
-  on_request: { label: "Sob encomenda", className: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30" },
-  unknown: { label: "Consultar disponibilidade", className: "bg-muted text-muted-foreground border-border" },
+const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  high:       { label: "Em stock",           color: "bg-emerald-500/12 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
+  low:        { label: "Últimas unidades",   color: "bg-amber-500/12 text-amber-700 border-amber-500/30",    dot: "bg-amber-500" },
+  out:        { label: "Sob encomenda",       color: "bg-blue-500/12 text-blue-700 border-blue-500/30",       dot: "bg-blue-500" },
+};
+
+// Tradução de chaves de specs para português legível
+const SPEC_LABELS: Record<string, string> = {
+  tipo: "Tipo", resolucao: "Resolução", resolucao_maxima: "Resolução máxima",
+  iluminacao: "Iluminação", alcance_ir: "Alcance IR", angulo_visao: "Ângulo de visão",
+  sensor: "Sensor", fps: "Taxa de imagem", compressao: "Compressão",
+  lente: "Lente", protecao_ip: "Protecção IP", protecao_ik: "Protecção IK",
+  poe: "PoE", wifi: "Wi-Fi", bluetooth: "Bluetooth", audio: "Áudio",
+  armazenamento_interno: "Armazenamento interno", armazenamento: "Armazenamento",
+  comunicacao: "Comunicação", alimentacao: "Alimentação", temperatura: "Temp. funcionamento",
+  humidade: "Humidade", grau_protecao: "Grau de protecção", grau_seguranca: "Grau de segurança",
+  dimensoes: "Dimensões", peso: "Peso", cor: "Cor", canais: "Canais",
+  tecnologia: "Tecnologia", bateria: "Bateria", ia: "Inteligência Artificial",
+  wdr: "WDR / HDR", protocolo: "Protocolo", interface_rede: "Interface de rede",
+  encriptacao: "Encriptação", firmware_ota: "Firmware OTA", frequencia: "Frequência",
+  distancia_transmissao: "Distância de transmissão", compatibilidade: "Compatibilidade",
+  funcoes_inteligentes: "Funções inteligentes", acesso_remoto: "Acesso remoto",
+  alarme: "Alarme", sensibilidade: "Sensibilidade", gama: "Gama",
+  processador: "Processador", geracao: "Geração", grafica: "Placa Gráfica",
+  ram_gb: "RAM (GB)", ram_tipo: "Tipo de RAM", ram_slots: "Slots RAM",
+  ram_ampliavel: "RAM Ampliável", armazenamento_gb: "Armazenamento (GB)",
+  armazenamento_tipo: "Tipo de armazenamento", ecra_polegadas: "Ecrã (\")",
+  sistema_operativo: "Sistema Operativo", grau: "Grau", teclado: "Teclado",
+  leitor_gravador: "Leitor/Gravador", webcam: "Webcam",
+  portas: "Portas", instalacao: "Instalação",
 };
 
 const Produto = () => {
   const { slug } = useParams<{ slug: string }>();
   const { addItem, setIsOpen } = useCart();
-  const [quantity, setQuantity] = useState(1);
   const [imgIdx, setImgIdx] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
 
-  const { data: product, isLoading, error } = useQuery({
+  const { data: product, isLoading } = useQuery({
     queryKey: ["product-slug", slug],
     queryFn: async () => {
-      // Try slug first, then fallback to id
       const { data: bySlug } = await supabase.from("products").select("*").eq("slug", slug!).maybeSingle();
       if (bySlug) return bySlug;
       const { data: byId } = await supabase.from("products").select("*").eq("id", slug!).maybeSingle();
@@ -39,51 +66,53 @@ const Produto = () => {
     enabled: !!slug,
   });
 
-  const { data: images = [] } = useQuery({
+  const { data: dbImages = [] } = useQuery({
     queryKey: ["product-images", product?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("product_images").select("*").eq("product_id", product!.id).order("position");
+      const { data } = await supabase.from("product_images").select("*")
+        .eq("product_id", product!.id).order("position");
       return data ?? [];
     },
     enabled: !!product?.id,
   });
 
-  if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  }
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!product) return <Navigate to="/404" replace />;
 
-  const allImages = images.length > 0
-    ? images.sort((a, b) => a.position - b.position).map((i) => i.image_url)
-    : product.image_url ? [product.image_url] : [];
-  const currentImage = allImages[imgIdx];
+  // Imagens — db images + imagens_extra do produto
+  const extraImgs = Array.isArray(product.imagens_extra) ? product.imagens_extra : [];
+  const allImages = dbImages.length > 0
+    ? dbImages.sort((a: any, b: any) => a.position - b.position).map((i: any) => i.image_url)
+    : product.image_url
+      ? [product.image_url, ...extraImgs]
+      : extraImgs;
+  const currentImage = allImages[imgIdx] || null;
 
-  const stock = stockLabels[product.stock_status ?? "unknown"] ?? stockLabels.unknown;
-  const specs = (product.especificacoes ?? {}) as Record<string, string>;
+  const specs = (typeof product.especificacoes === "string"
+    ? JSON.parse(product.especificacoes || "{}")
+    : product.especificacoes ?? {}) as Record<string, string>;
+
+  // Filtrar specs para mostrar — excluir campos internos
+  const specsToShow = Object.entries(specs).filter(([k]) =>
+    !["teclado_nota", "ram_slot_livre"].includes(k) && SPEC_LABELS[k]
+  );
+  const specsExtra = Object.entries(specs).filter(([k]) =>
+    !["teclado_nota", "ram_slot_livre"].includes(k) && !SPEC_LABELS[k]
+  );
+
   const destaques = (product.destaques ?? []) as string[];
+  const teclado_nota = specs.teclado_nota;
+  const envio_especial = !!product.envio_especial;
+  const stockCfg = STOCK_CONFIG[product.stock_status ?? "out"] ?? STOCK_CONFIG.out;
   const worldPath = product.mundo === "escritorio" ? "/escritorio" : "/seguranca";
   const worldLabel = product.mundo === "escritorio" ? "Escritório & IT" : "Segurança & Redes";
-  const productUrl = `https://showroom.vrcf.info/produto/${product.slug ?? product.id}`;
+  const priceWithVat = product.price ? product.price * 1.23 : null;
   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copiado!");
-    } catch {
-      toast.error("Não foi possível copiar");
-    }
-  };
-
-  const breadcrumbJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: "Início", item: "https://showroom.vrcf.info/" },
-      { "@type": "ListItem", position: 2, name: worldLabel, item: `https://showroom.vrcf.info${worldPath}` },
-      ...(product.category ? [{ "@type": "ListItem", position: 3, name: product.category, item: productUrl }] : []),
-      { "@type": "ListItem", position: product.category ? 4 : 3, name: product.name, item: productUrl },
-    ],
+  const handleAddToCart = () => {
+    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, 1);
+    toast.success(`${product.name} adicionado ao orçamento`);
+    setIsOpen(true);
   };
 
   return (
@@ -92,62 +121,66 @@ const Produto = () => {
         <title>{product.name} — VRCF Showroom</title>
         <meta name="description" content={product.short_description ?? product.description?.slice(0, 160) ?? product.name} />
         <link rel="canonical" href={`https://showroom.vrcf.info/produto/${product.slug ?? product.id}`} />
-        <meta property="og:title" content={product.name} />
-        <meta property="og:description" content={product.short_description ?? ""} />
         {currentImage && <meta property="og:image" content={currentImage} />}
-        <script type="application/ld+json">{JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Product",
-          name: product.name,
-          description: product.short_description ?? product.description,
-          image: currentImage,
-          sku: product.sku ?? undefined,
-          category: product.category ?? undefined,
-          offers: product.price ? {
-            "@type": "Offer",
-            price: product.price,
-            priceCurrency: "EUR",
-            availability: product.stock_status === "high" ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
-          } : undefined,
-        })}</script>
-        <script type="application/ld+json">{JSON.stringify(breadcrumbJsonLd)}</script>
       </Helmet>
 
-      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4 sm:py-3">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-lg">
+        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4">
           <div className="flex items-center gap-3">
             <Link to={worldPath} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
-            <Link to="/"><img src={vrcfLogo} alt="VRCF" className="h-10 sm:h-12 w-auto" /></Link>
+            <Link to="/"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
           </div>
           <div className="flex items-center gap-2">
             <DarkModeToggle />
-            <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9">
-              <ShoppingCart className="h-4 w-4" /> Orçamento
+            <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9 relative">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline text-sm">Orçamento</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <nav className="container mx-auto px-4 pt-6 text-xs text-muted-foreground">
+      {/* Breadcrumb */}
+      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
         <Link to="/" className="hover:text-foreground">Início</Link>
-        <span className="mx-1.5">/</span>
+        <span>/</span>
         <Link to={worldPath} className="hover:text-foreground">{worldLabel}</Link>
-        {product.category && (<><span className="mx-1.5">/</span><span>{product.category}</span></>)}
+        {product.category && <><span>/</span><span>{product.category}</span></>}
       </nav>
 
-      <section className="container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="space-y-4">
-          <div className="aspect-square rounded-2xl bg-secondary overflow-hidden border border-border">
-            {currentImage ? (
-              <img src={currentImage} alt={product.name} className="w-full h-full object-contain" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground"><Package2 className="h-16 w-16" /></div>
+      {/* Produto */}
+      <section className="container mx-auto px-4 pb-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+
+        {/* Imagens */}
+        <div className="space-y-3">
+          <div className="relative aspect-square rounded-2xl bg-muted/30 border border-border overflow-hidden group cursor-zoom-in"
+            onClick={() => setLightbox(true)}>
+            {currentImage
+              ? <img src={currentImage} alt={product.name} className="w-full h-full object-contain p-4" />
+              : <div className="w-full h-full flex items-center justify-center text-muted-foreground/40"><Package2 className="h-20 w-20" /></div>
+            }
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-lg p-1.5">
+              <ZoomIn className="h-4 w-4 text-white" />
+            </div>
+            {allImages.length > 1 && (
+              <>
+                <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i - 1 + allImages.length) % allImages.length); }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/80 border border-border flex items-center justify-center hover:bg-background transition-colors">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button onClick={e => { e.stopPropagation(); setImgIdx(i => (i + 1) % allImages.length); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/80 border border-border flex items-center justify-center hover:bg-background transition-colors">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
             )}
           </div>
           {allImages.length > 1 && (
-            <div className="grid grid-cols-5 gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {allImages.map((img, i) => (
-                <button key={i} onClick={() => setImgIdx(i)} className={`aspect-square rounded-lg overflow-hidden border-2 ${i === imgIdx ? "border-primary" : "border-border opacity-60 hover:opacity-100"}`}>
+                <button key={i} onClick={() => setImgIdx(i)}
+                  className={`shrink-0 w-16 h-16 rounded-xl border-2 overflow-hidden transition-all ${i === imgIdx ? "border-primary" : "border-border opacity-60 hover:opacity-100"}`}>
                   <img src={img} alt="" className="w-full h-full object-cover" />
                 </button>
               ))}
@@ -155,29 +188,88 @@ const Produto = () => {
           )}
         </div>
 
+        {/* Info */}
         <div className="space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {product.category && <Badge variant="secondary">{product.category}</Badge>}
-            {product.family && <Badge variant="outline">{product.family}</Badge>}
-            {product.brand && <Badge variant="outline">{product.brand}</Badge>}
-            <Badge variant="outline" className={stock.className}>{stock.label}</Badge>
-            {product.featured && <Badge className="bg-primary text-primary-foreground">★ Destaque</Badge>}
+          {/* Badges */}
+          <div className="flex flex-wrap gap-2">
+            {product.category && <Badge variant="secondary" className="text-xs">{product.category}</Badge>}
+            {product.brand && <Badge variant="outline" className="text-xs">{product.brand}</Badge>}
+            {product.featured && <Badge className="bg-primary text-primary-foreground text-xs gap-1"><Star className="h-3 w-3 fill-current" /> Destaque</Badge>}
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-bold">{product.name}</h1>
-          {product.sku && <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>}
-          {product.short_description && <p className="text-lg text-muted-foreground">{product.short_description}</p>}
 
-          {product.price != null && (
-            <p className="font-heading text-3xl font-bold text-foreground">
-              {Number(product.price).toFixed(2).replace(".", ",")} €
-              <span className="ml-2 text-xs font-normal text-muted-foreground">IVA incl.</span>
-            </p>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold leading-tight">{product.name}</h1>
+
+          {product.sku && (
+            <p className="text-xs text-muted-foreground font-mono">REF: {product.sku}{product.ean ? ` · EAN: ${product.ean}` : ""}</p>
           )}
 
-          {destaques.length > 0 && (
-            <ul className="space-y-1.5 text-sm">
-              {destaques.map((d, i) => (
-                <li key={i} className="flex items-start gap-2">
+          {/* Preço */}
+          {priceWithVat != null ? (
+            <div className="rounded-2xl bg-card border border-border p-4 space-y-1">
+              <p className="font-heading text-3xl font-bold text-foreground">
+                {priceWithVat.toFixed(2).replace(".", ",")} €
+                <span className="ml-2 text-sm font-normal text-muted-foreground">c/ IVA</span>
+              </p>
+              <p className="text-xs text-muted-foreground">{product.price?.toFixed(2).replace(".", ",")} € s/ IVA</p>
+              <p className="text-[10px] text-muted-foreground italic">Preço indicativo — confirmado no orçamento</p>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-card border border-border p-4">
+              <p className="text-sm text-muted-foreground italic">Preço sob consulta — solicite orçamento</p>
+            </div>
+          )}
+
+          {/* Stock */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold ${stockCfg.color}`}>
+              <span className={`h-2 w-2 rounded-full ${stockCfg.dot}`} />
+              {stockCfg.label}
+            </div>
+            {envio_especial && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-700 text-xs font-medium">
+                <Truck className="h-3.5 w-3.5" /> Envio especial
+              </div>
+            )}
+          </div>
+
+          {/* Entrega */}
+          <div className={`rounded-xl border p-3 space-y-1.5 ${envio_especial ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-muted/30"}`}>
+            {envio_especial ? (
+              <div className="flex items-start gap-2 text-sm text-amber-700">
+                <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                <p>Este produto tem condições especiais de envio. O custo e prazo de entrega serão indicados no orçamento.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Truck className="h-3.5 w-3.5 text-primary" />
+                  <span>Portes: <strong className="text-foreground">11,00 € fixo</strong> (Visiotech) · calculado no orçamento (outros)</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5 text-primary" />
+                  <span>Entrega em <strong className="text-foreground">48h a 72h úteis</strong> após confirmação de pagamento</span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Info className="h-3.5 w-3.5 text-primary" />
+                  <span>Stock referente ao armazém online — pode diferir do stock em loja física</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Teclado nota */}
+          {teclado_nota && (
+            <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-blue-700 flex items-start gap-2">
+              <Info className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{teclado_nota}</span>
+            </div>
+          )}
+
+          {/* Destaques */}
+          {destaques.filter(d => d !== teclado_nota).length > 0 && (
+            <ul className="space-y-1.5">
+              {destaques.filter(d => d !== teclado_nota).map((d, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm">
                   <ShieldCheck className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                   <span>{d}</span>
                 </li>
@@ -185,65 +277,64 @@ const Produto = () => {
             </ul>
           )}
 
-          <div className="flex items-center gap-3 pt-2">
-            <div className="flex items-center border border-border rounded-md">
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-r-none" onClick={() => setQuantity((q) => Math.max(1, q - 1))}><Minus className="h-3.5 w-3.5" /></Button>
-              <span className="w-10 text-center font-medium">{quantity}</span>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-l-none" onClick={() => setQuantity((q) => q + 1)}><Plus className="h-3.5 w-3.5" /></Button>
-            </div>
-            <Button size="lg" className="gap-2 flex-1" onClick={() => {
-              addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, quantity);
-              toast.success(`${quantity}x ${product.name} adicionado ao orçamento`);
-              setQuantity(1);
-            }}>
-              <ShoppingCart className="h-4 w-4" /> Adicionar ao Orçamento
+          {/* CTA */}
+          <div className="grid grid-cols-1 gap-2 pt-2">
+            <Button size="lg" className="gap-2 h-12 text-base font-bold rounded-xl" onClick={handleAddToCart}>
+              <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento
             </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <a href={`https://wa.me/351911564243?text=${waText}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-sm font-medium">
+                <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
+              </a>
+              <Button variant="outline" className="gap-2 h-10 rounded-xl" onClick={async () => {
+                try { await navigator.clipboard.writeText(window.location.href); toast.success("Link copiado!"); }
+                catch { toast.error("Não foi possível copiar"); }
+              }}>
+                <Copy className="h-4 w-4" /> Copiar link
+              </Button>
+            </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <a
-              href={`https://wa.me/351911564243?text=${waText}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 h-10 rounded-md border border-border bg-card hover:bg-accent transition-colors text-sm font-medium"
-            >
-              <MessageCircle className="h-4 w-4 text-green-600" />
-              WhatsApp
-            </a>
-            <Button variant="outline" className="gap-2 h-10" onClick={copyLink}>
-              <Copy className="h-4 w-4" /> Copiar link
-            </Button>
-          </div>
-
-          {product.description && (
-            <div className="pt-6 border-t border-border">
-              <h2 className="font-heading text-lg font-bold mb-2">Descrição</h2>
-              <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{product.description}</p>
-            </div>
-          )}
-
-          {Object.keys(specs).length > 0 && (
-            <div className="pt-4 border-t border-border">
-              <h2 className="font-heading text-lg font-bold mb-3">Especificações</h2>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                {Object.entries(specs).map(([k, v]) => (
-                  <div key={k} className="flex justify-between gap-3 py-1 border-b border-border/50">
-                    <dt className="text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
-                    <dd className="font-medium text-right">{String(v)}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-
-          {product.conteudo_embalagem && (
-            <div className="pt-4 border-t border-border">
-              <h2 className="font-heading text-lg font-bold mb-2">Conteúdo da embalagem</h2>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">{product.conteudo_embalagem}</p>
-            </div>
-          )}
         </div>
       </section>
+
+      {/* Descrição + Specs */}
+      <section className="container mx-auto px-4 pb-12 space-y-8 max-w-4xl">
+        {product.description && (
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-heading text-lg font-bold mb-3">Descrição</h2>
+            <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{product.description}</div>
+          </div>
+        )}
+
+        {specsToShow.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <h2 className="font-heading text-lg font-bold mb-4">Especificações técnicas</h2>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-0 text-sm">
+              {specsToShow.map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3 py-2 border-b border-border/40">
+                  <dt className="text-muted-foreground shrink-0">{SPEC_LABELS[k] ?? k.replace(/_/g, " ")}</dt>
+                  <dd className="font-medium text-right text-foreground">{String(v)}</dd>
+                </div>
+              ))}
+              {specsExtra.map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3 py-2 border-b border-border/40">
+                  <dt className="text-muted-foreground shrink-0 capitalize">{k.replace(/_/g, " ")}</dt>
+                  <dd className="font-medium text-right text-foreground">{String(v)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+      </section>
+
+      {/* Lightbox */}
+      {lightbox && currentImage && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightbox(false)}>
+          <img src={currentImage} alt="" className="max-w-[90vw] max-h-[90vh] object-contain" onClick={e => e.stopPropagation()} />
+          <button className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl">&times;</button>
+        </div>
+      )}
 
       <CartDrawer />
       <ContactFloatingBubble />
