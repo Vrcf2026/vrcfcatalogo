@@ -308,6 +308,42 @@ export type Database = {
         }
         Relationships: []
       }
+      price_history: {
+        Row: {
+          changed_at: string
+          fornecedor: string | null
+          id: string
+          price_new: number | null
+          price_old: number | null
+          purchase_price_new: number | null
+          purchase_price_old: number | null
+          raw: Json | null
+          sku: string
+        }
+        Insert: {
+          changed_at?: string
+          fornecedor?: string | null
+          id?: string
+          price_new?: number | null
+          price_old?: number | null
+          purchase_price_new?: number | null
+          purchase_price_old?: number | null
+          raw?: Json | null
+          sku: string
+        }
+        Update: {
+          changed_at?: string
+          fornecedor?: string | null
+          id?: string
+          price_new?: number | null
+          price_old?: number | null
+          purchase_price_new?: number | null
+          purchase_price_old?: number | null
+          raw?: Json | null
+          sku?: string
+        }
+        Relationships: []
+      }
       product_analytics: {
         Row: {
           created_at: string
