@@ -206,7 +206,12 @@ def carregar_api() -> list:
     url = f"{URL_API_BASE}?apikey={ALLTO_API_KEY}&fileformat=json&type=full"
     print(f"  A descarregar dados da API ALL.TO (type=full)...")
     print(f"  URL: {url[:60]}...")
-    resp = requests.get(url, timeout=180)
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "pt-PT,pt;q=0.9",
+    }
+    resp = requests.get(url, headers=headers, timeout=180)
     resp.encoding = "utf-8"
     print(f"  HTTP Status: {resp.status_code}")
     print(f"  Content-Type: {resp.headers.get('Content-Type', 'unknown')}")
