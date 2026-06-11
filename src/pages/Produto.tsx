@@ -92,6 +92,14 @@ const Produto = () => {
     ? JSON.parse(product.especificacoes || "{}")
     : product.especificacoes ?? {}) as Record<string, string>;
 
+  // Mapear valores de teclado para texto legível
+  const TECLADO_DISPLAY: Record<string, string> = {
+    "PT": "Português",
+    "ES": "Castelhano",
+    "Internacional": "Internacional",
+    "Personalizável": "Personalizável",
+  };
+
   // Filtrar specs para mostrar — excluir campos internos
   const specsToShow = Object.entries(specs).filter(([k]) =>
     !["teclado_nota", "ram_slot_livre"].includes(k) && SPEC_LABELS[k]
@@ -101,7 +109,7 @@ const Produto = () => {
   );
 
   const destaques = (product.destaques ?? []) as string[];
-  const teclado_nota = specs.teclado_nota;
+  const teclado_nota = ["Portátil", "Tudo-em-Um"].includes(specs.tipo ?? "") ? specs.teclado_nota : undefined;
   const envio_especial = !!product.envio_especial;
   const stockCfg = STOCK_CONFIG[product.stock_status ?? "out"] ?? STOCK_CONFIG.out;
   const worldPath = product.mundo === "escritorio" ? "/escritorio" : "/seguranca";
@@ -326,7 +334,10 @@ const Produto = () => {
               {specsToShow.map(([k, v]) => (
                 <div key={k} className="flex justify-between gap-3 py-2 border-b border-border/40">
                   <dt className="text-muted-foreground shrink-0">{SPEC_LABELS[k] ?? k.replace(/_/g, " ")}</dt>
-                  <dd className="font-medium text-right text-foreground">{String(v)}</dd>
+                  <dd className="font-medium text-right text-foreground flex items-center gap-1.5">
+                    {k === "teclado" && String(v) === "PT" && <span>🇵🇹</span>}
+                    {k === "teclado" ? (TECLADO_DISPLAY[String(v)] ?? String(v)) : String(v)}
+                  </dd>
                 </div>
               ))}
               {specsExtra.map(([k, v]) => (
