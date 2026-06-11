@@ -44,13 +44,14 @@ interface ProductCardProps {
   weight?: number | null;
   fornecedor?: string | null;
   envioEspecial?: boolean;
+  teclado?: string | null;
   onEdit?: () => void;
   isAdmin?: boolean;
   onClick?: () => void;
 }
 
 export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
-  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, onEdit, isAdmin, onClick }, ref) {
+  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, onEdit, isAdmin, onClick }, ref) {
     const { addItem } = useCart();
     const allImages = images.length > 0
       ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
@@ -88,6 +89,18 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
             </span>
           )}
         </div>
+        {/* Bandeira PT — teclado português */}
+        {teclado === "PT" && (
+          <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
+            <span className="text-base leading-none">🇵🇹</span>
+          </div>
+        )}
+        {/* Bandeira PT — teclado português */}
+        {teclado === "PT" && (
+          <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
+            <span className="text-base leading-none">🇵🇹</span>
+          </div>
+        )}
 
         {/* Imagem */}
         <div className="relative bg-muted/30 aspect-square overflow-hidden rounded-t-2xl flex items-center justify-center">
