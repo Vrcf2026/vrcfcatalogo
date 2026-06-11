@@ -67,9 +67,9 @@ async function getOrCreateCategory(
   supabase: SupabaseClient,
   cache: Cache,
   name: string,
-  mundo: string | null,
+  mundo: string,
 ): Promise<string> {
-  const key = name.toLowerCase();
+  const key = `${mundo.toLowerCase()}::${name.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -77,6 +77,7 @@ async function getOrCreateCategory(
     .from("categories")
     .select("id")
     .ilike("name", name)
+    .eq("mundo", mundo)
     .maybeSingle();
   if (selErr) throw new Error(`categories select: ${selErr.message}`);
   if (existing?.id) {
@@ -103,6 +104,7 @@ async function getOrCreateCategory(
       .from("categories")
       .select("id")
       .ilike("name", name)
+      .eq("mundo", mundo)
       .maybeSingle();
     if (again?.id) {
       cache.set(key, again.id);
@@ -119,21 +121,27 @@ async function getOrCreateFamily(
   cache: Cache,
   name: string,
   categoryName: string,
+  mundo: string,
 ): Promise<string> {
-  const key = `${categoryName.toLowerCase()}::${name.toLowerCase()}`;
+  const key = `${mundo.toLowerCase()}::${categoryName.toLowerCase()}::${name.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
-  const { data: existing, error: selErr } = await supabase
+  // Find candidate families with matching name+category, then filter by mundo via the categories table
+  const { data: candidates, error: selErr } = await supabase
     .from("product_families")
-    .select("id")
+    .select("id, category, categories!inner(mundo)")
     .ilike("name", name)
-    .ilike("category", categoryName)
-    .maybeSingle();
+    .ilike("category", categoryName);
   if (selErr) throw new Error(`product_families select: ${selErr.message}`);
-  if (existing?.id) {
-    cache.set(key, existing.id);
-    return existing.id;
+
+  const match = (candidates ?? []).find((c: any) => {
+    const cm = Array.isArray(c.categories) ? c.categories[0]?.mundo : c.categories?.mundo;
+    return cm === mundo;
+  });
+  if (match?.id) {
+    cache.set(key, match.id);
+    return match.id;
   }
 
   const { data: inserted, error: insErr } = await supabase
@@ -142,16 +150,6 @@ async function getOrCreateFamily(
     .select("id")
     .single();
   if (insErr) {
-    const { data: again } = await supabase
-      .from("product_families")
-      .select("id")
-      .ilike("name", name)
-      .ilike("category", categoryName)
-      .maybeSingle();
-    if (again?.id) {
-      cache.set(key, again.id);
-      return again.id;
-    }
     throw new Error(`product_families insert: ${insErr.message}`);
   }
   cache.set(key, inserted.id);
@@ -180,12 +178,12 @@ async function resolveProductReferences(
       p.brand_id = await getOrCreateBrand(supabase, brandCache, brandName);
       p.brand = brandName;
     }
-    if (categoryName) {
+    if (categoryName && mundo) {
       await getOrCreateCategory(supabase, categoryCache, categoryName, mundo);
       p.category = categoryName;
     }
-    if (familyName && categoryName) {
-      p.family_id = await getOrCreateFamily(supabase, familyCache, familyName, categoryName);
+    if (familyName && categoryName && mundo) {
+      p.family_id = await getOrCreateFamily(supabase, familyCache, familyName, categoryName, mundo);
       p.family = familyName;
     }
 
@@ -193,6 +191,7 @@ async function resolveProductReferences(
   }
   return resolved;
 }
+
 
 // ============ Actions ============
 
