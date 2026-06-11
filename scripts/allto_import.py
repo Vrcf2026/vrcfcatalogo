@@ -206,6 +206,12 @@ def carregar_api() -> list:
     print(f"  A descarregar dados da API ALL.TO (type=full)...")
     resp = requests.get(URL_API, timeout=180)
     resp.encoding = "utf-8"
+    print(f"  HTTP Status: {resp.status_code}")
+    print(f"  Content-Type: {resp.headers.get('Content-Type', 'unknown')}")
+    print(f"  Primeiros 500 chars: {resp.text[:500]}")
+    if not resp.text.strip():
+        print("  ❌ Resposta vazia — verifica a chave API ALLTO_API_KEY")
+        return []
     data = resp.json()
     # A API pode retornar lista directamente ou dentro de uma chave
     if isinstance(data, list):
