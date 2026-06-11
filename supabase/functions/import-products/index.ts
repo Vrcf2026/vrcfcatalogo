@@ -127,34 +127,51 @@ async function getOrCreateFamily(
   const cached = cache.get(key);
   if (cached) return cached;
 
-  // Find candidate families with matching name+category, then filter by mundo via the categories table
-  const { data: candidates, error: selErr } = await supabase
-    .from("product_families")
-    .select("id, category, categories!inner(mundo)")
-    .ilike("name", name)
-    .ilike("category", categoryName);
-  if (selErr) throw new Error(`product_families select: ${selErr.message}`);
+  // Confirm a category with this name exists in this mundo (it should — getOrCreateCategory ran first)
+  const { data: cat, error: catErr } = await supabase
+    .from("categories")
+    .select("name")
+    .ilike("name", categoryName)
+    .eq("mundo", mundo)
+    .maybeSingle();
+  if (catErr) throw new Error(`categories lookup for family: ${catErr.message}`);
+  const resolvedCategoryName = cat?.name ?? categoryName;
 
-  const match = (candidates ?? []).find((c: any) => {
-    const cm = Array.isArray(c.categories) ? c.categories[0]?.mundo : c.categories?.mundo;
-    return cm === mundo;
-  });
-  if (match?.id) {
-    cache.set(key, match.id);
-    return match.id;
+  // Look for an existing family with same name + category (case-insensitive)
+  const { data: existing, error: selErr } = await supabase
+    .from("product_families")
+    .select("id")
+    .ilike("name", name)
+    .ilike("category", resolvedCategoryName)
+    .maybeSingle();
+  if (selErr) throw new Error(`product_families select: ${selErr.message}`);
+  if (existing?.id) {
+    cache.set(key, existing.id);
+    return existing.id;
   }
 
   const { data: inserted, error: insErr } = await supabase
     .from("product_families")
-    .insert({ name, category: categoryName })
+    .insert({ name, category: resolvedCategoryName })
     .select("id")
     .single();
   if (insErr) {
+    const { data: again } = await supabase
+      .from("product_families")
+      .select("id")
+      .ilike("name", name)
+      .ilike("category", resolvedCategoryName)
+      .maybeSingle();
+    if (again?.id) {
+      cache.set(key, again.id);
+      return again.id;
+    }
     throw new Error(`product_families insert: ${insErr.message}`);
   }
   cache.set(key, inserted.id);
   return inserted.id;
 }
+
 
 async function resolveProductReferences(
   supabase: SupabaseClient,
