@@ -67,9 +67,9 @@ async function getOrCreateCategory(
   supabase: SupabaseClient,
   cache: Cache,
   name: string,
-  mundo: string | null,
+  mundo: string,
 ): Promise<string> {
-  const key = name.toLowerCase();
+  const key = `${mundo.toLowerCase()}::${name.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -77,6 +77,7 @@ async function getOrCreateCategory(
     .from("categories")
     .select("id")
     .ilike("name", name)
+    .eq("mundo", mundo)
     .maybeSingle();
   if (selErr) throw new Error(`categories select: ${selErr.message}`);
   if (existing?.id) {
@@ -103,6 +104,7 @@ async function getOrCreateCategory(
       .from("categories")
       .select("id")
       .ilike("name", name)
+      .eq("mundo", mundo)
       .maybeSingle();
     if (again?.id) {
       cache.set(key, again.id);
@@ -119,16 +121,28 @@ async function getOrCreateFamily(
   cache: Cache,
   name: string,
   categoryName: string,
+  mundo: string,
 ): Promise<string> {
-  const key = `${categoryName.toLowerCase()}::${name.toLowerCase()}`;
+  const key = `${mundo.toLowerCase()}::${categoryName.toLowerCase()}::${name.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
+  // Confirm a category with this name exists in this mundo (it should — getOrCreateCategory ran first)
+  const { data: cat, error: catErr } = await supabase
+    .from("categories")
+    .select("name")
+    .ilike("name", categoryName)
+    .eq("mundo", mundo)
+    .maybeSingle();
+  if (catErr) throw new Error(`categories lookup for family: ${catErr.message}`);
+  const resolvedCategoryName = cat?.name ?? categoryName;
+
+  // Look for an existing family with same name + category (case-insensitive)
   const { data: existing, error: selErr } = await supabase
     .from("product_families")
     .select("id")
     .ilike("name", name)
-    .ilike("category", categoryName)
+    .ilike("category", resolvedCategoryName)
     .maybeSingle();
   if (selErr) throw new Error(`product_families select: ${selErr.message}`);
   if (existing?.id) {
@@ -138,7 +152,7 @@ async function getOrCreateFamily(
 
   const { data: inserted, error: insErr } = await supabase
     .from("product_families")
-    .insert({ name, category: categoryName })
+    .insert({ name, category: resolvedCategoryName })
     .select("id")
     .single();
   if (insErr) {
@@ -146,7 +160,7 @@ async function getOrCreateFamily(
       .from("product_families")
       .select("id")
       .ilike("name", name)
-      .ilike("category", categoryName)
+      .ilike("category", resolvedCategoryName)
       .maybeSingle();
     if (again?.id) {
       cache.set(key, again.id);
@@ -157,6 +171,7 @@ async function getOrCreateFamily(
   cache.set(key, inserted.id);
   return inserted.id;
 }
+
 
 async function resolveProductReferences(
   supabase: SupabaseClient,
@@ -180,12 +195,12 @@ async function resolveProductReferences(
       p.brand_id = await getOrCreateBrand(supabase, brandCache, brandName);
       p.brand = brandName;
     }
-    if (categoryName) {
+    if (categoryName && mundo) {
       await getOrCreateCategory(supabase, categoryCache, categoryName, mundo);
       p.category = categoryName;
     }
-    if (familyName && categoryName) {
-      p.family_id = await getOrCreateFamily(supabase, familyCache, familyName, categoryName);
+    if (familyName && categoryName && mundo) {
+      p.family_id = await getOrCreateFamily(supabase, familyCache, familyName, categoryName, mundo);
       p.family = familyName;
     }
 
@@ -193,6 +208,7 @@ async function resolveProductReferences(
   }
   return resolved;
 }
+
 
 // ============ Actions ============
 

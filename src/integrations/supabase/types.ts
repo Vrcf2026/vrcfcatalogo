@@ -308,9 +308,40 @@ export type Database = {
         }
         Relationships: []
       }
+      import_exclusions: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          fornecedor: string | null
+          id: string
+          motivo: string | null
+          tipo: string
+          valor: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          fornecedor?: string | null
+          id?: string
+          motivo?: string | null
+          tipo: string
+          valor: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          fornecedor?: string | null
+          id?: string
+          motivo?: string | null
+          tipo?: string
+          valor?: string
+        }
+        Relationships: []
+      }
       price_history: {
         Row: {
           changed_at: string
+          created_at: string | null
           fornecedor: string | null
           id: string
           price_new: number | null
@@ -322,6 +353,7 @@ export type Database = {
         }
         Insert: {
           changed_at?: string
+          created_at?: string | null
           fornecedor?: string | null
           id?: string
           price_new?: number | null
@@ -333,6 +365,7 @@ export type Database = {
         }
         Update: {
           changed_at?: string
+          created_at?: string | null
           fornecedor?: string | null
           id?: string
           price_new?: number | null
@@ -431,6 +464,8 @@ export type Database = {
           created_at: string
           description: string | null
           destaques: Json | null
+          ean: string | null
+          envio_especial: boolean | null
           especificacoes: Json | null
           family: string | null
           family_id: string | null
@@ -438,13 +473,17 @@ export type Database = {
           fornecedor: string | null
           id: string
           image_url: string | null
+          imagens_extra: Json | null
           include_in_catalog: boolean
           mundo: string | null
           name: string
           price: number | null
+          price_tier2: number | null
+          price_tier3: number | null
           produtos_relacionados: string[] | null
           purchase_price: number | null
           purchase_price_vat: number | null
+          relacionados: Json | null
           short_description: string | null
           show_on_homepage: boolean | null
           sku: string | null
@@ -452,6 +491,7 @@ export type Database = {
           sob_encomenda: boolean | null
           stock_status: string | null
           updated_at: string
+          upgrades: Json | null
           weight: number | null
         }
         Insert: {
@@ -463,6 +503,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           destaques?: Json | null
+          ean?: string | null
+          envio_especial?: boolean | null
           especificacoes?: Json | null
           family?: string | null
           family_id?: string | null
@@ -470,13 +512,17 @@ export type Database = {
           fornecedor?: string | null
           id?: string
           image_url?: string | null
+          imagens_extra?: Json | null
           include_in_catalog?: boolean
           mundo?: string | null
           name: string
           price?: number | null
+          price_tier2?: number | null
+          price_tier3?: number | null
           produtos_relacionados?: string[] | null
           purchase_price?: number | null
           purchase_price_vat?: number | null
+          relacionados?: Json | null
           short_description?: string | null
           show_on_homepage?: boolean | null
           sku?: string | null
@@ -484,6 +530,7 @@ export type Database = {
           sob_encomenda?: boolean | null
           stock_status?: string | null
           updated_at?: string
+          upgrades?: Json | null
           weight?: number | null
         }
         Update: {
@@ -495,6 +542,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           destaques?: Json | null
+          ean?: string | null
+          envio_especial?: boolean | null
           especificacoes?: Json | null
           family?: string | null
           family_id?: string | null
@@ -502,13 +551,17 @@ export type Database = {
           fornecedor?: string | null
           id?: string
           image_url?: string | null
+          imagens_extra?: Json | null
           include_in_catalog?: boolean
           mundo?: string | null
           name?: string
           price?: number | null
+          price_tier2?: number | null
+          price_tier3?: number | null
           produtos_relacionados?: string[] | null
           purchase_price?: number | null
           purchase_price_vat?: number | null
+          relacionados?: Json | null
           short_description?: string | null
           show_on_homepage?: boolean | null
           sku?: string | null
@@ -516,6 +569,7 @@ export type Database = {
           sob_encomenda?: boolean | null
           stock_status?: string | null
           updated_at?: string
+          upgrades?: Json | null
           weight?: number | null
         }
         Relationships: [
@@ -570,6 +624,7 @@ export type Database = {
           ativo: boolean | null
           fornecedor: string
           id: string
+          notas: string | null
           preco_primeira_unidade: number | null
           preco_unidade_adicional: number | null
         }
@@ -577,6 +632,7 @@ export type Database = {
           ativo?: boolean | null
           fornecedor: string
           id?: string
+          notas?: string | null
           preco_primeira_unidade?: number | null
           preco_unidade_adicional?: number | null
         }
@@ -584,6 +640,7 @@ export type Database = {
           ativo?: boolean | null
           fornecedor?: string
           id?: string
+          notas?: string | null
           preco_primeira_unidade?: number | null
           preco_unidade_adicional?: number | null
         }
