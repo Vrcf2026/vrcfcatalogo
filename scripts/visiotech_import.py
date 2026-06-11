@@ -296,16 +296,16 @@ def supabase_upsert(produtos: list, fornecedor: str = "visiotech"):
     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
     total = len(produtos)
     inseridos = 0
-    for i in range(0, total, 100):
-        batch = produtos[i:i+100]
+    for i in range(0, total, 200):
+        batch = produtos[i:i+200]
         resp = requests.post(IMPORT_URL, headers=headers,
                              json={"fornecedor": fornecedor, "produtos": batch}, timeout=60)
         if resp.status_code == 200:
             inseridos += resp.json().get("count", len(batch))
-            print(f"  ✅ Upsert {i+1}-{min(i+100, total)}/{total}")
+            print(f"  ✅ Upsert {i+1}-{min(i+200, total)}/{total}")
         else:
             print(f"  ❌ Erro lote {i}: {resp.status_code} — {resp.text[:200]}")
-        time.sleep(0.3)
+        time.sleep(0.1)
     return inseridos
 
 
@@ -378,10 +378,17 @@ def main(local=False):
     print("\n📥 A carregar CSV...")
     rows = carregar_csv("visiotech_connect__1_.csv" if local else URL_CSV)
 
-    # 2. Buscar preços actuais para comparação
+    # 2. Buscar preços actuais para comparação (apenas se já houver produtos)
     print("\n💰 A buscar preços actuais...")
-    precos_actuais = buscar_precos_actuais("visiotech") if IMPORT_API_KEY else {}
-    print(f"  {len(precos_actuais)} produtos com preço actual no Supabase")
+    precos_actuais = {}
+    if IMPORT_API_KEY:
+        try:
+            precos_actuais = buscar_precos_actuais("visiotech")
+            print(f"  {len(precos_actuais)} produtos com preço actual no Supabase")
+        except Exception as e:
+            print(f"  ⚠ Não foi possível buscar preços actuais: {e} — a continuar sem comparação")
+    else:
+        print("  ⚠ Sem API key — a saltar comparação de preços")
 
     # 3. Processar produtos
     print("\n⚙️  A processar produtos...")
