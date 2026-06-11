@@ -22,7 +22,7 @@ IMPORT_URL     = os.environ.get("IMPORT_URL", "https://mgdhclajlcmepdfrkktw.supa
 IMPORT_API_KEY = os.environ.get("IMPORT_API_KEY", "")
 ALLTO_API_KEY  = os.environ.get("ALLTO_API_KEY", "")
 
-URL_API = f"https://api.allto.pt/v2/?apikey={ALLTO_API_KEY}&fileformat=json&type=full"
+URL_API_BASE = "https://api.allto.pt/v2/"
 
 # Tiers de preço
 DESCONTO_TIER2 = 0.10   # 10% — clientes fidelizados
@@ -203,8 +203,10 @@ def carregar_api() -> list:
     if not ALLTO_API_KEY:
         print("  ⚠ ALLTO_API_KEY não definida")
         return []
+    url = f"{URL_API_BASE}?apikey={ALLTO_API_KEY}&fileformat=json&type=full"
     print(f"  A descarregar dados da API ALL.TO (type=full)...")
-    resp = requests.get(URL_API, timeout=180)
+    print(f"  URL: {url[:60]}...")
+    resp = requests.get(url, timeout=180)
     resp.encoding = "utf-8"
     print(f"  HTTP Status: {resp.status_code}")
     print(f"  Content-Type: {resp.headers.get('Content-Type', 'unknown')}")
