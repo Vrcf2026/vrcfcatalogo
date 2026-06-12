@@ -46,7 +46,7 @@ const SPEC_LABELS: Record<string, string> = {
   armazenamento_tipo: "Tipo de armazenamento", ecra_polegadas: "Ecrã (\")",
   sistema_operativo: "Sistema Operativo", grau: "Grau", teclado: "Teclado",
   leitor_gravador: "Leitor/Gravador", webcam: "Webcam",
-  portas: "Portas", instalacao: "Instalação",
+  portas: "Portas", portas_frontais: "Portas frontais", portas_traseiras: "Portas traseiras", instalacao: "Instalação",
 };
 
 const Produto = () => {
