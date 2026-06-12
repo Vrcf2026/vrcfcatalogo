@@ -313,6 +313,10 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
     if portas_front:
         specs["portas_frontais"] = portas_front.group(1).strip()[:100]
 
+    portas_tras = re.search(r"[Cc]onexiones traseras\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if portas_tras:
+        specs["portas_traseiras"] = portas_tras.group(1).strip()[:150]
+
     portas_adic = re.search(r"[Cc]onexiones adicionales\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
     if portas_adic:
         specs["portas"] = portas_adic.group(1).strip()[:150]
@@ -327,31 +331,43 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         val = cor.group(1).strip()
         specs["cor"] = traduzir_texto(val)[:30]
 
-    # ── TECLADO ──
-    texto_teclado = f"{nome_es} {desc_es}".lower()
-    teclado_valor = None
-    teclado_nota = None
+    # ── DIMENSÕES ──
+    medidas = re.search(r"[Mm]edidas\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if medidas:
+        specs["dimensoes"] = medidas.group(1).strip()[:100]
 
-    if any(x in texto_teclado for x in ["portugués", "portugues", "kit portugu", "tecl. num. portugu", "teclado em portugu", "teclado portugu"]):
-        teclado_valor = "PT"
+    # ── ÁUDIO ──
+    audio = re.search(r"[Ss]onido\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if audio:
+        val = audio.group(1).strip()
+        specs["audio"] = traduzir_texto(val)[:60]
+
+    # ── TECLADO — só para portáteis e AIO ──
+    if specs.get("tipo") in ("Portátil", "Tudo-em-Um"):
+        texto_teclado = f"{nome_es} {desc_es}".lower()
+        teclado_valor = None
         teclado_nota = None
-    elif any(x in texto_teclado for x in ["castellano", "kit castellano", "tecl. num. castellano"]):
-        teclado_valor = "ES"
-        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-    elif "teclado internacional" in texto_teclado:
-        teclado_valor = "Internacional"
-        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-    elif teclado_personalizavel:
-        teclado_valor = "Personalizável"
-        teclado_nota = "Teclado não PT. Possibilidade de colocar PT — contacte-nos para saber disponibilidade e valor."
-    else:
-        teclado_valor = "Internacional"
-        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
 
-    if teclado_valor:
-        specs["teclado"] = teclado_valor
-    if teclado_nota:
-        specs["teclado_nota"] = teclado_nota
+        if any(x in texto_teclado for x in ["portugués", "portugues", "kit portugu", "tecl. num. portugu", "teclado em portugu", "teclado portugu"]):
+            teclado_valor = "PT"
+            teclado_nota = None
+        elif any(x in texto_teclado for x in ["castellano", "kit castellano", "tecl. num. castellano"]):
+            teclado_valor = "ES"
+            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+        elif "teclado internacional" in texto_teclado:
+            teclado_valor = "Internacional"
+            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+        elif teclado_personalizavel:
+            teclado_valor = "Personalizável"
+            teclado_nota = "Teclado não PT. Possibilidade de colocar PT — contacte-nos para saber disponibilidade e valor."
+        else:
+            teclado_valor = "Internacional"
+            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+
+        if teclado_valor:
+            specs["teclado"] = teclado_valor
+        if teclado_nota:
+            specs["teclado_nota"] = teclado_nota
 
     return specs
 
