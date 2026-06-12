@@ -77,9 +77,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   // Brands
   const { data: brands = [] } = useQuery({
-    queryKey: ["brands"],
+    queryKey: ["brands", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("brands").select("*").order("name");
+      const { data } = await supabase.from("brands").select("*")
+        .in("mundo", [mundo, "todos"]).order("name");
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
