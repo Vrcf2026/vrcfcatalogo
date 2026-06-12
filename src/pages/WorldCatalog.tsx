@@ -21,7 +21,7 @@ import { useCart } from "@/contexts/CartContext";
 import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 
-type Mundo = "seguranca" | "escritorio";
+type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
 const PAGE_SIZE = 24;
 
