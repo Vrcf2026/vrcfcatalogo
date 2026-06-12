@@ -313,6 +313,10 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
     if portas_front:
         specs["portas_frontais"] = portas_front.group(1).strip()[:100]
 
+    portas_tras = re.search(r"[Cc]onexiones traseras\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if portas_tras:
+        specs["portas_traseiras"] = portas_tras.group(1).strip()[:150]
+
     portas_adic = re.search(r"[Cc]onexiones adicionales\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
     if portas_adic:
         specs["portas"] = portas_adic.group(1).strip()[:150]
@@ -326,6 +330,17 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
     if cor:
         val = cor.group(1).strip()
         specs["cor"] = traduzir_texto(val)[:30]
+
+    # ── DIMENSÕES ──
+    medidas = re.search(r"[Mm]edidas\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if medidas:
+        specs["dimensoes"] = medidas.group(1).strip()[:100]
+
+    # ── ÁUDIO ──
+    audio = re.search(r"[Ss]onido\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if audio:
+        val = audio.group(1).strip()
+        specs["audio"] = traduzir_texto(val)[:60]
 
     # ── TECLADO — só para portáteis e AIO ──
     if specs.get("tipo") in ("Portátil", "Tudo-em-Um"):
