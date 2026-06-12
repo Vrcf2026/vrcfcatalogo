@@ -72,6 +72,56 @@ PARAMS_MAP = {
     "marca":                  None,   # ignorar — já temos brand
     "categoria":              None,   # ignorar — já temos category
     "stock":                  None,   # ignorar
+
+    # ── CCTV avançado ──
+    "proteccion-anti-corrosion": "protecao_corrosao",
+    "face-capture":              "captacao_facial",
+    "motion-detection-20":       "detecao_movimento",
+    "3-axis":                    "ajuste_3_eixos",
+    "zoom-optico-ptz":           "zoom_ptz",
+    "resolucion-max-grabacion":  "resolucao_max_gravacao",
+    "resolucion_maxima":         "resolucao",
+    "capacidad-de-grabacion":    "capacidade_gravacao",
+    "tipo-de-camara":            "tipo_camara",
+    "tipo-de-deteccion":         "tipo_detecao",
+    "entradas-y-salidas-de-audio": "audio_io",
+    "microfono-altavoz":         "microfone_altavoz",
+    "hdd":                       "baias_hdd",
+    "movimiento-remoto":         "movimento_remoto",
+
+    # ── Networking ──
+    "n-puertos-totales":              "portas_totais",
+    "velocidad-maxima-puertos-uplink": "velocidade_uplink",
+    "velocidad-maxima-puertos-lan":    "velocidade_lan",
+    "n-puertos-poe-8023af-at-30w":     "portas_poe",
+    "poe-total":                       "poe_total",
+    "entradas-poe":                    "entradas_poe",
+    "comunicacion-inalambrica":        "comunicacao_sem_fios",
+    "comunicacion-principal":          "comunicacao_principal",
+    "requiere-gateway-hub":            "requer_gateway",
+
+    # ── Cabos / Acessórios ──
+    "categoria-velocidad":   "categoria_cabo",
+    "longitud":              "comprimento",
+    "tipo-de-cable":         "tipo_cabo",
+    "tipo-de-conductor":     "tipo_condutor",
+    "apantallamiento":       "blindagem",
+    "modo-pasillo":          "modo_corredor",
+
+    # ── Energia ──
+    "alimentacion-poc":  "alimentacao_poc",
+    "potencia":          "potencia",
+    "tension-salida":    "tensao_saida",
+    "capacidad":         "capacidade",
+
+    # ── Instalação / Ambiente ──
+    "instalacion":        "tipo_montagem",
+    "exterior-interior":  "ambiente",
+    "escenario-de-instalacion": "cenario_instalacao",
+    "grado":              "grau_resistencia",
+
+    # ── Controlo de Acessos ──
+    "tecnologia-rfid":   "tecnologia_rfid",
 }
 
 # Valores a normalizar
@@ -128,6 +178,8 @@ CATEGORIA_MAP = {
     'Armazenagem': 'Acessórios IT e Segurança', 'Gestão de Sinal': 'Acessórios IT e Segurança',
     'Periféricos': 'Acessórios IT e Segurança', 'Adaptador de encaixe (clip-on)': 'Acessórios IT e Segurança',
     'ONVIF': 'Acessórios IT e Segurança', 'Software': 'Acessórios IT e Segurança',
+    'Ferramentas': 'Acessórios IT e Segurança', 'Discos rígidos e memórias': 'Acessórios IT e Segurança',
+    'Discos rígidos de vigilância': 'Acessórios IT e Segurança',
     # Smartphone e Escritório
     'Smartphone e escritório': 'Smartphone e Escritório', 'Monitores': 'Smartphone e Escritório',
     'Videoconferencia': 'Smartphone e Escritório', 'Soluções LED': 'Smartphone e Escritório',

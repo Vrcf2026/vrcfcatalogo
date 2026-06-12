@@ -16,6 +16,7 @@ import { DarkModeToggle } from "@/components/DarkModeToggle";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import { SPEC_LABELS } from "@/lib/specLabels";
 
 const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
   high:       { label: "Em stock",           color: "bg-emerald-500/12 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
@@ -24,31 +25,6 @@ const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }
 };
 
 // Tradução de chaves de specs para português legível
-const SPEC_LABELS: Record<string, string> = {
-  tipo: "Tipo", resolucao: "Resolução", resolucao_maxima: "Resolução máxima",
-  iluminacao: "Iluminação", alcance_ir: "Alcance IR", angulo_visao: "Ângulo de visão",
-  sensor: "Sensor", fps: "Taxa de imagem", compressao: "Compressão",
-  lente: "Lente", protecao_ip: "Protecção IP", protecao_ik: "Protecção IK",
-  poe: "PoE", wifi: "Wi-Fi", bluetooth: "Bluetooth", audio: "Áudio",
-  armazenamento_interno: "Armazenamento interno", armazenamento: "Armazenamento",
-  comunicacao: "Comunicação", alimentacao: "Alimentação", temperatura: "Temp. funcionamento",
-  humidade: "Humidade", grau_protecao: "Grau de protecção", grau_seguranca: "Grau de segurança",
-  dimensoes: "Dimensões", peso: "Peso", cor: "Cor", canais: "Canais",
-  tecnologia: "Tecnologia", bateria: "Bateria", ia: "Inteligência Artificial",
-  wdr: "WDR / HDR", protocolo: "Protocolo", interface_rede: "Interface de rede",
-  encriptacao: "Encriptação", firmware_ota: "Firmware OTA", frequencia: "Frequência",
-  distancia_transmissao: "Distância de transmissão", compatibilidade: "Compatibilidade",
-  funcoes_inteligentes: "Funções inteligentes", acesso_remoto: "Acesso remoto",
-  alarme: "Alarme", sensibilidade: "Sensibilidade", gama: "Gama",
-  processador: "Processador", geracao: "Geração", grafica: "Placa Gráfica",
-  ram_gb: "RAM (GB)", ram_tipo: "Tipo de RAM", ram_slots: "Slots RAM",
-  ram_ampliavel: "RAM Ampliável", armazenamento_gb: "Armazenamento (GB)",
-  armazenamento_tipo: "Tipo de armazenamento", ecra_polegadas: "Ecrã (\")",
-  sistema_operativo: "Sistema Operativo", grau: "Grau", teclado: "Teclado",
-  leitor_gravador: "Leitor/Gravador", webcam: "Webcam",
-  portas: "Portas", instalacao: "Instalação",
-};
-
 const Produto = () => {
   const { slug } = useParams<{ slug: string }>();
   const { addItem, setIsOpen } = useCart();
