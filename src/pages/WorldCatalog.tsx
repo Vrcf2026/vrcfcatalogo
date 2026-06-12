@@ -34,6 +34,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState(searchParams.get("marca") ?? "all");
   const [sortBy, setSortBy] = useState("featured");
   const [techFilters, setTechFilters] = useState<Record<string, string>>({});
@@ -67,9 +68,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   // Families
   const { data: families = [] } = useQuery({
-    queryKey: ["families"],
+    queryKey: ["families", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("product_families").select("*").order("name");
+      const { data } = await supabase.from("product_families").select("*")
+        .in("mundo", [mundo, "todos"]).order("name");
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
@@ -86,9 +88,20 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Tipos (Nível 3 — dependentes de uma família)
+  const { data: types = [] } = useQuery({
+    queryKey: ["types", mundo],
+    queryFn: async () => {
+      const { data } = await supabase.from("product_types").select("*")
+        .in("mundo", [mundo, "todos"]).order("name");
+      return data ?? [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Products query
   const productsQuery = useQuery({
-    queryKey: ["products", mundo, search, categoryFilter, familyFilter, brandFilter, sortBy, page, techFilters],
+    queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
     queryFn: async () => {
       let q = supabase.from("products").select("*", { count: "exact" })
         .eq("mundo", mundo)
@@ -97,6 +110,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,short_description.ilike.%${search}%`);
       if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
       if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
+      if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
       if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
 
       if (sortBy === "featured") q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
@@ -160,20 +174,25 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
-    categoryFilter !== "all", familyFilter !== "all", brandFilter !== "all",
+    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
     Object.keys(techFilters).length > 0,
   ].filter(Boolean).length;
 
   const setCategory = (name: string) => {
-    setCategoryFilter(name); setFamilyFilter("all"); setPage(1);
+    setCategoryFilter(name); setFamilyFilter("all"); setTypeFilter("all"); setPage(1);
     if (name === "all") searchParams.delete("categoria"); else searchParams.set("categoria", name);
     setSearchParams(searchParams, { replace: true });
   };
 
+  const setFamily = (id: string) => {
+    setFamilyFilter(id); setTypeFilter("all"); setPage(1);
+  };
+
   const clearAllFilters = () => {
-    setCategoryFilter("all"); setFamilyFilter("all"); setBrandFilter("all");
+    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter("all");
     setTechFilters({}); setSearch(""); setSearchInput(""); setPage(1);
     searchParams.delete("categoria"); searchParams.delete("marca");
     setSearchParams(searchParams, { replace: true });
@@ -188,11 +207,24 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {visibleFamilies.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Família</p>
-          <Select value={familyFilter} onValueChange={v => { setFamilyFilter(v); setPage(1); }}>
+          <Select value={familyFilter} onValueChange={v => setFamily(v)}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas as famílias</SelectItem>
               {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {visibleTypes.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</p>
+          <Select value={typeFilter} onValueChange={v => { setTypeFilter(v); setPage(1); }}>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {visibleTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -385,7 +417,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           </div>
 
           {/* Filtros activos */}
-          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || brandFilter !== "all") && (
+          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter !== "all") && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {categoryFilter !== "all" && (
                 <Badge variant="secondary" className="gap-1 pr-1 text-xs">
