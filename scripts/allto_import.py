@@ -306,8 +306,9 @@ def main():
         stock_qty = int(parse_float(row.get("Stock")))
         if stock_qty > 10:    stock_status = "high"
         elif stock_qty > 0:   stock_status = "low"
-        else:                 stock_status = "out"
+        else:                 stock_status = "on_request"
         sob_encomenda = stock_qty == 0
+        if stock_qty == 0: stock_status = "on_request"
         if stock_qty == 0: stats["sem_stock"] += 1
 
         # Peso e portes

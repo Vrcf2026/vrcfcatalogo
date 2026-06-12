@@ -174,9 +174,11 @@ def mapear_stock(stock: str, on_request: str) -> tuple:
     """Retorna (stock_status, sob_encomenda)."""
     sob = str(on_request).strip() == "1"
     s = stock.strip().lower()
-    if s == "high":    return "high",  sob
-    if s in ("medium", "low"): return "low", sob
-    return "out", True
+    if sob: return "on_request", True
+    if s == "high":   return "high", False
+    if s == "medium": return "medium", False
+    if s == "low":    return "low", False
+    return "on_request", True
 
 
 def extrair_specs_params(params_json: str) -> dict:

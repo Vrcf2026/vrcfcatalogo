@@ -327,33 +327,31 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         val = cor.group(1).strip()
         specs["cor"] = traduzir_texto(val)[:30]
 
-    # ── TECLADO — só para portáteis e AIO ──
-    tipo_produto = specs.get("tipo", "")
-    if tipo_produto in ("Portátil", "Tudo-em-Um"):
-        texto_teclado = f"{nome_es} {desc_es}".lower()
-        teclado_valor = None
+    # ── TECLADO ──
+    texto_teclado = f"{nome_es} {desc_es}".lower()
+    teclado_valor = None
+    teclado_nota = None
+
+    if any(x in texto_teclado for x in ["portugués", "portugues", "kit portugu", "tecl. num. portugu", "teclado em portugu", "teclado portugu"]):
+        teclado_valor = "PT"
         teclado_nota = None
+    elif any(x in texto_teclado for x in ["castellano", "kit castellano", "tecl. num. castellano"]):
+        teclado_valor = "ES"
+        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+    elif "teclado internacional" in texto_teclado:
+        teclado_valor = "Internacional"
+        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+    elif teclado_personalizavel:
+        teclado_valor = "Personalizável"
+        teclado_nota = "Teclado não PT. Possibilidade de colocar PT — contacte-nos para saber disponibilidade e valor."
+    else:
+        teclado_valor = "Internacional"
+        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
 
-        if any(x in texto_teclado for x in ["portugués", "portugues", "kit portugu", "tecl. num. portugu", "teclado em portugu", "teclado portugu"]):
-            teclado_valor = "PT"
-            teclado_nota = None
-        elif any(x in texto_teclado for x in ["castellano", "kit castellano", "tecl. num. castellano"]):
-            teclado_valor = "ES"
-            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-        elif "teclado internacional" in texto_teclado:
-            teclado_valor = "Internacional"
-            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-        elif teclado_personalizavel:
-            teclado_valor = "Personalizável"
-            teclado_nota = "Teclado não PT. Possibilidade de colocar PT — contacte-nos para saber disponibilidade e valor."
-        else:
-            teclado_valor = "Internacional"
-            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-
-        if teclado_valor:
-            specs["teclado"] = teclado_valor
-        if teclado_nota:
-            specs["teclado_nota"] = teclado_nota
+    if teclado_valor:
+        specs["teclado"] = teclado_valor
+    if teclado_nota:
+        specs["teclado_nota"] = teclado_nota
 
     return specs
 
@@ -499,7 +497,7 @@ def main(local=False):
             stock_qty = int(stock_raw)
         except ValueError:
             stock_qty = 0
-        stock_status = "high" if stock_qty >= 5 else ("low" if stock_qty > 0 else "out")
+        stock_status = "high" if stock_qty >= 5 else ("low" if stock_qty > 0 else "on_request")
         sob_encomenda = stock_qty == 0
 
         # Teclado personalizável (CSV simples)
@@ -577,7 +575,7 @@ def main(local=False):
     print(f"  Teclado PT: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'PT')}")
     print(f"  Teclado ES: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'ES')}")
     print(f"  Teclado Personalizável: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'Personalizável')}")
-    print(f"  Sem stock: {sum(1 for p in produtos if p['stock_status'] == 'out')}")
+    print(f"  Sem stock: {sum(1 for p in produtos if p['stock_status'] == 'on_request')}")
 
     if not IMPORT_API_KEY:
         print("\n⚠️  IMPORT_API_KEY não definida — a guardar preview local")
