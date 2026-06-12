@@ -64,58 +64,30 @@ def calcular_porte_dhl(peso_kg: float) -> float | None:
     return None  # >250kg — calculado no orçamento
 
 # ─────────────────────────────────────────────
-# MAPEAMENTO DE CATEGORIAS
+# MAPEAMENTO DE CATEGORIAS (4 níveis)
+# A ALL.TO já fornece uma hierarquia limpa e 100% preenchida:
+#   Familia       → Nível 1 (Categoria)       — 11 valores
+#   Linha_Produto → Nível 2 (Família)         — 93 valores
+#   Tipo_Produto  → Nível 3 (Tipo/Subfamília) — 776 valores
+#   Marca         → Marca
+#
+# Nota: alguns Tipo_Produto (ex: "Diversos", "Marcadores") repetem-se em
+# Linha_Produto diferentes — isso é normal, o Nível 3 fica sempre associado
+# ao par (categoria, família) através de family_id na BD, não é global.
 # ─────────────────────────────────────────────
-# Normalizar categorias da ALL.TO para o catálogo VRCF
-CATEGORIA_FAMILIA_MAP = {
-    # Consumíveis de impressão
-    "Tinteiros": ("Consumíveis de Impressão", "Tinteiros"),
-    "Toners": ("Consumíveis de Impressão", "Toners"),
-    "Toners Compatíveis": ("Consumíveis de Impressão", "Toners Compatíveis"),
-    "Tinteiros Compatíveis": ("Consumíveis de Impressão", "Tinteiros Compatíveis"),
-    "Fitas": ("Consumíveis de Impressão", "Fitas"),
-    "Papel de Cópia": ("Papel", "Papel de Cópia"),
-    "Papel Fotográfico": ("Papel", "Papel Fotográfico"),
-    "Papel Especial": ("Papel", "Papel Especial"),
-    # Papelaria
-    "Arquivadores": ("Papelaria", "Arquivadores"),
-    "Pastas": ("Papelaria", "Pastas"),
-    "Blocos e Cadernos": ("Papelaria", "Blocos e Cadernos"),
-    "Canetas e Marcadores": ("Papelaria", "Canetas e Marcadores"),
-    "Agrafadores": ("Papelaria", "Agrafadores"),
-    "Calculadoras": ("Papelaria", "Calculadoras"),
-    # Material de escritório
-    "Mesas": ("Mobiliário de Escritório", "Mesas"),
-    "Cadeiras": ("Mobiliário de Escritório", "Cadeiras"),
-    "Estantes": ("Mobiliário de Escritório", "Estantes"),
-    # Tecnologia
-    "Ratos": ("Tecnologia", "Ratos"),
-    "Teclados": ("Tecnologia", "Teclados"),
-    "Monitores": ("Tecnologia", "Monitores"),
-    "Headsets": ("Tecnologia", "Headsets"),
-    "Webcams": ("Tecnologia", "Webcams"),
-    "Pen Drives": ("Tecnologia", "Pen Drives"),
-    "Discos Externos": ("Tecnologia", "Discos Externos"),
-    "Impressoras": ("Tecnologia", "Impressoras"),
-    # Higiene e Limpeza
-    "Higiene Pessoal": ("Higiene e Limpeza", "Higiene Pessoal"),
-    "Limpeza": ("Higiene e Limpeza", "Limpeza"),
-    "Papel Higiénico": ("Higiene e Limpeza", "Papel Higiénico"),
-    "Toalhas de Papel": ("Higiene e Limpeza", "Toalhas de Papel"),
-    "Detergentes": ("Higiene e Limpeza", "Detergentes"),
-    "Sacos do Lixo": ("Higiene e Limpeza", "Sacos do Lixo"),
+
+# Pequenas normalizações de nomes de categoria (opcional — Familia já vem
+# limpa, mas isto permite ajustar nomes de exibição sem tocar no feed).
+CATEGORIA_DISPLAY = {
+    "Café e Chá": "Café e Chá",
 }
 
-def mapear_categoria(familia_allto: str, linha_produto: str, tipo_produto: str) -> tuple:
-    """Retorna (categoria, familia) para o catálogo VRCF."""
-    # Tentar mapeamento directo
-    if familia_allto in CATEGORIA_FAMILIA_MAP:
-        return CATEGORIA_FAMILIA_MAP[familia_allto]
-    if linha_produto in CATEGORIA_FAMILIA_MAP:
-        return CATEGORIA_FAMILIA_MAP[linha_produto]
-    # Fallback: usar família original
-    cat = familia_allto or linha_produto or tipo_produto or "Outros"
-    return (cat, cat)
+def mapear_4_niveis(familia_allto: str, linha_produto: str, tipo_produto: str) -> tuple:
+    """Retorna (categoria, familia, tipo) para o catálogo VRCF — mapeamento directo."""
+    categoria = CATEGORIA_DISPLAY.get(familia_allto, familia_allto) or "Outros"
+    familia = linha_produto or categoria
+    tipo = tipo_produto or ""
+    return (categoria, familia, tipo)
 
 # ─────────────────────────────────────────────
 # FUNÇÕES DE PREÇO
@@ -322,11 +294,11 @@ def main():
         em_promo = str(row.get("Promocao") or "").strip().lower() in ("sim", "yes", "true", "1", "s")
         if em_promo: stats["promo"] += 1
 
-        # Categoria e família
+        # Categoria, família e tipo (3 níveis)
         familia_allto  = str(row.get("Familia") or "").strip()
         linha_produto  = str(row.get("Linha_Produto") or "").strip()
         tipo_produto   = str(row.get("Tipo_Produto") or "").strip()
-        categoria, familia = mapear_categoria(familia_allto, linha_produto, tipo_produto)
+        categoria, familia, tipo = mapear_4_niveis(familia_allto, linha_produto, tipo_produto)
 
         # Marca
         marca = str(row.get("Marca") or "").strip()
@@ -380,6 +352,7 @@ def main():
             "brand":              marca,
             "category":           categoria,
             "family":             familia,
+            "type":               tipo,
             "price":              precos["price"],
             "price_tier2":        precos["price_tier2"],
             "price_tier3":        precos["price_tier3"],

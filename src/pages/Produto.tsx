@@ -85,7 +85,7 @@ const Produto = () => {
   );
 
   const destaques = (product.destaques ?? []) as string[];
-  const teclado_nota = ["Portátil", "Tudo-em-Um"].includes(specs.tipo ?? "") ? specs.teclado_nota : undefined;
+  const teclado_nota = destaques.find(d => d.startsWith("Teclado não"));
   const envio_especial = !!product.envio_especial;
   const stockCfg = STOCK_CONFIG[product.stock_status ?? "out"] ?? STOCK_CONFIG.out;
   const worldPath = product.mundo === "escritorio" ? "/escritorio" : "/seguranca";

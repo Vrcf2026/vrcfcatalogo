@@ -44,4 +44,7 @@ export const SPEC_LABELS: Record<string, string> = {
   tipo_montagem: "Tipo de montagem", ambiente: "Ambiente",
   cenario_instalacao: "Cenário de instalação", grau_resistencia: "Grau de resistência",
   tecnologia_rfid: "Tecnologia RFID",
+  tipo_painel: "Tipo de Painel", vesa: "Suporte VESA",
+  profundidade_de_cinzentos: "Profundidade de cinzentos", profundidade_de_colores: "Profundidade de cores",
+  ecra: "Ecrã", modelo: "Modelo", otras_funciones: "Outras funções",
 };

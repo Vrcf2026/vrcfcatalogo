@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown } from "lucide-react";
+import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X } from "lucide-react";
 
 interface Brand {
   id: string;
@@ -41,6 +41,7 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data: families = [] } = useQuery({
@@ -104,6 +105,48 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
     }
   };
 
+  const handleLogoUpload = async (brand: Brand, file: File) => {
+    setUploadingLogo(brand.id);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const fileName = `brands/${brand.id}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(fileName, file, { contentType: file.type, upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage.from("product-images").getPublicUrl(fileName);
+      // cache-bust so the new logo shows immediately even with same filename
+      const logoUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from("brands")
+        .update({ logo_url: logoUrl })
+        .eq("id", brand.id);
+      if (updateError) throw updateError;
+
+      toast.success("Logo atualizado!");
+      queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["brands-strip"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao enviar logo");
+    } finally {
+      setUploadingLogo(null);
+    }
+  };
+
+  const handleLogoRemove = async (brand: Brand) => {
+    try {
+      const { error } = await supabase.from("brands").update({ logo_url: null }).eq("id", brand.id);
+      if (error) throw error;
+      toast.success("Logo removido!");
+      queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["brands-strip"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao remover logo");
+    }
+  };
+
   const toggleFamily = async (brandId: string, familyId: string, checked: boolean) => {
     try {
       if (checked) {
@@ -157,7 +200,39 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
             const linked = familiesByBrand[b.id] || new Set<string>();
             return (
               <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2">
+                {/* Logo preview / upload */}
+                <label className="relative shrink-0 h-8 w-8 rounded border border-border bg-background flex items-center justify-center overflow-hidden cursor-pointer hover:border-primary transition-colors">
+                  {uploadingLogo === b.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                  ) : b.logo_url ? (
+                    <img src={b.logo_url} alt={b.name} className="h-full w-full object-contain p-0.5" />
+                  ) : (
+                    <ImagePlus className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingLogo === b.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleLogoUpload(b, file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+
                 <span className="text-sm font-medium text-foreground flex-1 truncate">{b.name}</span>
+
+                {b.logo_url && (
+                  <Button
+                    variant="ghost" size="icon" className="h-7 w-7"
+                    title="Remover logo"
+                    onClick={() => handleLogoRemove(b)}
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                )}
 
                 <Popover>
                   <PopoverTrigger asChild>

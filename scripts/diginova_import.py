@@ -89,6 +89,8 @@ TRADUCOES = {
     "Disco duro": "Disco Rígido", "Memorias": "Memória",
     "Memoria": "Memória", "Gráfica": "Placa Gráfica",
     "Pantalla": "Ecrã", "Batería": "Bateria",
+    "Resolución": "Resolução", "Profundidad": "Profundidade",
+    "Grises": "Cinzentos", "Colores": "Cores",
     "Lector": "Leitor", "Grabador": "Gravador",
     "Lector/Grabador": "Leitor/Gravador",
     "Conexiones": "Ligações", "Conectividad": "Conectividade",
@@ -202,9 +204,11 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["geracao"] = gen.group(1) + "ª Gen"
 
     # ── PLACA GRÁFICA ──
-    graf = re.search(r"Gr[áa]fica\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    graf = re.search(r"Gr[áa]fica integrada\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
     if not graf:
-        graf = re.search(r"(NVIDIA\s+\w[\w\s]+?\d+GB|Intel\s+(?:UHD|HD|Iris\s+\w+)\s+\w+|AMD\s+Radeon\s+\w+)", texto_orig, re.IGNORECASE)
+        graf = re.search(r"Gr[áa]fica\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    if not graf:
+        graf = re.search(r"(NVIDIA\s+\w[\w\s]+?\d+GB|Intel\s+(?:UHD|HD|Iris\s+\w+)(?:\s+\w+)?|AMD\s+Radeon\s+\w+)", texto_orig, re.IGNORECASE)
     if graf:
         val = graf.group(1).strip().rstrip('<').strip()
         if val:
@@ -268,7 +272,7 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["sistema_operativo"] = "Windows 10"
     elif re.search(r"Chrome OS|ChromeOS", texto_orig, re.IGNORECASE):
         specs["sistema_operativo"] = "Chrome OS"
-    elif re.search(r"sin sistema|sem sistema|FreeDOS", texto_orig, re.IGNORECASE):
+    elif re.search(r"sin sistema|sem sistema|FreeDOS|no incluye[ny]?\s+sistema operativo", texto_orig, re.IGNORECASE):
         specs["sistema_operativo"] = "Sem sistema operativo"
 
     # ── GRAU ──
@@ -289,24 +293,39 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
             specs["leitor_gravador"] = "Não"
 
     # ── WEBCAM ──
-    wcam = re.search(r"Webcam\s{2,}(\S+)", texto_orig, re.IGNORECASE)
+    wcam = re.search(r"Webcam\s{2,}([^<]+)", texto_orig, re.IGNORECASE)
     if wcam:
         val = wcam.group(1).strip().upper()
-        specs["webcam"] = "Sim" if val in ("SI", "SIM", "YES") else "Não"
+        if val.startswith("NO"):
+            specs["webcam"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["webcam"] = "Sim"
+        elif val:
+            specs["webcam"] = "Não"
     elif "webcam" in texto:
         specs["webcam"] = "Sim"
 
     # ── WIFI ──
-    wifi = re.search(r"\bWifi\b\s{2,}(\S+)", texto_orig, re.IGNORECASE)
+    wifi = re.search(r"\bWifi\b\s{2,}([^<]+)", texto_orig, re.IGNORECASE)
     if wifi:
         val = wifi.group(1).strip().upper()
-        specs["wifi"] = "Sim" if val in ("SI", "SIM", "YES") else "Não"
+        if val.startswith("NO"):
+            specs["wifi"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["wifi"] = "Sim"
+        elif val:
+            specs["wifi"] = "Não"
 
     # ── BLUETOOTH ──
-    bt = re.search(r"Bluetooth\s{2,}(\S+)", texto_orig, re.IGNORECASE)
+    bt = re.search(r"Bluetooth\s{2,}([^<]+)", texto_orig, re.IGNORECASE)
     if bt:
         val = bt.group(1).strip().upper()
-        specs["bluetooth"] = "Sim" if val in ("SI", "SIM", "YES") else "Não"
+        if val.startswith("NO"):
+            specs["bluetooth"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["bluetooth"] = "Sim"
+        elif val:
+            specs["bluetooth"] = "Não"
 
     # ── PORTAS ──
     portas_front = re.search(r"[Cc]onexiones frontales\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
@@ -341,6 +360,54 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
     if audio:
         val = audio.group(1).strip()
         specs["audio"] = traduzir_texto(val)[:60]
+
+    # ── TIPO DE PAINEL (monitores) ──
+    painel = re.search(r"Tipo Panel\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    if painel:
+        val = painel.group(1).strip()
+        specs["tipo_painel"] = traduzir_texto(val)[:60]
+        # Tentar extrair polegadas a partir do texto (ex: "24 Pulgadas LED")
+        if "ecra_polegadas" not in specs:
+            pol = re.search(r"(\d+(?:[.,]\d+)?)\s*Pulgadas?", val, re.IGNORECASE)
+            if pol:
+                specs["ecra_polegadas"] = pol.group(1).replace(",", ".")
+
+    # ── RESOLUÇÃO EXACTA (monitores — substitui a estimativa por palavra-chave) ──
+    resol = re.search(r"Resoluci[oó]n\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    if resol:
+        specs["resolucao"] = resol.group(1).strip()[:30]
+
+    # ── VESA (suporte de montagem — monitores) ──
+    vesa = re.search(r"\bVESA\b\s+([0-9Xx ]+mm)", texto_orig, re.IGNORECASE)
+    if vesa:
+        specs["vesa"] = vesa.group(1).strip()
+
+    # ── CAMPOS GENÉRICOS (catch-all) ──
+    # Captura qualquer "· Label    Valor<br" não tratado pelas regras específicas
+    # acima — garante que não se perde informação de categorias menos comuns
+    # (ex: scanners com "Resolución Máxima", "Profundidad de color", etc.)
+    LABELS_JA_TRATADOS = {
+        "marca", "procesador", "memorias", "memoria", "lector/grabador", "lector/gravador",
+        "disco duro", "gráfica", "grafica", "gráfica integrada", "grafica integrada",
+        "panel", "tipo panel", "webcam", "wifi", "bluetooth",
+        "conexiones", "conexiones frontales", "conexiones traseras", "conexiones adicionales",
+        "color", "resolución", "resolucion", "sonido", "medidas", "vesa", "tipo",
+        # Garantia: nunca mostrar info de garantia do fornecedor — está sujeita à
+        # lei portuguesa (DL de garantias) e não pode vir do feed espanhol.
+        "garantía", "garantia", "garanzia",
+    }
+    VALORES_VAZIOS = {"", "-", "n/a", "no aplica", "não aplicável"}
+
+    for m in re.finditer(r"·\s*([A-Za-zÀ-ÿ/\. ]{2,30}?)\s{2,}([^<]+)<", texto_orig):
+        label_raw = m.group(1).strip()
+        val_raw = m.group(2).strip()
+        if not val_raw or val_raw.lower() in VALORES_VAZIOS:
+            continue
+        if label_raw.lower() in LABELS_JA_TRATADOS:
+            continue
+        key_slug = slugify(traduzir_texto(label_raw), separator="_")
+        if key_slug and key_slug not in specs:
+            specs[key_slug] = traduzir_texto(val_raw)[:80]
 
     # ── TECLADO — só para portáteis e AIO ──
     if specs.get("tipo") in ("Portátil", "Tudo-em-Um"):
@@ -519,6 +586,10 @@ def main(local=False):
         # Teclado personalizável (CSV simples)
         simples = rows_simples.get(ref, {})
         teclado_pers = "personaliz" in simples.get("Teclado personalizable", "").lower()
+
+        # Marca — fallback para "Fabricante" do CSV simples quando MARCA vem vazia
+        if not marca:
+            marca = simples.get("Fabricante", "").strip()
 
         # Tradução
         nome_pt_dict = traduzir_texto(nome_es)
