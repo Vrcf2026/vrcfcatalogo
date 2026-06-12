@@ -2,7 +2,9 @@ name: Diginova — Importação Diária
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # todos os dias às 06:00 UTC (07:00 Lisboa)
+    - cron: '0 6 * * *'    # 06:00 UTC (07:00 Lisboa)
+    - cron: '0 12 * * *'   # 12:00 UTC (13:00 Lisboa)
+    - cron: '0 18 * * *'   # 18:00 UTC (19:00 Lisboa)
   workflow_dispatch:        # permite correr manualmente quando quiseres
 
 jobs:

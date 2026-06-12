@@ -2,7 +2,9 @@ name: Visiotech — Importação Diária
 
 on:
   schedule:
-    - cron: '0 7 * * *'   # todos os dias às 07:00 UTC (08:00 Lisboa)
+    - cron: '0 7 * * *'    # 07:00 UTC (08:00 Lisboa)
+    - cron: '0 13 * * *'   # 13:00 UTC (14:00 Lisboa)
+    - cron: '0 19 * * *'   # 19:00 UTC (20:00 Lisboa)
   workflow_dispatch:        # permite correr manualmente quando quiseres
 
 jobs:
