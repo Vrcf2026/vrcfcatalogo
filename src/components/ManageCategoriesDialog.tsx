@@ -188,7 +188,8 @@ function SortableRow({
         <SelectContent>
           <SelectItem value="seguranca">Segurança</SelectItem>
           <SelectItem value="escritorio">Escritório</SelectItem>
-          <SelectItem value="todos">Ambos</SelectItem>
+          <SelectItem value="economato">Economato</SelectItem>
+          <SelectItem value="todos">Todos</SelectItem>
         </SelectContent>
       </Select>
       <div className="flex items-center gap-1.5">

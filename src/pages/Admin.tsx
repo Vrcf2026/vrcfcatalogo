@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
 import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
 import { ManageBrandsDialog } from "@/components/ManageBrandsDialog";
+import { ManageTypesDialog } from "@/components/ManageTypesDialog";
 import HomepageHighlightsDialog from "@/components/HomepageHighlightsDialog";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { EditProductSheet } from "@/components/EditProductSheet";
@@ -82,6 +83,15 @@ const Admin = () => {
     queryKey: ["brands"],
     queryFn: async () => {
       const { data, error } = await supabase.from("brands").select("*").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: types = [] } = useQuery({
+    queryKey: ["types"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("product_types").select("*").order("name");
       if (error) throw error;
       return data;
     },
@@ -188,6 +198,7 @@ const Admin = () => {
             <ManageCategoriesDialog categories={dbCategories} />
             <ManageFamiliesDialog families={families} categories={categoryNames} />
             <ManageBrandsDialog brands={brands} />
+            <ManageTypesDialog types={types} families={families as any} />
             <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
             <AddProductDialog families={families} categories={categoryNames} brands={brands} />
             <DarkModeToggle />

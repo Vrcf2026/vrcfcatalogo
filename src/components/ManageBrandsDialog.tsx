@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -19,6 +20,7 @@ interface Brand {
   id: string;
   name: string;
   logo_url: string | null;
+  mundo?: string;
 }
 
 interface ManageBrandsDialogProps {
@@ -40,6 +42,7 @@ interface BrandFamilyLink {
 export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [mundo, setMundo] = useState("todos");
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -80,15 +83,26 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from("brands").insert({ name: name.trim() });
+      const { error } = await supabase.from("brands").insert({ name: name.trim(), mundo });
       if (error) throw error;
       toast.success("Marca criada!");
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       setName("");
+      setMundo("todos");
     } catch (e: any) {
       toast.error(e.message || "Erro ao criar marca");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeMundo = async (id: string, novoMundo: string) => {
+    try {
+      const { error } = await supabase.from("brands").update({ mundo: novoMundo }).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["brands"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao atualizar mundo");
     }
   };
 
@@ -186,6 +200,18 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
             <Label>Nome da Marca</Label>
             <Input placeholder="Ex: Samsung, Hikvision..." value={name} onChange={(e) => setName(e.target.value)} />
           </div>
+          <div className="space-y-1">
+            <Label>Mundo</Label>
+            <Select value={mundo} onValueChange={setMundo}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="seguranca">Segurança</SelectItem>
+                <SelectItem value="escritorio">Escritório</SelectItem>
+                <SelectItem value="economato">Economato</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={handleAdd} disabled={loading} size="sm" className="gap-2">
             {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
             Adicionar Marca
@@ -223,6 +249,16 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
                 </label>
 
                 <span className="text-sm font-medium text-foreground flex-1 truncate">{b.name}</span>
+
+                <Select value={b.mundo ?? "todos"} onValueChange={(v) => handleChangeMundo(b.id, v)}>
+                  <SelectTrigger className="h-8 w-[110px] text-xs shrink-0"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="seguranca">Segurança</SelectItem>
+                    <SelectItem value="escritorio">Escritório</SelectItem>
+                    <SelectItem value="economato">Economato</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
+                  </SelectContent>
+                </Select>
 
                 {b.logo_url && (
                   <Button
