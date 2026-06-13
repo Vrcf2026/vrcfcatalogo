@@ -102,6 +102,8 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
           price: price ? parseFloat(price) : null,
           family_id: familyId === "none" ? null : familyId,
           brand_id: brandId === "none" ? null : brandId,
+          type_id: typeId === "none" ? null : typeId,
+          type: typeId === "none" ? null : (types.find((t) => t.id === typeId)?.name ?? null),
         })
         .select()
         .single();
