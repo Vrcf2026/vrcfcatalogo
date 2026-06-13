@@ -154,6 +154,66 @@ TRADUCOES = {
     "Negro": "Preto", "Plata": "Prateado", "Blanco": "Branco", "Gris": "Cinzento",
     "SI": "SIM", "No.": "Não",
     "Pulgadas LED": "Polegadas LED",
+
+    # Portáteis 2-em-1 / convertíveis
+    "Portátil convertible": "Portátil convertível",
+    "Portatil convertible": "Portátil convertível",
+    "Portatil 2 en 1": "Portátil 2 em 1",
+    "convertible": "convertível", "Convertible": "Convertível",
+    "rotable 360º": "rotativo 360º", "rotable": "rotativo",
+
+    # "Este equipamento incluyen/Incluyen ..." (verbo no plural por engano)
+    "incluyen preinstalacion": "inclui pré-instalação",
+    "Incluyen licencia": "Inclui licença",
+    "incluyen Licencia": "inclui licença",
+    "incluyen": "inclui", "Incluyen": "Inclui",
+    "preinstalacion": "pré-instalação", "Preinstalacion": "Pré-instalação",
+    "Licencia": "Licença", "licencia": "licença",
+    "Estos equipo ": "Este equipamento ",
+
+    # Datas (Apple)
+    "Mediados de": "Meados de", "Principios de": "Início de", "Finales de": "Final de",
+
+    # Tipos de computador / linhas de produto
+    "TORRE": "Torre",
+    "Workstations": "Estações de trabalho", "Workstation": "Estação de trabalho",
+    "Education": "Educação", "education": "educação",
+
+    # Avisos e bases
+    "ATENCIÓN": "ATENÇÃO", "Atención": "Atenção",
+    "Los portas": "As portas",
+    "no son funcionales con el procesador": "não são funcionais com o processador",
+    "incluido en": "incluído em",
+    "con pie generico": "com base genérica", "Con pie generico": "Com base genérica",
+    "pie generico": "base genérica", "pie de cristal": "base em vidro", "Pie de cristal": "Base em vidro",
+
+    # Monitores / escritório
+    "Monitor de oficina": "Monitor de escritório", "oficina": "escritório",
+
+    # Impressoras
+    "IMPRESORA NUEVA": "IMPRESSORA NOVA",
+    "Híbrida, con impresión térmica y matricial": "Híbrida, com impressão térmica e matricial",
+    "Nueva, en caja original, por desprecintar": "Nova, em caixa original, por abrir",
+    "Impresora para puesto individual": "Impressora para posto individual",
+    "con conexión": "com ligação", "nivel sonoro": "nível sonoro",
+
+    # Monitores com carcaça amarelecida
+    "Estos monitores tienen su carcaça amarilleada, comprobar fotos adjuntas":
+        "Estes monitores têm a carcaça amarelada, ver fotos em anexo",
+    "amarilleada": "amarelada", "comprobar fotos adjuntas": "ver fotos em anexo",
+
+    # "Portatil" sem acento, isolado (ex: "Portatil Tablet")
+    "Portatil": "Portátil",
+
+    # Impressora EPSON (texto próprio, não-boilerplate)
+    " y nivel": " e nível", "bajo (": "baixo (",
+    "Conexión a cajon portamonedas": "Ligação a gaveta porta-moedas",
+    "Conexión a display de cliente": "Ligação a display de cliente",
+    "Color gris oscuro Epson": "Cor cinzento escuro Epson",
+    "Capacidad de impresión de logos y códigos de barras": "Capacidade de impressão de logótipos e códigos de barras",
+    "Durabilidad máxima, diseñada para trabajar de manera muy contínua": "Durabilidade máxima, projetada para trabalhar de forma contínua",
+    "Conexión USB y RS-232": "Ligação USB e RS-232",
+    "Incluye transformador de corriente": "Inclui transformador de corrente",
 }
 
 def traduzir_texto(texto: str) -> str:
@@ -674,16 +734,64 @@ def main(local=False):
         teclado_nota = specs.pop("teclado_nota", None)
 
         # Descrição limpa — só introdução
-        cortes = ["Especificações:", "Especificaciones:", "· Marca", "·Marca"]
-        desc_intro = desc_pt
-        for corte in cortes:
-            if corte in desc_pt:
-                desc_intro = desc_pt[:desc_pt.index(corte)].strip()
+        # O texto-padrão "Equipos comprobados y testeados... pero son
+        # completamente funcionales" e "Estos equipos incluyen licencia de
+        # Windows X Pro" aparece (com pequenas variações) em quase todos os
+        # produtos, e a tradução palavra-a-palavra deixava-o meio em
+        # espanhol. Removemos este texto-padrão do original em espanhol
+        # e substituímos por uma frase limpa em português; só o que sobrar
+        # (texto extra específico do produto) é traduzido.
+        desc_intro_es = desc_es
+        for corte in ["Especificaciones:", "Especificações:", "· Marca", "·Marca"]:
+            if corte in desc_intro_es:
+                desc_intro_es = desc_intro_es[:desc_intro_es.index(corte)].strip()
                 break
-        desc_intro_limpa = re.sub(r'<[^>]+>', ' ', desc_intro)
-        desc_intro_limpa = re.sub(r'  +', ' ', desc_intro_limpa).strip()
-        if not desc_intro_limpa:
-            desc_intro_limpa = "Equipamento recondicionado testado e verificado completamente."
+
+        RE_BOILERPLATE_COND = re.compile(
+            r"Equipos?\s+comprobados?\s+y\s+testeados?\s+completamente\.?\s*"
+            r"Pueden?\s+tener\s+signos\s+de\s+desgaste\s+o\s+ara[ñn]azos\s+en\s+su\s+carcasa,?\s*"
+            r"(?:o\s+pantalla,?\s*)?"
+            r"pero\s+son\s+completamente\s+funcionales\.?",
+            re.IGNORECASE,
+        )
+        RE_BOILERPLATE_COND2 = re.compile(
+            r"(?:Equipos?\s+rea?condicionados?\.?\s*)?"
+            r"(?:Equipos?\s+comprobados?\s+y\s+testeados?\s+completamente\.?"
+            r"|Equipa?mentos?\s+testados?\s+e\s+verificados?\s+completamente\.?)\s*"
+            r"P(?:o|ue)de(?:n)?\s+(?:tener|apresentar)\s+(?:sinais?|signos)\s+de\s+desgaste,?\s*"
+            r"(?:ara[ñn]azos|riscos)\s+o\s+deterioro\s+superficial\s+en\s+su\s+carca[çcs]a\s+y/o\s+pantalla,?\s*"
+            r"pero\s+est[aá]n?\s+comprobados\s+100%\s*y\s+funcionan\s+correctamente\.?",
+            re.IGNORECASE,
+        )
+        # "Equipos comprobados y garantizados por X años" — nunca mostrar
+        # garantia do fornecedor (sujeito à lei portuguesa).
+        RE_GARANTIA_MENCAO = re.compile(
+            r"Equipos?\s+comprobados?\s+y\s+garantizados?\s+por\s+\d+\s+años?\.?",
+            re.IGNORECASE,
+        )
+        RE_BOILERPLATE_WIN = re.compile(
+            r"Estos\s+equipos\s+incluyen\s+(?:licencia\s+)?(?:original\s+)?(?:de\s+)?licencia\s+(?:de\s+)?Windows\s+\d+\s*Pro\.?",
+            re.IGNORECASE,
+        )
+        RE_GRADO_TOKEN = re.compile(r"\bGRADO\s+[ABC]\b", re.IGNORECASE)
+
+        extra = re.sub(r"<[^>]+>", " ", desc_intro_es)
+        extra = RE_BOILERPLATE_COND.sub("", extra)
+        extra = RE_BOILERPLATE_COND2.sub("", extra)
+        extra = RE_GARANTIA_MENCAO.sub("", extra)
+        extra = RE_BOILERPLATE_WIN.sub("", extra)
+        extra = RE_GRADO_TOKEN.sub("", extra)
+        extra = re.sub(r"\s+", " ", extra).strip(" .")
+
+        FRASE_PADRAO = (
+            "Equipamento recondicionado, testado e verificado integralmente. "
+            "Pode apresentar ligeiros sinais de uso (riscos ou desgaste na "
+            "carcaça e/ou ecrã), mas está totalmente funcional."
+        )
+        if extra:
+            desc_intro_limpa = f"{FRASE_PADRAO} {traduzir_texto(extra)}"
+        else:
+            desc_intro_limpa = FRASE_PADRAO
 
         # Categoria e família PT
         cat_familia = CATEGORIA_MAP.get(familia.strip(), ("Computadores", familia))
