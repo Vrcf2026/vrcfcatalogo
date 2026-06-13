@@ -426,6 +426,7 @@ const Admin = () => {
           families={families}
           categories={categoryNames}
           brands={brands}
+          types={types as any}
         />
       )}
     </div>
