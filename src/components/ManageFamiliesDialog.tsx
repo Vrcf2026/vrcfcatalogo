@@ -154,10 +154,20 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
           </Button>
         </div>
 
+        {/* Search */}
+        <div className="pt-1">
+          <Input
+            placeholder="Pesquisar família..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+          />
+        </div>
+
         {/* List */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-1">
           {grouped.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma família criada ainda.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma família encontrada.</p>
           )}
           {grouped.map((group) => (
             <div key={group.category}>
