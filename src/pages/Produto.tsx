@@ -88,14 +88,26 @@ const Produto = () => {
   const teclado_nota = destaques.find(d => d.startsWith("Teclado não"));
   const envio_especial = !!product.envio_especial;
   const stockCfg = STOCK_CONFIG[product.stock_status ?? "out"] ?? STOCK_CONFIG.out;
-  const worldPath = product.mundo === "escritorio" ? "/escritorio" : "/seguranca";
-  const worldLabel = product.mundo === "escritorio" ? "Escritório & IT" : "Segurança & Redes";
+  const WORLD_INFO: Record<string, { path: string; label: string }> = {
+    escritorio: { path: "/escritorio", label: "Escritório & IT" },
+    seguranca:  { path: "/seguranca",  label: "Segurança & Redes" },
+    economato:  { path: "/economato",  label: "Economato" },
+  };
+  const worldInfo = WORLD_INFO[product.mundo ?? ""] ?? WORLD_INFO.seguranca;
+  const worldPath = worldInfo.path;
+  const worldLabel = worldInfo.label;
   const priceWithVat = product.price ? product.price * 1.23 : null;
   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
 
+  const minSaleQty = product.min_sale_qty && product.min_sale_qty > 1 ? product.min_sale_qty : 1;
+
   const handleAddToCart = () => {
-    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, 1);
-    toast.success(`${product.name} adicionado ao orçamento`);
+    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, minSaleQty);
+    toast.success(
+      minSaleQty > 1
+        ? `${minSaleQty}x ${product.name} adicionado ao orçamento (embalagem mínima)`
+        : `${product.name} adicionado ao orçamento`
+    );
     setIsOpen(true);
   };
 
@@ -275,8 +287,13 @@ const Produto = () => {
 
           {/* CTA */}
           <div className="grid grid-cols-1 gap-2 pt-2">
+            {minSaleQty > 1 && (
+              <p className="text-sm text-muted-foreground -mb-1">
+                Vendido em embalagens de <strong>{minSaleQty} unidades</strong> — o preço indicado é por unidade.
+              </p>
+            )}
             <Button size="lg" className="gap-2 h-12 text-base font-bold rounded-xl" onClick={handleAddToCart}>
-              <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento
+              <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento{minSaleQty > 1 ? ` (${minSaleQty} un.)` : ""}
             </Button>
             <div className="grid grid-cols-2 gap-2">
               <a href={`https://wa.me/351911564243?text=${waText}`} target="_blank" rel="noopener noreferrer"
