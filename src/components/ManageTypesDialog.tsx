@@ -105,17 +105,27 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
     }
   };
 
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [familyFilter, setFamilyFilter] = useState("all");
   const s = search.trim().toLowerCase();
-  const filteredTypes = s
-    ? types.filter((t) => {
-        const fam = familyMap[t.family_id];
-        return (
-          t.name.toLowerCase().includes(s) ||
-          (fam?.name?.toLowerCase().includes(s) ?? false) ||
-          (fam?.category?.toLowerCase().includes(s) ?? false)
-        );
-      })
-    : types;
+  const filteredTypes = types.filter((t) => {
+    const fam = familyMap[t.family_id];
+    if (mundoFilter !== "all" && (t.mundo ?? "todos") !== mundoFilter) return false;
+    if (categoryFilter !== "all" && fam?.category !== categoryFilter) return false;
+    if (familyFilter !== "all" && t.family_id !== familyFilter) return false;
+    if (!s) return true;
+    return (
+      t.name.toLowerCase().includes(s) ||
+      (fam?.name?.toLowerCase().includes(s) ?? false) ||
+      (fam?.category?.toLowerCase().includes(s) ?? false)
+    );
+  });
+
+  const categoryOptions = Array.from(new Set(families.map((f) => f.category))).sort();
+  const familyOptions = categoryFilter === "all"
+    ? families
+    : families.filter((f) => f.category === categoryFilter);
 
   // Agrupar por família (e mostrar categoria da família)
   const grouped = families
