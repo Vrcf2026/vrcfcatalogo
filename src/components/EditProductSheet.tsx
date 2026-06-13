@@ -54,6 +54,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
+  const filteredTypes = types.filter((t) => familyId !== "none" && t.family_id === familyId);
 
   // Margem calculada
   const margem = purchasePrice && price
