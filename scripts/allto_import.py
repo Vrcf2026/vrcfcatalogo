@@ -12,7 +12,7 @@ Variáveis de ambiente:
   ALLTO_API_KEY    → chave API ALL.TO
 """
 
-import os, json, time, requests, re
+import os, json, time, requests, re, csv, io
 from slugify import slugify
 
 # ─────────────────────────────────────────────
@@ -23,6 +23,7 @@ IMPORT_API_KEY = os.environ.get("IMPORT_API_KEY", "")
 ALLTO_API_KEY  = os.environ.get("ALLTO_API_KEY", "")
 
 URL_API_BASE = "https://api.allto.pt/v2/"
+URL_API_V1   = "https://api.allto.pt/v1/"
 
 # Tiers de preço
 DESCONTO_TIER2 = 0.10   # 10% — clientes fidelizados
@@ -92,15 +93,123 @@ def mapear_4_niveis(familia_allto: str, linha_produto: str, tipo_produto: str) -
 # ─────────────────────────────────────────────
 # FUNÇÕES DE PREÇO
 # ─────────────────────────────────────────────
-def calcular_precos(pvr: float, primeiro_preco: float) -> dict | None:
-    """Calcula os 3 tiers de preço."""
-    if pvr <= 0 or primeiro_preco <= 0:
+# ─────────────────────────────────────────────
+# PARSER "DESCRIÇÃO TÉCNICA"
+# Formato: segmentos separados por "¶", cada um "Label: Valor" (specs)
+# ou texto livre (prosa, vai para a descrição).
+# ─────────────────────────────────────────────
+def parsear_descricao_tecnica(texto: str) -> tuple[dict, list[str]]:
+    """Devolve (specs_extra, paragrafos_prosa) a partir de Descricao_Tecnica."""
+    specs_extra: dict = {}
+    prosa: list[str] = []
+    if not texto:
+        return specs_extra, prosa
+
+    for seg in texto.split("¶"):
+        seg = seg.strip().strip("\t").strip()
+        if not seg:
+            continue
+        if ":" in seg:
+            label, _, valor = seg.partition(":")
+            label = label.strip()
+            valor = valor.strip()
+            primeira_palavra = label.split(" ", 1)[0].lower() if label else ""
+            # Rejeitar frases de marketing tipo "Acreditamos na beleza útil: ..."
+            # (1ª pessoa do plural: -amos/-emos/-imos), que não são specs reais.
+            is_frase_marketing = re.search(r"(amos|emos|imos)$", primeira_palavra)
+            # "Label: Valor" só se o label for curto e o valor não vazio
+            if valor and 0 < len(label) <= 40 and label.count(" ") <= 5 and not is_frase_marketing:
+                key = slugify(label, separator="_")
+                if key and key not in specs_extra:
+                    specs_extra[key] = valor[:120]
+                continue
+        # Caso contrário, é texto livre/prosa
+        prosa.append(seg)
+
+    return specs_extra, prosa
+
+
+# ─────────────────────────────────────────────
+# CONFIGURAÇÃO DE MARGENS (Preco_Venda_Cliente)
+# Portado de margin-config.json / pricing.ts — calcula o PVP a partir
+# do PVR (custo sem IVA), por família/tipo/marca, com ajuste por escalão
+# de preço. Ver margin-config.json para a explicação de cada regra.
+# ─────────────────────────────────────────────
+MARGEM_BASE_FAMILIA: dict[str, float] = {
+    "Papelaria": 0.40,
+    "Alimentar": 0.35,
+    "Manutenção": 0.32,
+    "Limpeza": 0.32,
+    "Informática": 0.25,
+    "Higiene e Beleza": 0.38,
+    "Mobiliário": 0.25,
+    "Embalagem": 0.30,
+    "Eletrónica": 0.25,
+    "Café e Chá": 0.35,
+}
+MARGEM_DEFAULT = 0.30
+
+# Regra própria para "Impressão" (Originais vs Compatíveis)
+IMPRESSAO_MARGEM_ORIGINAIS = 0.25
+IMPRESSAO_MARGEM_COMPATIVEIS = 0.35
+MARCAS_COMPATIVEIS = {
+    "EVERGREEN", "PERPETUAL", "NEUTRAL", "COMPATIVEL", "COMPATÍVEL",
+    "OUTRAS", "G&G", "ARMOR", "MICROTECH",
+}
+
+MARGEM_MINIMA = 0.08
+
+
+def _margem_base(categoria: str, tipo_produto: str | None, marca: str | None) -> float:
+    """Margem base (fração) antes do ajuste por escalão de PVR."""
+    cat = (categoria or "").strip()
+    marca_u = (marca or "").strip().upper()
+    tipo_u = (tipo_produto or "").strip().upper()
+
+    if cat == "Impressão":
+        if marca_u in MARCAS_COMPATIVEIS or "COMPAT" in tipo_u:
+            return IMPRESSAO_MARGEM_COMPATIVEIS
+        return IMPRESSAO_MARGEM_ORIGINAIS
+
+    return MARGEM_BASE_FAMILIA.get(cat, MARGEM_DEFAULT)
+
+
+def _ajuste_escalao_pvr(pvr: float) -> float:
+    """Ajuste (pp, fração) ao custo (PVR sem IVA)."""
+    if pvr < 2:   return 0.15
+    if pvr < 10:  return 0.05
+    if pvr < 50:  return 0.0
+    if pvr < 150: return -0.04
+    return -0.08
+
+
+def calcular_pvp(pvr: float, categoria: str, tipo_produto: str | None, marca: str | None, iva: float = 0.23) -> dict:
+    """Calcula o Preco_Venda_Cliente a partir do PVR (custo sem IVA)."""
+    if not pvr or pvr <= 0:
+        return {"margem": 0.0, "pvp_sem_iva": 0.0, "pvp_com_iva": 0.0}
+
+    base = _margem_base(categoria, tipo_produto, marca)
+    ajuste = _ajuste_escalao_pvr(pvr)
+    margem = max(MARGEM_MINIMA, base + ajuste)
+
+    pvp_sem_iva = round(pvr * (1 + margem), 2)
+    pvp_com_iva = round(pvp_sem_iva * (1 + iva), 2)
+    return {"margem": margem, "pvp_sem_iva": pvp_sem_iva, "pvp_com_iva": pvp_com_iva}
+
+
+def calcular_precos(pvr: float, primeiro_preco: float, categoria: str = "",
+                     tipo_produto: str | None = None, marca: str | None = None,
+                     taxa_iva: float = 23) -> dict | None:
+    """Calcula os 3 tiers de preço, com PVP baseado em margem (não no custo)."""
+    if pvr <= 0:
         return None
+    pvp = calcular_pvp(pvr, categoria, tipo_produto, marca, (taxa_iva or 23) / 100)
+    preco_venda = pvp["pvp_com_iva"]
     return {
-        "purchase_price":     round(primeiro_preco, 2),
-        "price":              round(pvr, 2),
-        "price_tier2":        round(pvr * (1 - DESCONTO_TIER2), 2),
-        "price_tier3":        round(pvr * (1 - DESCONTO_TIER3), 2),
+        "purchase_price":     round(primeiro_preco if primeiro_preco > 0 else pvr, 2),
+        "price":              preco_venda,
+        "price_tier2":        round(preco_venda * (1 - DESCONTO_TIER2), 2),
+        "price_tier3":        round(preco_venda * (1 - DESCONTO_TIER3), 2),
     }
 
 def parse_float(val) -> float:
@@ -208,6 +317,55 @@ def carregar_api() -> list:
     print(f"  API ALL.TO: {len(rows)} produtos")
     return rows
 
+
+# Campos ricos disponíveis apenas na API v1 (CSV), ausentes na v2 "type=full":
+# imagem, descrição técnica/longa, peso e taxa de IVA por produto.
+CAMPOS_V1_COMPLEMENTO = {
+    "Link Imagem":     "Link_Imagem",
+    "Descricao Tecnica": "Descricao_Tecnica",
+    "Descricao Longa": "Descricao_Longa",
+    "Peso":            "Peso",
+    "Taxa Iva":        "Taxa_Iva",
+}
+
+
+def carregar_api_v1() -> dict:
+    """Carrega o CSV da API v1 (campos ricos: imagem, descrição técnica, peso,
+    taxa de IVA, descrição longa) e devolve um dict {Referencia: {campos_v2: valor}}
+    para complementar os produtos da v2."""
+    if not ALLTO_API_KEY:
+        return {}
+    url = f"{URL_API_V1}?apikey={ALLTO_API_KEY}"
+    print(f"  A descarregar dados complementares da API v1 (CSV)...")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    }
+    try:
+        resp = requests.get(url, headers=headers, timeout=180)
+        resp.encoding = "latin1"
+        print(f"  HTTP Status (v1): {resp.status_code}")
+        if resp.status_code != 200 or not resp.text.strip():
+            print("  ⚠ API v1 indisponível — a continuar só com dados da v2")
+            return {}
+        reader = csv.DictReader(io.StringIO(resp.text), delimiter=";")
+        complemento = {}
+        for row in reader:
+            ref = (row.get("Referencia") or "").strip()
+            if not ref:
+                continue
+            extra = {}
+            for campo_v1, campo_v2 in CAMPOS_V1_COMPLEMENTO.items():
+                val = (row.get(campo_v1) or "").strip()
+                if val:
+                    extra[campo_v2] = val
+            if extra:
+                complemento[ref] = extra
+        print(f"  API v1: {len(complemento)} produtos com dados complementares")
+        return complemento
+    except Exception as e:
+        print(f"  ⚠ Erro ao carregar API v1 ({e}) — a continuar só com dados da v2")
+        return {}
+
 # ─────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────
@@ -223,6 +381,21 @@ def main():
         print("❌ Sem dados para importar")
         return
 
+    # 1b. Complementar com dados ricos da API v1 (imagem, descrição técnica,
+    # peso, taxa de IVA, descrição longa) — não disponíveis na v2.
+    complemento_v1 = carregar_api_v1()
+    if complemento_v1:
+        n_complementados = 0
+        for row in rows:
+            ref = (row.get("Referencia") or "").strip()
+            extra = complemento_v1.get(ref)
+            if extra:
+                for campo, val in extra.items():
+                    if not str(row.get(campo) or "").strip():
+                        row[campo] = val
+                n_complementados += 1
+        print(f"  {n_complementados} de {len(rows)} produtos complementados com dados da v1")
+
     # 2. Preços actuais para comparação
     print("\n💰 A buscar preços actuais...")
     precos_actuais = buscar_precos_actuais("allto") if IMPORT_API_KEY else {}
@@ -236,7 +409,7 @@ def main():
     stats = {
         "sem_preco": 0, "sem_stock": 0, "promo": 0,
         "preco_actualizado": 0, "preco_estavel": 0,
-        "envio_especial": 0,
+        "envio_especial": 0, "sem_imagem": 0, "sem_descricao_tecnica": 0,
     }
 
     for row in rows:
@@ -245,10 +418,28 @@ def main():
         if not sku:
             continue
 
-        # Preços
+        # Categoria, família e tipo (3 níveis) — calculados primeiro porque
+        # a margem de preço depende da categoria/tipo/marca
+        familia_allto  = str(row.get("Familia") or "").strip()
+        linha_produto  = str(row.get("Linha_Produto") or "").strip()
+        tipo_produto   = str(row.get("Tipo_Produto") or "").strip()
+        categoria, familia, tipo = mapear_4_niveis(familia_allto, linha_produto, tipo_produto)
+
+        # Marca
+        marca = str(row.get("Marca") or "").strip()
+
+        # IVA
+        taxa_iva = parse_float(row.get("Taxa_Iva") or 23)
+
+        # Preços — PVP calculado por margem (ver calcular_pvp), não ao custo
         pvr          = parse_float(row.get("PVR"))
         primeiro_preco = parse_float(row.get("Primeiro_Preco"))
-        precos = calcular_precos(pvr, primeiro_preco)
+
+        # Quantidade mínima de venda (embalagem mínima — ex: caixa de 100)
+        min_sale_qty = int(parse_float(row.get("MIN_Venda")) or 1)
+        if min_sale_qty < 1:
+            min_sale_qty = 1
+        precos = calcular_precos(pvr, primeiro_preco, categoria, tipo_produto, marca, taxa_iva)
         if precos is None:
             stats["sem_preco"] += 1
             continue
@@ -294,29 +485,27 @@ def main():
         em_promo = str(row.get("Promocao") or "").strip().lower() in ("sim", "yes", "true", "1", "s")
         if em_promo: stats["promo"] += 1
 
-        # Categoria, família e tipo (3 níveis)
-        familia_allto  = str(row.get("Familia") or "").strip()
-        linha_produto  = str(row.get("Linha_Produto") or "").strip()
-        tipo_produto   = str(row.get("Tipo_Produto") or "").strip()
-        categoria, familia, tipo = mapear_4_niveis(familia_allto, linha_produto, tipo_produto)
-
-        # Marca
-        marca = str(row.get("Marca") or "").strip()
-
         # Descrição
         descricao_curta = str(row.get("Descricao") or "").strip()
         descricao_longa = str(row.get("Descricao_Longa") or "").strip()
         descricao_tecnica = str(row.get("Descricao_Tecnica") or "").strip()
-        description = descricao_longa or descricao_tecnica or descricao_curta
+        if not descricao_tecnica: stats["sem_descricao_tecnica"] += 1
+
+        specs_tecnica, prosa_tecnica = parsear_descricao_tecnica(descricao_tecnica)
+
+        description = descricao_longa or descricao_curta
+        # Enriquecer com a prosa da "Descrição Técnica" (frases que não são specs
+        # "Label: Valor"), evitando repetir texto já presente na descrição.
+        for linha in prosa_tecnica:
+            if linha and linha.lower() not in description.lower():
+                description = f"{description}\n{linha}" if description else linha
 
         # Imagem
         imagem = str(row.get("Link_Imagem") or "").strip()
+        if not imagem: stats["sem_imagem"] += 1
 
         # EAN
         ean = str(row.get("Codigo_Barras") or "").strip() or None
-
-        # IVA
-        taxa_iva = parse_float(row.get("Taxa_Iva") or 23)
 
         # Specs
         specs = {}
@@ -330,6 +519,12 @@ def main():
         paking  = str(row.get("Paking") or "").strip()
         if unidade: specs["unidade_venda"]  = unidade
         if paking:  specs["pack"]           = paking
+        if min_sale_qty > 1: specs["quantidade_minima"] = f"{min_sale_qty} unidades"
+
+        # Specs extraídas da "Descrição Técnica" (Cor, Formato, Dimensões, etc.)
+        for k, v in specs_tecnica.items():
+            if k not in specs:
+                specs[k] = v
 
         # Destaques
         destaques = []
@@ -368,6 +563,7 @@ def main():
             "relacionados":       [],
             "ean":                ean,
             "weight":             peso,
+            "min_sale_qty":       min_sale_qty,
             "fornecedor":         "allto",
             "mundo":              "economato",
             "especificacoes":     specs,
@@ -385,6 +581,11 @@ def main():
     print(f"  Envio especial:         {stats['envio_especial']}")
     print(f"  Preço actualizado:      {stats['preco_actualizado']}")
     print(f"  Preço estável (<{int(LIMIAR_VARIACAO*100)}%): {stats['preco_estavel']}")
+    print(f"  Sem imagem:             {stats['sem_imagem']}")
+    print(f"  Sem Descrição Técnica:  {stats['sem_descricao_tecnica']}")
+    if stats["sem_imagem"] > 0:
+        print("  ⚠ 'Link_Imagem' vazio em produtos — confirmar se a API "
+              "(type=full) devolve este campo; ver nota em allto_import.py")
 
     if alteracoes_preco:
         print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}%:")
