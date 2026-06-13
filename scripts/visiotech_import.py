@@ -13,6 +13,7 @@ Variáveis de ambiente:
 
 import csv, re, os, json, time, requests
 from io import StringIO
+from html import unescape
 from slugify import slugify
 
 # ─────────────────────────────────────────────
@@ -72,6 +73,56 @@ PARAMS_MAP = {
     "marca":                  None,   # ignorar — já temos brand
     "categoria":              None,   # ignorar — já temos category
     "stock":                  None,   # ignorar
+
+    # ── CCTV avançado ──
+    "proteccion-anti-corrosion": "protecao_corrosao",
+    "face-capture":              "captacao_facial",
+    "motion-detection-20":       "detecao_movimento",
+    "3-axis":                    "ajuste_3_eixos",
+    "zoom-optico-ptz":           "zoom_ptz",
+    "resolucion-max-grabacion":  "resolucao_max_gravacao",
+    "resolucion_maxima":         "resolucao",
+    "capacidad-de-grabacion":    "capacidade_gravacao",
+    "tipo-de-camara":            "tipo_camara",
+    "tipo-de-deteccion":         "tipo_detecao",
+    "entradas-y-salidas-de-audio": "audio_io",
+    "microfono-altavoz":         "microfone_altavoz",
+    "hdd":                       "baias_hdd",
+    "movimiento-remoto":         "movimento_remoto",
+
+    # ── Networking ──
+    "n-puertos-totales":              "portas_totais",
+    "velocidad-maxima-puertos-uplink": "velocidade_uplink",
+    "velocidad-maxima-puertos-lan":    "velocidade_lan",
+    "n-puertos-poe-8023af-at-30w":     "portas_poe",
+    "poe-total":                       "poe_total",
+    "entradas-poe":                    "entradas_poe",
+    "comunicacion-inalambrica":        "comunicacao_sem_fios",
+    "comunicacion-principal":          "comunicacao_principal",
+    "requiere-gateway-hub":            "requer_gateway",
+
+    # ── Cabos / Acessórios ──
+    "categoria-velocidad":   "categoria_cabo",
+    "longitud":              "comprimento",
+    "tipo-de-cable":         "tipo_cabo",
+    "tipo-de-conductor":     "tipo_condutor",
+    "apantallamiento":       "blindagem",
+    "modo-pasillo":          "modo_corredor",
+
+    # ── Energia ──
+    "alimentacion-poc":  "alimentacao_poc",
+    "potencia":          "potencia",
+    "tension-salida":    "tensao_saida",
+    "capacidad":         "capacidade",
+
+    # ── Instalação / Ambiente ──
+    "instalacion":        "tipo_montagem",
+    "exterior-interior":  "ambiente",
+    "escenario-de-instalacion": "cenario_instalacao",
+    "grado":              "grau_resistencia",
+
+    # ── Controlo de Acessos ──
+    "tecnologia-rfid":   "tecnologia_rfid",
 }
 
 # Valores a normalizar
@@ -79,6 +130,140 @@ INSTALACAO_MAP = {
     "Interior": "Interior", "Exterior": "Exterior",
     "Int/Ext": "Interior/Exterior", "interior": "Interior", "exterior": "Exterior",
 }
+
+
+# ─────────────────────────────────────────────
+# MAPEAMENTO CATEGORIA (3 níveis)
+# Nível 1 (category) ← classify_category(category_parent, category, sku)
+# Nível 2 (family)   ← family_for(category_parent, category, brand_values)
+# Nível 3 (brand)    ← campo brand
+# ─────────────────────────────────────────────
+CATEGORIA_MAP = {
+    # CCTV IP
+    'Hikvision': 'CCTV IP', 'Ajax CCTV': 'CCTV IP', 'Safire Smart': 'CCTV IP',
+    'Uniview - Uniarch': 'CCTV IP', 'X-Security': 'CCTV IP', 'Câmaras': 'CCTV IP',
+    'NVRs Profissionais': 'CCTV IP', 'IP Home': 'CCTV IP', 'Imou': 'CCTV IP',
+    'Descodificadores': 'CCTV IP', 'Kits Profissionais': 'CCTV IP', 'HiLook': 'CCTV IP',
+    'Soluções IP': 'CCTV IP', 'Eufy': 'CCTV IP', 'Ezviz': 'CCTV IP', 'VicoHome': 'CCTV IP',
+    'Térmicas': 'CCTV IP', 'Temperatura Corporal Febre': 'CCTV IP', 'EASY-P': 'CCTV IP',
+    # CCTV Analógico
+    'CCTV analógico': 'CCTV Analógico', 'Câmaras AHD': 'CCTV Analógico', 'XVRs': 'CCTV Analógico',
+    # Analítica de Vídeo
+    'VCA Technology': 'Analítica de Vídeo',
+    # Intrusão
+    'Intrusão': 'Intrusão', 'Ajax Wireless': 'Intrusão', 'Detectores Cablados': 'Intrusão',
+    'Pyronix Cablado': 'Intrusão', 'Hikvision - Pyronix': 'Intrusão', 'Chuango': 'Intrusão',
+    'DMTech': 'Intrusão', 'Jade Bird': 'Intrusão', 'Sopras': 'Intrusão', 'Smanos': 'Intrusão',
+    'Home8': 'Intrusão', 'Autónomos': 'Intrusão', 'Antirroubo': 'Intrusão', 'Servicios': 'Intrusão',
+    # Incêndio e Evacuação
+    'Wizmart': 'Incêndio e Evacuação',
+    # Controlo de Presença/Acessos (unificado)
+    'ZKTeco': 'Controlo de Presença/Acessos', 'Anviz': 'Controlo de Presença/Acessos',
+    'EasyClocking': 'Controlo de Presença/Acessos', 'Fechaduras': 'Controlo de Presença/Acessos',
+    'Torniquetes': 'Controlo de Presença/Acessos', 'Estacionamento': 'Controlo de Presença/Acessos',
+    'Hotel': 'Controlo de Presença/Acessos', 'Hysoon': 'Controlo de Presença/Acessos',
+    'Yale': 'Controlo de Presença/Acessos', 'iLOQ': 'Controlo de Presença/Acessos',
+    'Virdi': 'Controlo de Presença/Acessos',
+    'Contagem e Controlo de lotação máxima permitida': 'Controlo de Presença/Acessos',
+    # Videoporteiros
+    'Akuvox': 'Videoporteiros', 'Akubela': 'Videoporteiros',
+    # Networking
+    'Networking': 'Networking', 'Switching': 'Networking', 'Routing': 'Networking',
+    'NGFW': 'Networking', 'Comunicação e redes': 'Networking', 'Wireless': 'Networking',
+    # Mobilidade
+    'Trackers': 'Mobilidade', 'Equipamento de bordo': 'Mobilidade',
+    # Audiovisuais
+    'Monitores': 'Audiovisuais', 'Videoconferencia': 'Audiovisuais',
+    'Soluções LED': 'Audiovisuais', 'Gestão de Sinal': 'Audiovisuais',
+    # Energia
+    'Alimentação': 'Energia', 'Baterias': 'Energia', 'Instalações solares': 'Energia',
+    'Energía portátil': 'Energia', 'Veículos eléctricos': 'Energia',
+    # Smart Home
+    'Smart Home': 'Smart Home', 'AQARA': 'Smart Home', 'Shelly': 'Smart Home', 'Fibaro': 'Smart Home',
+    # Smartphone e Escritório
+    'Smartphone e escritório': 'Smartphone e Escritório', 'Periféricos': 'Smartphone e Escritório',
+    # Outdoor
+    'Câmara de vigilância para caça': 'Outdoor',
+    # Acessórios IT e Segurança
+    'Acessórios IT e Segurança': 'Acessórios IT e Segurança', 'Acessórios': 'Acessórios IT e Segurança',
+    'Suportes para Câmaras': 'Acessórios IT e Segurança', 'Adaptador de encaixe (clip-on)': 'Acessórios IT e Segurança',
+    'ONVIF': 'Acessórios IT e Segurança', 'Software': 'Acessórios IT e Segurança',
+    'Ferramentas': 'Acessórios IT e Segurança', 'Discos rígidos e memórias': 'Acessórios IT e Segurança',
+    'Saúde': 'Acessórios IT e Segurança',
+    # Sonorização e Áudio
+    'Sonorização e áudio': 'Sonorização e Áudio',
+    # Promoções / Merchandising / Outlet
+    'Promoções': 'Promoções', 'Merchandising': 'Merchandising', '': 'Outlet',
+}
+
+# Overrides por (category_parent, category) — casos em que category_parent
+# por si só não chega para determinar a categoria correcta (ex: Videoporteiros
+# vendidos sob category_parent="Hikvision"/"Safire Smart"/"X-Security").
+CATEGORIA_OVERRIDES = {
+    ('Hikvision', 'Comunidades 2 Fios'): 'Videoporteiros',
+    ('Hikvision', 'Kits'):               'Videoporteiros',
+    ('Hikvision', 'Monitores'):          'Videoporteiros',
+    ('Hikvision', 'Placas'):             'Videoporteiros',
+    ('Safire Smart', 'Monitores'):       'Videoporteiros',
+    ('Safire Smart', 'Placas'):          'Videoporteiros',
+    ('X-Security', 'Placas'):            'Videoporteiros',
+    ('Eufy', 'Robôs aspiradores'):       'Robótica',
+    ('Imou', 'Smarthome'):               'Smart Home',
+}
+
+# A "linha Safire" (terminais/fechaduras/teclados/videoporteiros SF-VI*)
+# precisa de regras próprias por subcategoria.
+SAFIRE_CAT_MAP = {
+    'Terminais':           'Controlo de Presença/Acessos',
+    'Teclados autónomos':  'Controlo de Presença/Acessos',
+    'Fechaduras':          'Controlo de Presença/Acessos',
+    'Acessórios':          'Controlo de Presença/Acessos',
+    'Antirroubo':          'Intrusão',
+    'Monitores':           'Videoporteiros',
+    'Placas':              'Videoporteiros',
+}
+
+# Prefixos de SKU Hikvision que indicam acessórios de videoporteiro
+# (cabos/teclados/peças de DS-KD/DS-KV/DS-KAB...) em vez de controlo de acessos.
+INTERCOM_PREFIXES = ('DS-KAB', 'DS-KV', 'DS-KDM', 'DS-KD-', 'DS-KD8003')
+
+
+def classify_category(category_parent: str, category: str, sku: str) -> str:
+    """Determina a categoria de Nível 1 (uma das 21 categorias)."""
+    cp = (category_parent or "").strip()
+    cat = (category or "").strip()
+
+    if (cp, cat) in CATEGORIA_OVERRIDES:
+        return CATEGORIA_OVERRIDES[(cp, cat)]
+
+    if cp == 'Hikvision' and cat in ('Controladoras', 'Leitores', 'Autónomos', 'Software'):
+        return 'Controlo de Presença/Acessos'
+    if cp == 'Hikvision' and cat == 'Acessórios':
+        if any(sku.startswith(p) for p in INTERCOM_PREFIXES):
+            return 'Videoporteiros'
+        return 'Controlo de Presença/Acessos'
+
+    if cp == 'Safire':
+        return SAFIRE_CAT_MAP.get(cat, 'Controlo de Presença/Acessos')
+
+    return CATEGORIA_MAP.get(cp, cp)
+
+
+def family_for(category_parent: str, category: str, brand_values: set) -> str:
+    """Determina a família de Nível 2.
+
+    Quando 'category' é, na verdade, o nome de uma marca (ex: cp="Suportes
+    para Câmaras", category="Hikvision"), usa-se 'category_parent' como
+    família — é ele que descreve o tipo de produto nesses casos.
+    """
+    cp = (category_parent or "").strip()
+    cat = (category or "").strip()
+    if not cat:
+        return cp or "Outros"
+    if cat.upper() in brand_values:
+        return cp or cat
+    return cat
+
 
 # ─────────────────────────────────────────────
 # FUNÇÕES DE EXTRACÇÃO
@@ -105,6 +290,11 @@ def calcular_preco(row: dict) -> dict | None:
     else:
         price = round(compra * 1.35, 2)
 
+    # Margem mínima de segurança: 35% sobre o preço de compra
+    margem_minima = round(compra * 1.35, 2)
+    if price < margem_minima:
+        price = margem_minima
+
     return {
         "purchase_price":     round(compra, 2),
         "price":              price,
@@ -117,9 +307,20 @@ def mapear_stock(stock: str, on_request: str) -> tuple:
     """Retorna (stock_status, sob_encomenda)."""
     sob = str(on_request).strip() == "1"
     s = stock.strip().lower()
-    if s == "high":    return "high",  sob
-    if s in ("medium", "low"): return "low", sob
-    return "out", True
+    if sob: return "on_request", True
+    if s == "high":   return "high", False
+    if s == "medium": return "medium", False
+    if s == "low":    return "low", False
+    return "on_request", True
+
+
+VALORES_VAZIOS = {
+    "", "-", "n/a", "na", "não", "nao", "no",
+    "não dispõe", "nao dispoe", "no disponible", "não disponível", "nao disponivel",
+    "sin información", "sem informação",
+}
+
+SPECS_IGNORAR_HTML = {"marca", "modelo"}
 
 
 def extrair_specs_params(params_json: str) -> dict:
@@ -134,13 +335,13 @@ def extrair_specs_params(params_json: str) -> dict:
         if sk is None:
             continue
         val = str(params.get(pk, "")).strip()
-        if not val or val.lower() in ("", "n/a", "não", "no", "-"):
+        if val.lower() in VALORES_VAZIOS:
             continue
         if sk == "instalacao":
             val = INSTALACAO_MAP.get(val, val)
         if val.lower() in ("sim", "yes", "sí", "si", "true", "1"):
             val = "Sim"
-        elif val.lower() in ("não", "no", "false", "0"):
+        elif val.lower() in ("não", "nao", "no", "false", "0"):
             continue
         specs[sk] = val
 
@@ -148,74 +349,42 @@ def extrair_specs_params(params_json: str) -> dict:
 
 
 def extrair_specs_html(specs_html: str) -> dict:
-    """Extrai specs da tabela HTML de especificações."""
+    """Extrai TODOS os pares chave/valor da tabela HTML de especificações.
+
+    Em vez de uma whitelist fixa (~40 chaves), captura qualquer
+    <strong>Chave</strong></td><td>Valor</td> e usa a própria chave (em PT,
+    slugificada) como nome do campo — maximiza a informação aproveitada sem
+    ter de enumerar centenas de variantes manualmente. Ignora apenas
+    "Marca"/"Modelo" (redundantes com brand/sku) e valores vazios/"não dispõe".
+    """
     if not specs_html:
         return {}
     specs = {}
-    pairs = re.findall(r'<strong>([^<]+)</strong></td><td[^>]*>([^<]+)', specs_html)
+    pairs = re.findall(r'<strong>([^<]+)</strong></td>\s*<td[^>]*>(.*?)</td>', specs_html, re.S)
     for k, v in pairs:
         k = k.strip()
-        v = re.sub(r'<[^>]+>', '', v).strip()
-        if not v or v in ("-", "N/A"):
+        v = re.sub(r'<[^>]+>', ' ', v)
+        v = unescape(v)
+        v = re.sub(r'\s+', ' ', v).strip()
+        if not v or v.lower() in VALORES_VAZIOS:
             continue
-        # Mapear para chaves limpas
-        key_map = {
-            "Dimensões":                "dimensoes",
-            "Peso":                     "peso",
-            "Cor":                      "cor",
-            "Marca":                    None,
-            "Modelo":                   None,
-            "Resolução máxima":         "resolucao_maxima",
-            "Sensor de imagem":         "sensor",
-            "Taxa Main Stream":         "fps",
-            "Compressão":               "compressao",
-            "Lente":                    "lente",
-            "Alcance IR":               "alcance_ir",
-            "Ângulo de visão":          "angulo_visao",
-            "Melhoras de imagem":       "wdr",
-            "Armazenagem":              "armazenamento",
-            "Armazenagem interna":      "armazenamento_interno",
-            "Áudio":                    "audio",
-            "Protocolo de vídeo":       "protocolo",
-            "Interface de Rede":        "interface_rede",
-            "Encriptação":              "encriptacao",
-            "Inteligência Artificial":  "ia",
-            "Alimentação":              "alimentacao",
-            "Temp. funcionamento":      "temperatura",
-            "Temperatura de funcionamento": "temperatura",
-            "Humidade de funcionamento":"humidade",
-            "Grau de protecção":        "grau_protecao",
-            "Grau de segurança":        "grau_seguranca",
-            "Frequência":               "frequencia",
-            "Distância de transmissão": "distancia_transmissao",
-            "Canais":                   "canais",
-            "Compatibilidade":          "compatibilidade",
-            "Tecnologia":               "tecnologia",
-            "Material":                 "material",
-            "Bateria":                  "bateria",
-            "Funções Inteligentes":     "funcoes_inteligentes",
-            "Acesso remoto":            "acesso_remoto",
-            "Comunicação":              "comunicacao",
-            "Alarme":                   "alarme",
-            "Sensibilidade":            "sensibilidade",
-            "Atualização do firmware":  "firmware_ota",
-        }
-        mapped = key_map.get(k)
-        if mapped is None:
+        key_slug = slugify(k, separator="_")
+        if not key_slug or key_slug in SPECS_IGNORAR_HTML:
             continue
-        specs[mapped] = v[:150]
+        specs[key_slug] = v[:200]
 
     return specs
 
 
 def extrair_imagens_extra(extra_json: str) -> list:
-    """Extrai lista de URLs de imagens extra."""
+    """Extrai lista de URLs de imagens extra (sem duplicados de baixa resolução _thumb)."""
     if not extra_json or extra_json.strip() in ("", "{}"):
         return []
     try:
         data = json.loads(extra_json)
         imgs = data.get("details", [])
-        return [i for i in imgs if i.startswith("http")][:8]
+        imgs = [i for i in imgs if i.startswith("http") and "_thumb" not in i.lower()]
+        return imgs[:8]
     except:
         return []
 
@@ -231,6 +400,41 @@ def nota_envio_especial() -> str:
     return "Este produto tem condições especiais de envio. O custo e prazo de entrega serão indicados no orçamento."
 
 
+def limpar_descricao_html(html_str: str) -> str:
+    """Converte a descrição HTML (parágrafos + listas) em texto limpo.
+
+    <p>...</p> → parágrafos separados por linha em branco
+    <li>...</li> → bullets "• ..."
+    Remove todas as restantes tags e descodifica entidades HTML (&aacute; etc.)
+    """
+    if not html_str:
+        return ""
+    text = html_str
+
+    # Listas: cada <li> torna-se um bullet numa linha própria
+    text = re.sub(r'<li[^>]*>\s*(.*?)\s*</li>', lambda m: "• " + m.group(1) + "\n", text, flags=re.S)
+    text = re.sub(r'</?[uo]l[^>]*>', '\n', text)
+
+    # Parágrafos: cada <p> torna-se um parágrafo com linha em branco a seguir
+    text = re.sub(r'<p[^>]*>\s*(.*?)\s*</p>', lambda m: m.group(1) + "\n\n", text, flags=re.S)
+
+    # Quebras de linha explícitas
+    text = re.sub(r'<br\s*/?>', '\n', text)
+
+    # Remover quaisquer tags HTML remanescentes
+    text = re.sub(r'<[^>]+>', '', text)
+
+    # Descodificar entidades HTML (&aacute;, &amp;, etc.)
+    text = unescape(text)
+
+    # Normalizar espaços e linhas em branco
+    text = re.sub(r'[ \t]+', ' ', text)
+    text = re.sub(r' *\n *', '\n', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+
+    return text.strip()
+
+
 # ─────────────────────────────────────────────
 # EDGE FUNCTION
 # ─────────────────────────────────────────────
@@ -239,16 +443,16 @@ def supabase_upsert(produtos: list, fornecedor: str = "visiotech"):
     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
     total = len(produtos)
     inseridos = 0
-    for i in range(0, total, 100):
-        batch = produtos[i:i+100]
+    for i in range(0, total, 200):
+        batch = produtos[i:i+200]
         resp = requests.post(IMPORT_URL, headers=headers,
                              json={"fornecedor": fornecedor, "produtos": batch}, timeout=60)
         if resp.status_code == 200:
             inseridos += resp.json().get("count", len(batch))
-            print(f"  ✅ Upsert {i+1}-{min(i+100, total)}/{total}")
+            print(f"  ✅ Upsert {i+1}-{min(i+200, total)}/{total}")
         else:
             print(f"  ❌ Erro lote {i}: {resp.status_code} — {resp.text[:200]}")
-        time.sleep(0.3)
+        time.sleep(0.1)
     return inseridos
 
 
@@ -321,10 +525,23 @@ def main(local=False):
     print("\n📥 A carregar CSV...")
     rows = carregar_csv("visiotech_connect__1_.csv" if local else URL_CSV)
 
-    # 2. Buscar preços actuais para comparação
+    # Conjunto de marcas conhecidas — usado por family_for() para distinguir
+    # quando o campo 'category' é na verdade o nome de uma marca.
+    brand_values = {(r.get("brand") or "").strip().upper() for r in rows if r.get("brand")}
+    brand_values.discard("")
+
+
+    # 2. Buscar preços actuais para comparação (apenas se já houver produtos)
     print("\n💰 A buscar preços actuais...")
-    precos_actuais = buscar_precos_actuais("visiotech") if IMPORT_API_KEY else {}
-    print(f"  {len(precos_actuais)} produtos com preço actual no Supabase")
+    precos_actuais = {}
+    if IMPORT_API_KEY:
+        try:
+            precos_actuais = buscar_precos_actuais("visiotech")
+            print(f"  {len(precos_actuais)} produtos com preço actual no Supabase")
+        except Exception as e:
+            print(f"  ⚠ Não foi possível buscar preços actuais: {e} — a continuar sem comparação")
+    else:
+        print("  ⚠ Sem API key — a saltar comparação de preços")
 
     # 3. Processar produtos
     print("\n⚙️  A processar produtos...")
@@ -334,7 +551,7 @@ def main(local=False):
     stats = {
         "sem_preco": 0, "sob_encomenda": 0, "envio_especial": 0,
         "com_stock": 0, "preco_actualizado": 0, "preco_estavel": 0,
-        "com_imagens_extra": 0, "com_relacionados": 0,
+        "com_imagens_extra": 0, "com_relacionados": 0, "quantidade_minima": 0,
     }
 
     for row in rows:
@@ -401,9 +618,19 @@ def main(local=False):
         # Descrição
         short_desc = re.sub(r'<[^>]+>', ' ', row.get("short_description", "") or "").strip()
         short_desc = re.sub(r'\s+', ' ', short_desc)[:300]
-        description = row.get("description", "") or row.get("content", "") or short_desc
+        description_raw = row.get("description", "") or row.get("content", "")
+        description = limpar_descricao_html(description_raw) or short_desc
 
-        # Nota envio especial nos destaques
+        # Quantidade mínima de encomenda
+        try:
+            qtd_minima = int(float(row.get("order_quantity_block", 1) or 1))
+        except (ValueError, TypeError):
+            qtd_minima = 1
+        if qtd_minima < 1:
+            qtd_minima = 1
+        if qtd_minima > 1: stats["quantidade_minima"] += 1
+
+        # Nota envio especial / quantidade mínima nos destaques
         destaques = []
         if short_desc:
             # Converter bullet points da short_description em lista
@@ -411,21 +638,24 @@ def main(local=False):
             destaques = bullets[:6]
         if envio_especial:
             destaques.append(nota_envio_especial())
+        if qtd_minima > 1:
+            destaques.append(f"Vendido em embalagens/múltiplos de {qtd_minima} unidades.")
 
         # Slug
         brand = row.get("brand", "").strip()
         slug = slugify(f"{brand}-{sku}".lower(), separator="-")
+        nome_produto = f"{brand} {sku}".strip() if brand else sku
 
         produto = {
             "sku":                sku,
             "slug":               slug,
-            "name":               short_desc or sku,
+            "name":               nome_produto,
             "short_description":  short_desc,
             "description":        description,
             "brand_id":           None,
             "brand":              brand,
-            "category":           row.get("category", "").strip(),
-            "family":             row.get("category_parent", "").strip(),
+            "category":           classify_category(row.get("category_parent", ""), row.get("category", ""), sku),
+            "family":             family_for(row.get("category_parent", ""), row.get("category", ""), brand_values),
             "price":              precos["price"],
             "price_tier2":        precos["price_tier2"],
             "price_tier3":        precos["price_tier3"],
@@ -433,6 +663,7 @@ def main(local=False):
             "stock_status":       stock_status,
             "sob_encomenda":      sob_encomenda,
             "envio_especial":     envio_especial,
+            "quantidade_minima":  qtd_minima,
             "include_in_catalog": True,
             "featured":           False,
             "show_on_homepage":   False,
@@ -457,6 +688,7 @@ def main(local=False):
     print(f"  Envio especial:         {stats['envio_especial']}")
     print(f"  Com imagens extra:      {stats['com_imagens_extra']}")
     print(f"  Com relacionados:       {stats['com_relacionados']}")
+    print(f"  Qtd. mínima > 1:        {stats['quantidade_minima']}")
     print(f"  Preço actualizado:      {stats['preco_actualizado']}")
     print(f"  Preço estável (<{int(LIMIAR_VARIACAO*100)}%): {stats['preco_estavel']}")
     if alteracoes_preco:

@@ -88,19 +88,25 @@ export type Database = {
           created_at: string
           id: string
           logo_url: string | null
+          mundo: string | null
           name: string
+          visivel: boolean
         }
         Insert: {
           created_at?: string
           id?: string
           logo_url?: string | null
+          mundo?: string | null
           name: string
+          visivel?: boolean
         }
         Update: {
           created_at?: string
           id?: string
           logo_url?: string | null
+          mundo?: string | null
           name?: string
+          visivel?: boolean
         }
         Relationships: []
       }
@@ -308,9 +314,40 @@ export type Database = {
         }
         Relationships: []
       }
+      import_exclusions: {
+        Row: {
+          ativo: boolean | null
+          created_at: string | null
+          fornecedor: string | null
+          id: string
+          motivo: string | null
+          tipo: string
+          valor: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          created_at?: string | null
+          fornecedor?: string | null
+          id?: string
+          motivo?: string | null
+          tipo: string
+          valor: string
+        }
+        Update: {
+          ativo?: boolean | null
+          created_at?: string | null
+          fornecedor?: string | null
+          id?: string
+          motivo?: string | null
+          tipo?: string
+          valor?: string
+        }
+        Relationships: []
+      }
       price_history: {
         Row: {
           changed_at: string
+          created_at: string | null
           fornecedor: string | null
           id: string
           price_new: number | null
@@ -322,6 +359,7 @@ export type Database = {
         }
         Insert: {
           changed_at?: string
+          created_at?: string | null
           fornecedor?: string | null
           id?: string
           price_new?: number | null
@@ -333,6 +371,7 @@ export type Database = {
         }
         Update: {
           changed_at?: string
+          created_at?: string | null
           fornecedor?: string | null
           id?: string
           price_new?: number | null
@@ -371,21 +410,27 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          mundo: string | null
           name: string
+          visivel: boolean
         }
         Insert: {
           category: string
           created_at?: string
           description?: string | null
           id?: string
+          mundo?: string | null
           name: string
+          visivel?: boolean
         }
         Update: {
           category?: string
           created_at?: string
           description?: string | null
           id?: string
+          mundo?: string | null
           name?: string
+          visivel?: boolean
         }
         Relationships: []
       }
@@ -421,6 +466,41 @@ export type Database = {
           },
         ]
       }
+      product_types: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          mundo: string
+          name: string
+          visivel: boolean
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          mundo?: string
+          name: string
+          visivel?: boolean
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          mundo?: string
+          name?: string
+          visivel?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_types_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string | null
@@ -431,6 +511,8 @@ export type Database = {
           created_at: string
           description: string | null
           destaques: Json | null
+          ean: string | null
+          envio_especial: boolean | null
           especificacoes: Json | null
           family: string | null
           family_id: string | null
@@ -438,20 +520,27 @@ export type Database = {
           fornecedor: string | null
           id: string
           image_url: string | null
+          imagens_extra: Json | null
           include_in_catalog: boolean
           mundo: string | null
           name: string
           price: number | null
+          price_tier2: number | null
+          price_tier3: number | null
           produtos_relacionados: string[] | null
           purchase_price: number | null
           purchase_price_vat: number | null
+          relacionados: Json | null
           short_description: string | null
           show_on_homepage: boolean | null
           sku: string | null
           slug: string | null
           sob_encomenda: boolean | null
           stock_status: string | null
+          type: string | null
+          type_id: string | null
           updated_at: string
+          upgrades: Json | null
           weight: number | null
         }
         Insert: {
@@ -463,6 +552,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           destaques?: Json | null
+          ean?: string | null
+          envio_especial?: boolean | null
           especificacoes?: Json | null
           family?: string | null
           family_id?: string | null
@@ -470,20 +561,27 @@ export type Database = {
           fornecedor?: string | null
           id?: string
           image_url?: string | null
+          imagens_extra?: Json | null
           include_in_catalog?: boolean
           mundo?: string | null
           name: string
           price?: number | null
+          price_tier2?: number | null
+          price_tier3?: number | null
           produtos_relacionados?: string[] | null
           purchase_price?: number | null
           purchase_price_vat?: number | null
+          relacionados?: Json | null
           short_description?: string | null
           show_on_homepage?: boolean | null
           sku?: string | null
           slug?: string | null
           sob_encomenda?: boolean | null
           stock_status?: string | null
+          type?: string | null
+          type_id?: string | null
           updated_at?: string
+          upgrades?: Json | null
           weight?: number | null
         }
         Update: {
@@ -495,6 +593,8 @@ export type Database = {
           created_at?: string
           description?: string | null
           destaques?: Json | null
+          ean?: string | null
+          envio_especial?: boolean | null
           especificacoes?: Json | null
           family?: string | null
           family_id?: string | null
@@ -502,20 +602,27 @@ export type Database = {
           fornecedor?: string | null
           id?: string
           image_url?: string | null
+          imagens_extra?: Json | null
           include_in_catalog?: boolean
           mundo?: string | null
           name?: string
           price?: number | null
+          price_tier2?: number | null
+          price_tier3?: number | null
           produtos_relacionados?: string[] | null
           purchase_price?: number | null
           purchase_price_vat?: number | null
+          relacionados?: Json | null
           short_description?: string | null
           show_on_homepage?: boolean | null
           sku?: string | null
           slug?: string | null
           sob_encomenda?: boolean | null
           stock_status?: string | null
+          type?: string | null
+          type_id?: string | null
           updated_at?: string
+          upgrades?: Json | null
           weight?: number | null
         }
         Relationships: [
@@ -531,6 +638,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
@@ -570,6 +684,7 @@ export type Database = {
           ativo: boolean | null
           fornecedor: string
           id: string
+          notas: string | null
           preco_primeira_unidade: number | null
           preco_unidade_adicional: number | null
         }
@@ -577,6 +692,7 @@ export type Database = {
           ativo?: boolean | null
           fornecedor: string
           id?: string
+          notas?: string | null
           preco_primeira_unidade?: number | null
           preco_unidade_adicional?: number | null
         }
@@ -584,6 +700,7 @@ export type Database = {
           ativo?: boolean | null
           fornecedor?: string
           id?: string
+          notas?: string | null
           preco_primeira_unidade?: number | null
           preco_unidade_adicional?: number | null
         }

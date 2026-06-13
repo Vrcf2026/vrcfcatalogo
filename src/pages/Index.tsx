@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ShieldCheck, Monitor, Search, ShoppingCart, Phone, Mail, MapPin,
   ArrowRight, ChevronLeft, ChevronRight, Star, Package, Send, Zap,
-  Wifi, Camera, Lock, Cpu, Printer, Tablet,
+  Wifi, Camera, Lock, Cpu, Printer, Tablet, ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,7 +98,7 @@ const Index = () => {
   const [query, setQuery] = useState("");
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
-  const [activeMundo, setActiveMundo] = useState<"seguranca" | "escritorio">("seguranca");
+  const [activeMundo, setActiveMundo] = useState<"seguranca" | "escritorio" | "economato">("seguranca");
   const navigate = useNavigate();
   const timerRef = useRef<any>(null);
 
@@ -108,6 +108,8 @@ const Index = () => {
   const escCount = useWorldCount("escritorio");
   const segCats = useCategories("seguranca");
   const escCats = useCategories("escritorio");
+  const ecoCount = useWorldCount("economato");
+  const ecoCats = useCategories("economato");
   const featured = useFeaturedProducts();
 
   useEffect(() => {
@@ -121,8 +123,8 @@ const Index = () => {
     if (query.trim()) navigate(`/pesquisa?q=${encodeURIComponent(query.trim())}`);
   };
 
-  const cats = activeMundo === "seguranca" ? segCats.data ?? [] : escCats.data ?? [];
-  const worldPath = activeMundo === "seguranca" ? "/seguranca" : "/escritorio";
+  const cats = activeMundo === "seguranca" ? segCats.data ?? [] : activeMundo === "escritorio" ? escCats.data ?? [] : ecoCats.data ?? [];
+  const worldPath = activeMundo === "seguranca" ? "/seguranca" : activeMundo === "escritorio" ? "/escritorio" : "/economato";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -217,7 +219,7 @@ const Index = () => {
 
       {/* ── WORLD SELECTOR ── */}
       <section className="px-3 pt-4 pb-2 max-w-screen-xl mx-auto w-full">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <WorldBtn
             active={activeMundo === "seguranca"}
             onClick={() => setActiveMundo("seguranca")}
@@ -235,6 +237,15 @@ const Index = () => {
             label="Escritório & IT"
             count={escCount.data}
             color="blue"
+          />
+          <WorldBtn
+            active={activeMundo === "economato"}
+            onClick={() => setActiveMundo("economato")}
+            to="/economato"
+            icon={ShoppingBag}
+            label="Economato"
+            count={ecoCount.data}
+            color="green"
           />
         </div>
       </section>
@@ -429,19 +440,17 @@ const Index = () => {
 
 function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
   active: boolean; onClick: () => void; to: string;
-  icon: any; label: string; count?: number; color: "orange" | "blue";
+  icon: any; label: string; count?: number; color: "orange" | "blue" | "green";
 }) {
-  const isOrange = color === "orange";
+  const cm = {
+    orange: { active: "border-primary bg-primary/[0.08] shadow-primary/15 shadow-md", icon: "bg-primary/15 text-primary", link: "text-primary", dot: "bg-primary" },
+    blue:   { active: "border-blue-500 bg-blue-500/[0.08] shadow-blue-500/15 shadow-md", icon: "bg-blue-500/15 text-blue-500", link: "text-blue-500", dot: "bg-blue-500" },
+    green:  { active: "border-green-600 bg-green-600/[0.08] shadow-green-600/15 shadow-md", icon: "bg-green-600/15 text-green-600", link: "text-green-600", dot: "bg-green-600" },
+  }[color];
   return (
-    <div className={`relative rounded-2xl border-2 transition-all overflow-hidden cursor-pointer ${
-      active
-        ? isOrange ? "border-primary bg-primary/8 shadow-primary/15 shadow-md" : "border-blue-500 bg-blue-500/8 shadow-blue-500/15 shadow-md"
-        : "border-border bg-card hover:border-muted-foreground/30"
-    }`} onClick={onClick}>
+    <div className={`relative rounded-2xl border-2 transition-all overflow-hidden cursor-pointer ${active ? cm.active : "border-border bg-card hover:border-muted-foreground/30"}`} onClick={onClick}>
       <div className="p-4">
-        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl mb-3 ${
-          isOrange ? "bg-primary/15 text-primary" : "bg-blue-500/15 text-blue-500"
-        }`}>
+        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl mb-3 ${cm.icon}`}>
           <Icon className="h-5 w-5" />
         </div>
         <p className="font-bold text-sm text-foreground leading-tight">{label}</p>
@@ -450,15 +459,11 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
         )}
         <Link to={to}
           onClick={e => e.stopPropagation()}
-          className={`mt-3 inline-flex items-center gap-1 text-[11px] font-bold transition-colors ${
-            isOrange ? "text-primary hover:text-primary/80" : "text-blue-500 hover:text-blue-400"
-          }`}>
+          className={`mt-3 inline-flex items-center gap-1 text-[11px] font-bold transition-colors ${cm.link}`}>
           Explorar <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
-      {active && (
-        <div className={`absolute top-2 right-2 h-2 w-2 rounded-full ${isOrange ? "bg-primary" : "bg-blue-500"}`} />
-      )}
+      {active && <div className={`absolute top-2 right-2 h-2 w-2 rounded-full ${cm.dot}`} />}
     </div>
   );
 }

@@ -1,0 +1,48 @@
+name: ALL.TO — Importação Diária
+
+on:
+  schedule:
+    - cron: '15 8 * * *'    # 09:15 UTC (10:15 Lisboa) — após actualização das 09:00
+    - cron: '15 12 * * *'   # 13:15 UTC (14:15 Lisboa) — após actualização das 13:00
+    - cron: '15 16 * * *'   # 17:15 UTC (18:15 Lisboa) — após actualização das 17:00
+    - cron: '15 20 * * *'   # 21:15 UTC (22:15 Lisboa) — após actualização das 21:00
+  workflow_dispatch:
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install requests python-slugify
+
+      - name: Correr script de importação
+        env:
+          IMPORT_URL: ${{ secrets.IMPORT_URL }}
+          IMPORT_API_KEY: ${{ secrets.IMPORT_API_KEY }}
+          ALLTO_API_KEY: ${{ secrets.ALLTO_API_KEY }}
+        run: python scripts/allto_import.py 2>&1 | tee importacao_log.txt
+
+      - name: Enviar email com relatório
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USER }}
+          password: ${{ secrets.GMAIL_PASSWORD }}
+          subject: 'VRCF — Importação ALL.TO ${{ job.status }}'
+          to: geral@vrcf.pt
+          from: VRCF Showroom <${{ secrets.GMAIL_USER }}>
+          body: |
+            Importação ALL.TO concluída.
+            Data: ${{ github.run_started_at }}
+            Relatório:
+          attachments: importacao_log.txt

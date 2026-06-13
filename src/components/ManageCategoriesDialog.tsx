@@ -34,6 +34,12 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<Category[]>([]);
+  const [search, setSearch] = useState("");
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const filteredItems = items.filter((c) => {
+    if (mundoFilter !== "all" && (c.mundo ?? "todos") !== mundoFilter) return false;
+    return c.name.toLowerCase().includes(search.toLowerCase());
+  });
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -135,8 +141,25 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
           </Button>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-muted-foreground">Arrasta para reordenar. Define mundo e visibilidade.</p>
+        <div className="flex items-center justify-between gap-2 pt-2 flex-wrap">
+          <div className="flex gap-2 flex-1">
+            <Input
+              placeholder="Pesquisar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 max-w-[220px]"
+            />
+            <Select value={mundoFilter} onValueChange={setMundoFilter}>
+              <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os mundos</SelectItem>
+                <SelectItem value="seguranca">Segurança</SelectItem>
+                <SelectItem value="escritorio">Escritório</SelectItem>
+                <SelectItem value="economato">Economato</SelectItem>
+                <SelectItem value="todos">Genérico</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button size="sm" variant="default" onClick={saveOrder} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
             Guardar ordem
@@ -144,12 +167,12 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={filteredItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-1.5">
-              {items.length === 0 && (
+              {filteredItems.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhuma categoria.</p>
               )}
-              {items.map((cat) => (
+              {filteredItems.map((cat) => (
                 <SortableRow
                   key={cat.id}
                   cat={cat}
@@ -188,7 +211,8 @@ function SortableRow({
         <SelectContent>
           <SelectItem value="seguranca">Segurança</SelectItem>
           <SelectItem value="escritorio">Escritório</SelectItem>
-          <SelectItem value="todos">Ambos</SelectItem>
+          <SelectItem value="economato">Economato</SelectItem>
+          <SelectItem value="todos">Todos</SelectItem>
         </SelectContent>
       </Select>
       <div className="flex items-center gap-1.5">

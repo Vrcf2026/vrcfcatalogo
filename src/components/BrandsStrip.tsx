@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link, useLocation } from "react-router-dom";
 
 interface BrandsStripProps {
-  mundo?: "seguranca" | "escritorio";
+  mundo?: "seguranca" | "escritorio" | "economato";
 }
 
 const BrandsStrip = ({ mundo }: BrandsStripProps) => {

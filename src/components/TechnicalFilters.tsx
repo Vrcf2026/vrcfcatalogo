@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { SPEC_LABELS } from "@/lib/specLabels";
 
 interface TechnicalFiltersProps {
   products: any[];
@@ -56,7 +57,7 @@ export const TechnicalFilters = ({ products, activeFilters, onFilterChange }: Te
       </div>
       {specOptions.map((group) => (
         <div key={group.key} className="space-y-2">
-          <p className="text-xs font-medium capitalize text-muted-foreground">{group.key.replace(/_/g, " ")}</p>
+          <p className="text-xs font-medium capitalize text-muted-foreground">{SPEC_LABELS[group.key] ?? group.key.replace(/_/g, " ")}</p>
           <div className="flex flex-wrap gap-1.5">
             {group.values.map(({ value, count }) => {
               const active = activeFilters[group.key] === value;

@@ -11,6 +11,7 @@ import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Seguranca from "./pages/Seguranca.tsx";
 import Escritorio from "./pages/Escritorio.tsx";
+import Economato from "./pages/Economato.tsx";
 import Produto from "./pages/Produto.tsx";
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/seguranca" element={<Seguranca />} />
               <Route path="/escritorio" element={<Escritorio />} />
+              <Route path="/economato" element={<Economato />} />
               <Route path="/produto/:slug" element={<Produto />} />
               <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
               <Route path="/politica-de-cookies" element={<PoliticaCookies />} />

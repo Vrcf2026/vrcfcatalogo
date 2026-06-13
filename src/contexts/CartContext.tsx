@@ -7,6 +7,9 @@ export interface CartItem {
   imageUrl: string | null;
   category: string | null;
   quantity: number;
+  weight?: number | null;
+  fornecedor?: string | null;
+  envio_especial?: boolean;
 }
 
 interface CartContextType {
