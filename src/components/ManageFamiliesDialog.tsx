@@ -30,6 +30,7 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
   const [category, setCategory] = useState("");
   const [mundo, setMundo] = useState("todos");
   const [description, setDescription] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
