@@ -200,7 +200,7 @@ const Admin = () => {
             <ManageBrandsDialog brands={brands} />
             <ManageTypesDialog types={types} families={families as any} />
             <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
-            <AddProductDialog families={families} categories={categoryNames} brands={brands} />
+            <AddProductDialog families={families} categories={categoryNames} brands={brands} types={types as any} />
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
