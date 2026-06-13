@@ -177,6 +177,54 @@ async function getOrCreateFamily(
 }
 
 
+async function getOrCreateType(
+  supabase: SupabaseClient,
+  cache: Cache,
+  name: string,
+  familyId: string,
+  mundo: string,
+): Promise<string> {
+  const key = `${mundo.toLowerCase()}::${familyId}::${name.toLowerCase()}`;
+  const cached = cache.get(key);
+  if (cached) return cached;
+
+  const { data: existing, error: selErr } = await supabase
+    .from("product_types")
+    .select("id")
+    .ilike("name", name)
+    .eq("family_id", familyId)
+    .eq("mundo", mundo)
+    .maybeSingle();
+  if (selErr) throw new Error(`product_types select: ${selErr.message}`);
+  if (existing?.id) {
+    cache.set(key, existing.id);
+    return existing.id;
+  }
+
+  const { data: inserted, error: insErr } = await supabase
+    .from("product_types")
+    .insert({ name, family_id: familyId, mundo })
+    .select("id")
+    .single();
+  if (insErr) {
+    const { data: again } = await supabase
+      .from("product_types")
+      .select("id")
+      .ilike("name", name)
+      .eq("family_id", familyId)
+      .eq("mundo", mundo)
+      .maybeSingle();
+    if (again?.id) {
+      cache.set(key, again.id);
+      return again.id;
+    }
+    throw new Error(`product_types insert: ${insErr.message}`);
+  }
+  cache.set(key, inserted.id);
+  return inserted.id;
+}
+
+
 async function resolveProductReferences(
   supabase: SupabaseClient,
   produtos: any[],
@@ -185,6 +233,7 @@ async function resolveProductReferences(
   const brandCache: Cache = new Map();
   const categoryCache: Cache = new Map();
   const familyCache: Cache = new Map();
+  const typeCache: Cache = new Map();
 
   const resolved: any[] = [];
   for (const raw of produtos) {
@@ -193,6 +242,7 @@ async function resolveProductReferences(
     const brandName = normalize(p.brand);
     const categoryName = normalize(p.category);
     const familyName = normalize(p.family);
+    const typeName = normalize(p.type);
     const mundo = normalize(p.mundo);
 
     if (brandName && mundo) {
@@ -206,6 +256,10 @@ async function resolveProductReferences(
     if (familyName && categoryName && mundo) {
       p.family_id = await getOrCreateFamily(supabase, familyCache, familyName, categoryName, mundo);
       p.family = familyName;
+    }
+    if (typeName && p.family_id && mundo) {
+      p.type_id = await getOrCreateType(supabase, typeCache, typeName, p.family_id, mundo);
+      p.type = typeName;
     }
 
     resolved.push(p);
@@ -225,6 +279,31 @@ async function handleUpsertProducts(supabase: SupabaseClient, produtos: any[], f
   let count = 0;
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
+
+    // Preservar specs "trancadas" manualmente em /admin — não deixar a
+    // importação sobrescrever essas chaves de `especificacoes`.
+    const skus = batch.map((p) => p.sku).filter(Boolean);
+    if (skus.length > 0) {
+      const { data: existentes } = await supabase
+        .from("products")
+        .select("sku, especificacoes, specs_locked")
+        .in("sku", skus);
+      const existentesMap = new Map((existentes ?? []).map((e: any) => [e.sku, e]));
+      for (const p of batch) {
+        const ex = existentesMap.get(p.sku);
+        const locked: string[] = ex?.specs_locked ?? [];
+        if (locked.length > 0) {
+          const especs = { ...(p.especificacoes ?? {}) };
+          const existingSpecs = ex?.especificacoes ?? {};
+          for (const key of locked) {
+            if (key in existingSpecs) especs[key] = existingSpecs[key];
+            else delete especs[key];
+          }
+          p.especificacoes = especs;
+        }
+      }
+    }
+
     const { error, data } = await supabase
       .from("products")
       .upsert(batch, { onConflict: "sku" })
