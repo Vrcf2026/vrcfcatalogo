@@ -34,6 +34,8 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<Category[]>([]);
+  const [search, setSearch] = useState("");
+  const filteredItems = items.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
   const queryClient = useQueryClient();
 
   useEffect(() => {
