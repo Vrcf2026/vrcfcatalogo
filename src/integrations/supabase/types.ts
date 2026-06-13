@@ -460,6 +460,38 @@ export type Database = {
           },
         ]
       }
+      product_types: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          mundo: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          mundo?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          mundo?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_types_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string | null
@@ -496,6 +528,8 @@ export type Database = {
           slug: string | null
           sob_encomenda: boolean | null
           stock_status: string | null
+          type: string | null
+          type_id: string | null
           updated_at: string
           upgrades: Json | null
           weight: number | null
@@ -535,6 +569,8 @@ export type Database = {
           slug?: string | null
           sob_encomenda?: boolean | null
           stock_status?: string | null
+          type?: string | null
+          type_id?: string | null
           updated_at?: string
           upgrades?: Json | null
           weight?: number | null
@@ -574,6 +610,8 @@ export type Database = {
           slug?: string | null
           sob_encomenda?: boolean | null
           stock_status?: string | null
+          type?: string | null
+          type_id?: string | null
           updated_at?: string
           upgrades?: Json | null
           weight?: number | null
@@ -591,6 +629,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
