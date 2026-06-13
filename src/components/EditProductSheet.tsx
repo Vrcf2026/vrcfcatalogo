@@ -34,6 +34,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
   const [brandId, setBrandId] = useState("none");
+  const [typeId, setTypeId] = useState("none");
   const [familyText, setFamilyText] = useState("");
   const [brandText, setBrandText] = useState("");
   const [price, setPrice] = useState("");
