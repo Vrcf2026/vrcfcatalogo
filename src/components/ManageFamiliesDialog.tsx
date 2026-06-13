@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { FolderTree, Plus, Trash2, Loader2 } from "lucide-react";
 
@@ -15,6 +16,7 @@ interface Family {
   category: string;
   description: string | null;
   mundo?: string;
+  visivel?: boolean;
 }
 
 interface ManageFamiliesDialogProps {
@@ -28,6 +30,7 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
   const [category, setCategory] = useState("");
   const [mundo, setMundo] = useState("todos");
   const [description, setDescription] = useState("");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
 
@@ -80,9 +83,24 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
     }
   };
 
+  const handleToggleVisible = async (id: string, v: boolean) => {
+    try {
+      const { error } = await supabase.from("product_families").update({ visivel: v } as any).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["families"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const s = search.trim().toLowerCase();
+  const filteredFamilies = s
+    ? families.filter((f) => f.name.toLowerCase().includes(s) || f.category.toLowerCase().includes(s))
+    : families;
+
   const grouped = categories.map((cat) => ({
     category: cat,
-    items: families.filter((f) => f.category === cat),
+    items: filteredFamilies.filter((f) => f.category === cat),
   })).filter((g) => g.items.length > 0);
 
   return (
@@ -136,10 +154,20 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
           </Button>
         </div>
 
+        {/* Search */}
+        <div className="pt-1">
+          <Input
+            placeholder="Pesquisar família..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+          />
+        </div>
+
         {/* List */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-1">
           {grouped.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma família criada ainda.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma família encontrada.</p>
           )}
           {grouped.map((group) => (
             <div key={group.category}>
@@ -164,6 +192,10 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
                         <SelectItem value="todos">Todos</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Switch
+                      checked={f.visivel ?? true}
+                      onCheckedChange={(v) => handleToggleVisible(f.id, v)}
+                    />
                     <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleDelete(f.id)}>
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Layers, Plus, Trash2, Loader2 } from "lucide-react";
 
@@ -14,6 +15,7 @@ interface ProductType {
   name: string;
   family_id: string;
   mundo?: string;
+  visivel?: boolean;
 }
 
 interface Family {
@@ -34,6 +36,7 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
   const [familyId, setFamilyId] = useState("");
   const [mundo, setMundo] = useState("todos");
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f]));
@@ -92,11 +95,33 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
     }
   };
 
+  const handleToggleVisible = async (id: string, v: boolean) => {
+    try {
+      const { error } = await supabase.from("product_types").update({ visivel: v } as any).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["types"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const s = search.trim().toLowerCase();
+  const filteredTypes = s
+    ? types.filter((t) => {
+        const fam = familyMap[t.family_id];
+        return (
+          t.name.toLowerCase().includes(s) ||
+          (fam?.name?.toLowerCase().includes(s) ?? false) ||
+          (fam?.category?.toLowerCase().includes(s) ?? false)
+        );
+      })
+    : types;
+
   // Agrupar por família (e mostrar categoria da família)
   const grouped = families
     .map((fam) => ({
       family: fam,
-      items: types.filter((t) => t.family_id === fam.id),
+      items: filteredTypes.filter((t) => t.family_id === fam.id),
     }))
     .filter((g) => g.items.length > 0);
 
@@ -155,10 +180,20 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
           </Button>
         </div>
 
+        {/* Search */}
+        <div className="pt-1">
+          <Input
+            placeholder="Pesquisar tipo, família ou categoria..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+          />
+        </div>
+
         {/* List */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-1">
           {grouped.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhum tipo criado ainda.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum tipo encontrado.</p>
           )}
           {grouped.map((group) => (
             <div key={group.family.id}>
@@ -178,6 +213,10 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
                         <SelectItem value="todos">Todos</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Switch
+                      checked={t.visivel ?? true}
+                      onCheckedChange={(v) => handleToggleVisible(t.id, v)}
+                    />
                     <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleDelete(t.id)}>
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>

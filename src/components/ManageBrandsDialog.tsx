@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X } from "lucide-react";
 
 interface Brand {
@@ -21,6 +22,7 @@ interface Brand {
   name: string;
   logo_url: string | null;
   mundo?: string;
+  visivel?: boolean;
 }
 
 interface ManageBrandsDialogProps {
@@ -43,9 +45,12 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [mundo, setMundo] = useState("todos");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const filteredBrands = brands.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
 
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
@@ -103,6 +108,16 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
     } catch (e: any) {
       toast.error(e.message || "Erro ao atualizar mundo");
+    }
+  };
+
+  const handleToggleVisible = async (id: string, v: boolean) => {
+    try {
+      const { error } = await supabase.from("brands").update({ visivel: v } as any).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["brands"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro");
     }
   };
 
@@ -218,11 +233,20 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
           </Button>
         </div>
 
-        <div className="space-y-2 pt-2">
-          {brands.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca criada ainda.</p>
+        <div className="pt-2">
+          <Input
+            placeholder="Pesquisar marca..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+          />
+        </div>
+
+        <div className="space-y-2">
+          {filteredBrands.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca encontrada.</p>
           )}
-          {brands.map((b) => {
+          {filteredBrands.map((b) => {
             const linked = familiesByBrand[b.id] || new Set<string>();
             return (
               <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2">
@@ -305,6 +329,10 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
                     </ScrollArea>
                   </PopoverContent>
                 </Popover>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Switch checked={b.visivel ?? true} onCheckedChange={(v) => handleToggleVisible(b.id, v)} />
+                </div>
 
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(b.id)}>
                   <Trash2 className="h-3 w-3 text-destructive" />

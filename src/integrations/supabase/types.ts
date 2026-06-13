@@ -90,6 +90,7 @@ export type Database = {
           logo_url: string | null
           mundo: string | null
           name: string
+          visivel: boolean
         }
         Insert: {
           created_at?: string
@@ -97,6 +98,7 @@ export type Database = {
           logo_url?: string | null
           mundo?: string | null
           name: string
+          visivel?: boolean
         }
         Update: {
           created_at?: string
@@ -104,6 +106,7 @@ export type Database = {
           logo_url?: string | null
           mundo?: string | null
           name?: string
+          visivel?: boolean
         }
         Relationships: []
       }
@@ -409,6 +412,7 @@ export type Database = {
           id: string
           mundo: string | null
           name: string
+          visivel: boolean
         }
         Insert: {
           category: string
@@ -417,6 +421,7 @@ export type Database = {
           id?: string
           mundo?: string | null
           name: string
+          visivel?: boolean
         }
         Update: {
           category?: string
@@ -425,6 +430,7 @@ export type Database = {
           id?: string
           mundo?: string | null
           name?: string
+          visivel?: boolean
         }
         Relationships: []
       }
@@ -456,6 +462,41 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_types: {
+        Row: {
+          created_at: string
+          family_id: string
+          id: string
+          mundo: string
+          name: string
+          visivel: boolean
+        }
+        Insert: {
+          created_at?: string
+          family_id: string
+          id?: string
+          mundo?: string
+          name: string
+          visivel?: boolean
+        }
+        Update: {
+          created_at?: string
+          family_id?: string
+          id?: string
+          mundo?: string
+          name?: string
+          visivel?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_types_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "product_families"
             referencedColumns: ["id"]
           },
         ]
@@ -496,6 +537,8 @@ export type Database = {
           slug: string | null
           sob_encomenda: boolean | null
           stock_status: string | null
+          type: string | null
+          type_id: string | null
           updated_at: string
           upgrades: Json | null
           weight: number | null
@@ -535,6 +578,8 @@ export type Database = {
           slug?: string | null
           sob_encomenda?: boolean | null
           stock_status?: string | null
+          type?: string | null
+          type_id?: string | null
           updated_at?: string
           upgrades?: Json | null
           weight?: number | null
@@ -574,6 +619,8 @@ export type Database = {
           slug?: string | null
           sob_encomenda?: boolean | null
           stock_status?: string | null
+          type?: string | null
+          type_id?: string | null
           updated_at?: string
           upgrades?: Json | null
           weight?: number | null
@@ -591,6 +638,13 @@ export type Database = {
             columns: ["family_id"]
             isOneToOne: false
             referencedRelation: "product_families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_type_id_fkey"
+            columns: ["type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
