@@ -90,6 +90,7 @@ export type Database = {
           logo_url: string | null
           mundo: string | null
           name: string
+          visivel: boolean
         }
         Insert: {
           created_at?: string
@@ -97,6 +98,7 @@ export type Database = {
           logo_url?: string | null
           mundo?: string | null
           name: string
+          visivel?: boolean
         }
         Update: {
           created_at?: string
@@ -104,6 +106,7 @@ export type Database = {
           logo_url?: string | null
           mundo?: string | null
           name?: string
+          visivel?: boolean
         }
         Relationships: []
       }
@@ -409,6 +412,7 @@ export type Database = {
           id: string
           mundo: string | null
           name: string
+          visivel: boolean
         }
         Insert: {
           category: string
@@ -417,6 +421,7 @@ export type Database = {
           id?: string
           mundo?: string | null
           name: string
+          visivel?: boolean
         }
         Update: {
           category?: string
@@ -425,6 +430,7 @@ export type Database = {
           id?: string
           mundo?: string | null
           name?: string
+          visivel?: boolean
         }
         Relationships: []
       }
@@ -467,6 +473,7 @@ export type Database = {
           id: string
           mundo: string
           name: string
+          visivel: boolean
         }
         Insert: {
           created_at?: string
@@ -474,6 +481,7 @@ export type Database = {
           id?: string
           mundo?: string
           name: string
+          visivel?: boolean
         }
         Update: {
           created_at?: string
@@ -481,6 +489,7 @@ export type Database = {
           id?: string
           mundo?: string
           name?: string
+          visivel?: boolean
         }
         Relationships: [
           {
