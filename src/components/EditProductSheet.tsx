@@ -264,6 +264,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
               {product?.type && typeId === "none" && (
                 <p className="text-xs text-muted-foreground">Importado: {product.type}</p>
               )}
+            </div>
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               {[
