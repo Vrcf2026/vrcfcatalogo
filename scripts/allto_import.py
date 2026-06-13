@@ -22,7 +22,6 @@ IMPORT_URL     = os.environ.get("IMPORT_URL", "https://mgdhclajlcmepdfrkktw.supa
 IMPORT_API_KEY = os.environ.get("IMPORT_API_KEY", "")
 ALLTO_API_KEY  = os.environ.get("ALLTO_API_KEY", "")
 
-URL_API_BASE = "https://api.allto.pt/v2/"
 URL_API_V1   = "https://api.allto.pt/v1/"
 
 # Tiers de preço
@@ -281,120 +280,86 @@ def buscar_precos_actuais(fornecedor: str) -> dict:
 # CARREGAR API
 # ─────────────────────────────────────────────
 def carregar_api() -> list:
+    """Carrega o catálogo ALL.TO via API v1 (CSV) — único pedido HTTP.
+
+    A v1 tem todos os campos necessários (incluindo os que a v2 'type=full'
+    não devolve: Link Imagem, Descricao Tecnica, Descricao Longa, Peso,
+    Taxa Iva), por isso não é necessário combinar v1+v2 — 2 pedidos
+    seguidos à API arriscavam acionar a proteção anti-bot (Imunify360).
+
+    Os nomes das colunas (com espaços) são normalizados para o formato
+    com underscore usado no resto do script (ex: 'Linha Produto' →
+    'Linha_Produto', 'MIN Venda' → 'MIN_Venda').
+    """
     if not ALLTO_API_KEY:
         print("  ⚠ ALLTO_API_KEY não definida")
         return []
-    url = f"{URL_API_BASE}?apikey={ALLTO_API_KEY}&fileformat=json&type=full"
-    print(f"  A descarregar dados da API ALL.TO (type=full)...")
-    print(f"  URL: {url[:60]}...")
+    url = f"{URL_API_V1}?apikey={ALLTO_API_KEY}"
+    print(f"  A descarregar dados da API ALL.TO v1 (CSV)...")
+    print(f"  URL: {url[:50]}...")
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*",
+        "Accept": "text/csv, text/plain, */*",
         "Accept-Language": "pt-PT,pt;q=0.9",
     }
     resp = requests.get(url, headers=headers, timeout=180)
-    resp.encoding = "utf-8"
+    resp.encoding = "latin1"
     print(f"  HTTP Status: {resp.status_code}")
     print(f"  Content-Type: {resp.headers.get('Content-Type', 'unknown')}")
-    print(f"  Primeiros 500 chars: {resp.text[:500]}")
-    if not resp.text.strip():
+    texto = resp.text.strip()
+    print(f"  Primeiros 300 chars: {texto[:300]}")
+
+    if not texto:
         print("  ❌ Resposta vazia — verifica a chave API ALLTO_API_KEY")
         return []
-    data = resp.json()
 
-    # Resposta de erro (ex: bloqueio Imunify360) — vem como dict com "message",
-    # NÃO é a lista de produtos. Detectar explicitamente para não rebentar
-    # mais abaixo a tentar iterar uma string como se fosse uma lista de rows.
-    if isinstance(data, dict) and "message" in data and not any(
-        k in data for k in ("products", "produtos", "items", "data", "artigos")
-    ):
-        print(f"  ❌ API ALL.TO devolveu erro: {data['message']}")
-        if "Imunify360" in str(data["message"]) or "bot-protection" in str(data["message"]):
+    # Resposta de erro (ex: bloqueio Imunify360) vem como JSON com "message",
+    # não como CSV. Detectar antes de passar ao csv.DictReader.
+    if texto.startswith("{"):
+        try:
+            data = json.loads(texto)
+            msg = data.get("message", texto[:200])
+        except Exception:
+            msg = texto[:200]
+        print(f"  ❌ API ALL.TO devolveu erro: {msg}")
+        if "Imunify360" in str(msg) or "bot-protection" in str(msg):
             print("  ⚠ O IP usado pelo GitHub Actions está a ser bloqueado pela ALL.TO.")
             print("  ⚠ É necessário contactar a ALL.TO para fazer whitelisting do(s) IP(s)")
             print("  ⚠ usado(s) pelos runners do GitHub Actions (ou usar um IP fixo/proxy).")
         return []
 
-    # A API pode retornar lista directamente ou dentro de uma chave
-    if isinstance(data, list):
-        rows = data
-    elif isinstance(data, dict):
-        # Tentar várias chaves possíveis
-        for key in ["products", "produtos", "items", "data", "artigos"]:
-            if key in data:
-                rows = data[key]
-                break
-        else:
-            rows = list(data.values())[0] if data else []
-    else:
-        rows = []
+    reader = csv.DictReader(io.StringIO(resp.text), delimiter=";")
+    # Mapeamento de colunas v1 (com espaços) → nomes com underscore usados
+    # no resto do script.
+    RENAME = {
+        "Linha Produto":     "Linha_Produto",
+        "Tipo Produto":      "Tipo_Produto",
+        "Descricao Longa":   "Descricao_Longa",
+        "Descricao Tecnica": "Descricao_Tecnica",
+        "MIN Venda":         "MIN_Venda",
+        "Primeira Qty":      "Primeira_Qty",
+        "Primeiro Preco":    "Primeiro_Preco",
+        "Segunda Qty":       "Segunda_Qty",
+        "Segundo Preco":     "Segundo_Preco",
+        "Data Entrega":      "DataEntrega",
+        "Codigo Barras":     "Codigo_Barras",
+        "Link Imagem":       "Link_Imagem",
+        "Taxa Adicional Transporte(Esc.1)": "Taxa_Adicional_Transporte",
+        "Taxa Iva":          "Taxa_Iva",
+        "Promoção":          "Promocao",
+    }
+    rows = []
+    for row in reader:
+        normalized = {RENAME.get(k, k): v for k, v in row.items() if k is not None}
+        rows.append(normalized)
 
-    # Salvaguarda final: garantir que rows é uma lista de dicts antes de a
-    # devolver, para nunca rebentar mais abaixo com "'str' object has no
-    # attribute 'get'" se a estrutura vier inesperada.
-    if not isinstance(rows, list) or (rows and not isinstance(rows[0], dict)):
-        print(f"  ❌ Resposta da API em formato inesperado (não é lista de produtos): {str(rows)[:200]}")
+    if not rows:
+        print("  ❌ CSV vazio ou em formato inesperado")
         return []
 
     print(f"  API ALL.TO: {len(rows)} produtos")
     return rows
 
-
-# Campos ricos disponíveis apenas na API v1 (CSV), ausentes na v2 "type=full":
-# imagem, descrição técnica/longa, peso e taxa de IVA por produto.
-CAMPOS_V1_COMPLEMENTO = {
-    "Link Imagem":     "Link_Imagem",
-    "Descricao Tecnica": "Descricao_Tecnica",
-    "Descricao Longa": "Descricao_Longa",
-    "Peso":            "Peso",
-    "Taxa Iva":        "Taxa_Iva",
-}
-
-
-def carregar_api_v1() -> dict:
-    """Carrega o CSV da API v1 (campos ricos: imagem, descrição técnica, peso,
-    taxa de IVA, descrição longa) e devolve um dict {Referencia: {campos_v2: valor}}
-    para complementar os produtos da v2."""
-    if not ALLTO_API_KEY:
-        return {}
-    url = f"{URL_API_V1}?apikey={ALLTO_API_KEY}"
-    print(f"  A descarregar dados complementares da API v1 (CSV)...")
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    }
-    try:
-        resp = requests.get(url, headers=headers, timeout=180)
-        resp.encoding = "latin1"
-        print(f"  HTTP Status (v1): {resp.status_code}")
-        if resp.status_code != 200 or not resp.text.strip():
-            print("  ⚠ API v1 indisponível — a continuar só com dados da v2")
-            return {}
-        # A v1 também pode devolver um JSON de erro (ex: bloqueio Imunify360)
-        # em vez do CSV esperado — detectar antes de o passar ao csv.DictReader.
-        texto = resp.text.strip()
-        if texto.startswith("{"):
-            print(f"  ⚠ API v1 devolveu resposta inesperada (JSON, não CSV): {texto[:200]}")
-            if "Imunify360" in texto or "bot-protection" in texto:
-                print("  ⚠ IP bloqueado pela ALL.TO — necessário whitelisting.")
-            return {}
-        reader = csv.DictReader(io.StringIO(resp.text), delimiter=";")
-        complemento = {}
-        for row in reader:
-            ref = (row.get("Referencia") or "").strip()
-            if not ref:
-                continue
-            extra = {}
-            for campo_v1, campo_v2 in CAMPOS_V1_COMPLEMENTO.items():
-                val = (row.get(campo_v1) or "").strip()
-                if val:
-                    extra[campo_v2] = val
-            if extra:
-                complemento[ref] = extra
-        print(f"  API v1: {len(complemento)} produtos com dados complementares")
-        return complemento
-    except Exception as e:
-        print(f"  ⚠ Erro ao carregar API v1 ({e}) — a continuar só com dados da v2")
-        return {}
 
 # ─────────────────────────────────────────────
 # MAIN
@@ -410,24 +375,6 @@ def main():
     if not rows:
         print("❌ Sem dados para importar")
         return
-
-    # 1b. Complementar com dados ricos da API v1 (imagem, descrição técnica,
-    # peso, taxa de IVA, descrição longa) — não disponíveis na v2.
-    # Pequeno intervalo entre pedidos: 2 pedidos seguidos à mesma API podem
-    # acionar a proteção anti-bot (Imunify360) da ALL.TO.
-    time.sleep(3)
-    complemento_v1 = carregar_api_v1()
-    if complemento_v1:
-        n_complementados = 0
-        for row in rows:
-            ref = (row.get("Referencia") or "").strip()
-            extra = complemento_v1.get(ref)
-            if extra:
-                for campo, val in extra.items():
-                    if not str(row.get(campo) or "").strip():
-                        row[campo] = val
-                n_complementados += 1
-        print(f"  {n_complementados} de {len(rows)} produtos complementados com dados da v1")
 
     # 2. Preços actuais para comparação
     print("\n💰 A buscar preços actuais...")
