@@ -135,8 +135,13 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
           </Button>
         </div>
 
-        <div className="flex items-center justify-between pt-2">
-          <p className="text-xs text-muted-foreground">Arrasta para reordenar. Define mundo e visibilidade.</p>
+        <div className="flex items-center justify-between gap-2 pt-2">
+          <Input
+            placeholder="Pesquisar..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 max-w-[220px]"
+          />
           <Button size="sm" variant="default" onClick={saveOrder} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
             Guardar ordem
@@ -144,12 +149,12 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
         </div>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={filteredItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-1.5">
-              {items.length === 0 && (
+              {filteredItems.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">Nenhuma categoria.</p>
               )}
-              {items.map((cat) => (
+              {filteredItems.map((cat) => (
                 <SortableRow
                   key={cat.id}
                   cat={cat}
