@@ -180,10 +180,20 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
           </Button>
         </div>
 
+        {/* Search */}
+        <div className="pt-1">
+          <Input
+            placeholder="Pesquisar tipo, família ou categoria..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+          />
+        </div>
+
         {/* List */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-1">
           {grouped.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhum tipo criado ainda.</p>
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum tipo encontrado.</p>
           )}
           {grouped.map((group) => (
             <div key={group.family.id}>
