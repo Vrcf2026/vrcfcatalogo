@@ -213,6 +213,10 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
                         <SelectItem value="todos">Todos</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Switch
+                      checked={t.visivel ?? true}
+                      onCheckedChange={(v) => handleToggleVisible(t.id, v)}
+                    />
                     <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleDelete(t.id)}>
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
