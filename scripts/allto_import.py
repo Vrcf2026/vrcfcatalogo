@@ -301,6 +301,20 @@ def carregar_api() -> list:
         print("  ❌ Resposta vazia — verifica a chave API ALLTO_API_KEY")
         return []
     data = resp.json()
+
+    # Resposta de erro (ex: bloqueio Imunify360) — vem como dict com "message",
+    # NÃO é a lista de produtos. Detectar explicitamente para não rebentar
+    # mais abaixo a tentar iterar uma string como se fosse uma lista de rows.
+    if isinstance(data, dict) and "message" in data and not any(
+        k in data for k in ("products", "produtos", "items", "data", "artigos")
+    ):
+        print(f"  ❌ API ALL.TO devolveu erro: {data['message']}")
+        if "Imunify360" in str(data["message"]) or "bot-protection" in str(data["message"]):
+            print("  ⚠ O IP usado pelo GitHub Actions está a ser bloqueado pela ALL.TO.")
+            print("  ⚠ É necessário contactar a ALL.TO para fazer whitelisting do(s) IP(s)")
+            print("  ⚠ usado(s) pelos runners do GitHub Actions (ou usar um IP fixo/proxy).")
+        return []
+
     # A API pode retornar lista directamente ou dentro de uma chave
     if isinstance(data, list):
         rows = data
@@ -314,6 +328,14 @@ def carregar_api() -> list:
             rows = list(data.values())[0] if data else []
     else:
         rows = []
+
+    # Salvaguarda final: garantir que rows é uma lista de dicts antes de a
+    # devolver, para nunca rebentar mais abaixo com "'str' object has no
+    # attribute 'get'" se a estrutura vier inesperada.
+    if not isinstance(rows, list) or (rows and not isinstance(rows[0], dict)):
+        print(f"  ❌ Resposta da API em formato inesperado (não é lista de produtos): {str(rows)[:200]}")
+        return []
+
     print(f"  API ALL.TO: {len(rows)} produtos")
     return rows
 
@@ -346,6 +368,14 @@ def carregar_api_v1() -> dict:
         print(f"  HTTP Status (v1): {resp.status_code}")
         if resp.status_code != 200 or not resp.text.strip():
             print("  ⚠ API v1 indisponível — a continuar só com dados da v2")
+            return {}
+        # A v1 também pode devolver um JSON de erro (ex: bloqueio Imunify360)
+        # em vez do CSV esperado — detectar antes de o passar ao csv.DictReader.
+        texto = resp.text.strip()
+        if texto.startswith("{"):
+            print(f"  ⚠ API v1 devolveu resposta inesperada (JSON, não CSV): {texto[:200]}")
+            if "Imunify360" in texto or "bot-protection" in texto:
+                print("  ⚠ IP bloqueado pela ALL.TO — necessário whitelisting.")
             return {}
         reader = csv.DictReader(io.StringIO(resp.text), delimiter=";")
         complemento = {}
@@ -383,6 +413,9 @@ def main():
 
     # 1b. Complementar com dados ricos da API v1 (imagem, descrição técnica,
     # peso, taxa de IVA, descrição longa) — não disponíveis na v2.
+    # Pequeno intervalo entre pedidos: 2 pedidos seguidos à mesma API podem
+    # acionar a proteção anti-bot (Imunify360) da ALL.TO.
+    time.sleep(3)
     complemento_v1 = carregar_api_v1()
     if complemento_v1:
         n_complementados = 0
