@@ -47,4 +47,15 @@ export const SPEC_LABELS: Record<string, string> = {
   tipo_painel: "Tipo de Painel", vesa: "Suporte VESA",
   profundidade_de_cinzentos: "Profundidade de cinzentos", profundidade_de_colores: "Profundidade de cores",
   ecra: "Ecrã", modelo: "Modelo", otras_funciones: "Outras funções",
+
+  // ALL.TO — papelaria/escritório (a partir de "Descrição Técnica")
+  formato: "Formato", gramagem: "Gramagem", idade_recomendada: "Idade recomendada",
+  material: "Material", tamanho: "Tamanho", medidas: "Medidas", espessura: "Espessura",
+  acabamento: "Acabamento", quantidade: "Quantidade", quantidade_minima: "Quantidade mínima de venda", traco: "Traço",
+  largura_do_traco: "Largura do traço", forma_da_ponta: "Forma da ponta",
+  pontas_substituiveis: "Pontas substituíveis", classificacao: "Classificação",
+  mandril: "Mandril", comprimento_cabo: "Comprimento do cabo", virola: "Virola",
+  pelo: "Pêlo", comprimento_visivel_do_pelo: "Comprimento visível do pêlo",
+  caracteristicas_do_cabo: "Características do cabo", etiquetas: "Etiquetas",
+  superficies_a_pintar: "Superfícies a pintar", competencias_desenvolvidas: "Competências desenvolvidas",
 };
