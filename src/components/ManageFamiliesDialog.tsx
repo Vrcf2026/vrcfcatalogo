@@ -192,6 +192,10 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
                         <SelectItem value="todos">Todos</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Switch
+                      checked={f.visivel ?? true}
+                      onCheckedChange={(v) => handleToggleVisible(f.id, v)}
+                    />
                     <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => handleDelete(f.id)}>
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
