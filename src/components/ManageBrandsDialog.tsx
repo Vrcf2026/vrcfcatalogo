@@ -233,11 +233,20 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
           </Button>
         </div>
 
-        <div className="space-y-2 pt-2">
-          {brands.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca criada ainda.</p>
+        <div className="pt-2">
+          <Input
+            placeholder="Pesquisar marca..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8"
+          />
+        </div>
+
+        <div className="space-y-2">
+          {filteredBrands.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca encontrada.</p>
           )}
-          {brands.map((b) => {
+          {filteredBrands.map((b) => {
             const linked = familiesByBrand[b.id] || new Set<string>();
             return (
               <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2">
