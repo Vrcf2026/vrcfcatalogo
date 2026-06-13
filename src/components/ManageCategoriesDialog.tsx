@@ -35,7 +35,11 @@ export function ManageCategoriesDialog({ categories }: ManageCategoriesDialogPro
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
-  const filteredItems = items.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()));
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const filteredItems = items.filter((c) => {
+    if (mundoFilter !== "all" && (c.mundo ?? "todos") !== mundoFilter) return false;
+    return c.name.toLowerCase().includes(search.toLowerCase());
+  });
   const queryClient = useQueryClient();
 
   useEffect(() => {
