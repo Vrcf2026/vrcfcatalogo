@@ -19,11 +19,6 @@ interface AddProductDialogProps {
 }
 
 export function AddProductDialog({ families, categories, brands, types = [] }: AddProductDialogProps) {
-  categories: string[];
-  brands: { id: string; name: string }[];
-}
-
-export function AddProductDialog({ families, categories, brands }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
