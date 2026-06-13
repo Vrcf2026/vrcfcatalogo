@@ -83,9 +83,24 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
     }
   };
 
+  const handleToggleVisible = async (id: string, v: boolean) => {
+    try {
+      const { error } = await supabase.from("product_families").update({ visivel: v } as any).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["families"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const s = search.trim().toLowerCase();
+  const filteredFamilies = s
+    ? families.filter((f) => f.name.toLowerCase().includes(s) || f.category.toLowerCase().includes(s))
+    : families;
+
   const grouped = categories.map((cat) => ({
     category: cat,
-    items: families.filter((f) => f.category === cat),
+    items: filteredFamilies.filter((f) => f.category === cat),
   })).filter((g) => g.items.length > 0);
 
   return (
