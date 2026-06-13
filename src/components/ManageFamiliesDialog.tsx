@@ -93,10 +93,15 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
     }
   };
 
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const s = search.trim().toLowerCase();
-  const filteredFamilies = s
-    ? families.filter((f) => f.name.toLowerCase().includes(s) || f.category.toLowerCase().includes(s))
-    : families;
+  const filteredFamilies = families.filter((f) => {
+    if (mundoFilter !== "all" && (f.mundo ?? "todos") !== mundoFilter) return false;
+    if (categoryFilter !== "all" && f.category !== categoryFilter) return false;
+    if (!s) return true;
+    return f.name.toLowerCase().includes(s) || f.category.toLowerCase().includes(s);
+  });
 
   const grouped = categories.map((cat) => ({
     category: cat,
