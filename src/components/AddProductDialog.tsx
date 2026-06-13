@@ -143,6 +143,7 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
     setPrice("");
     setFamilyId("none");
     setBrandId("none");
+    setTypeId("none");
     setImageSlots([]);
   };
 
