@@ -21,18 +21,20 @@ interface EditProductSheetProps {
   families: { id: string; name: string; category: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
+  types?: { id: string; name: string; family_id: string }[];
 }
 
 const TECLADO_OPTIONS = ["PT", "ES", "Internacional", "Personalizável"];
 const GRAU_OPTIONS = ["A", "B", "C"];
 const STOCK_OPTIONS = ["high", "low", "out"];
 
-export function EditProductSheet({ open, onOpenChange, product, families, categories, brands }: EditProductSheetProps) {
+export function EditProductSheet({ open, onOpenChange, product, families, categories, brands, types = [] }: EditProductSheetProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
   const [brandId, setBrandId] = useState("none");
+  const [typeId, setTypeId] = useState("none");
   const [familyText, setFamilyText] = useState("");
   const [brandText, setBrandText] = useState("");
   const [price, setPrice] = useState("");
@@ -52,6 +54,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
+  const filteredTypes = types.filter((t) => familyId !== "none" && t.family_id === familyId);
 
   // Margem calculada
   const margem = purchasePrice && price
@@ -65,6 +68,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
     setCategory(product.category || "");
     setFamilyId(product.family_id || "none");
     setBrandId(product.brand_id || "none");
+    setTypeId(product.type_id || "none");
     setFamilyText(product.family || "");
     setBrandText(product.brand || "");
     setPrice(product.price?.toString() || "");
@@ -100,6 +104,8 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
         category: category || null,
         family_id: familyId === "none" ? null : familyId,
         brand_id: brandId === "none" ? null : brandId,
+        type_id: typeId === "none" ? null : typeId,
+        type: typeId === "none" ? null : (types.find((t) => t.id === typeId)?.name ?? null),
         family: familyText || null,
         brand: brandText || null,
         price: price ? parseFloat(price) : null,
@@ -243,6 +249,21 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
                 </SelectContent>
               </Select>
               {brandText && <p className="text-xs text-muted-foreground">Importado: {brandText}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo (nível 3)</Label>
+              <Select value={typeId} onValueChange={setTypeId} disabled={familyId === "none"}>
+                <SelectTrigger>
+                  <SelectValue placeholder={familyId === "none" ? "Escolhe família primeiro" : "Sem tipo"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem tipo</SelectItem>
+                  {filteredTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {product?.type && typeId === "none" && (
+                <p className="text-xs text-muted-foreground">Importado: {product.type}</p>
+              )}
             </div>
             <Separator />
             <div className="grid grid-cols-2 gap-4">

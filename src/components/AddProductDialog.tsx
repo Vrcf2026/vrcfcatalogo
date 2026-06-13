@@ -15,15 +15,17 @@ interface AddProductDialogProps {
   families: { id: string; name: string; category: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
+  types?: { id: string; name: string; family_id: string }[];
 }
 
-export function AddProductDialog({ families, categories, brands }: AddProductDialogProps) {
+export function AddProductDialog({ families, categories, brands, types = [] }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
   const [brandId, setBrandId] = useState("none");
+  const [typeId, setTypeId] = useState("none");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
@@ -31,6 +33,7 @@ export function AddProductDialog({ families, categories, brands }: AddProductDia
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
+  const filteredTypes = types.filter((t) => familyId !== "none" && t.family_id === familyId);
 
   const handleGenerateDescription = async () => {
     if (!name.trim()) {
@@ -99,6 +102,8 @@ export function AddProductDialog({ families, categories, brands }: AddProductDia
           price: price ? parseFloat(price) : null,
           family_id: familyId === "none" ? null : familyId,
           brand_id: brandId === "none" ? null : brandId,
+          type_id: typeId === "none" ? null : typeId,
+          type: typeId === "none" ? null : (types.find((t) => t.id === typeId)?.name ?? null),
         })
         .select()
         .single();
@@ -138,6 +143,7 @@ export function AddProductDialog({ families, categories, brands }: AddProductDia
     setPrice("");
     setFamilyId("none");
     setBrandId("none");
+    setTypeId("none");
     setImageSlots([]);
   };
 
@@ -223,6 +229,21 @@ export function AddProductDialog({ families, categories, brands }: AddProductDia
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tipo (nível 3)</Label>
+            <Select value={typeId} onValueChange={setTypeId} disabled={familyId === "none"}>
+              <SelectTrigger>
+                <SelectValue placeholder={familyId === "none" ? "Escolhe família primeiro" : "Sem tipo"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem tipo</SelectItem>
+                {filteredTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <ImageSlotPicker

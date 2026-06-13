@@ -105,17 +105,27 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
     }
   };
 
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [familyFilter, setFamilyFilter] = useState("all");
   const s = search.trim().toLowerCase();
-  const filteredTypes = s
-    ? types.filter((t) => {
-        const fam = familyMap[t.family_id];
-        return (
-          t.name.toLowerCase().includes(s) ||
-          (fam?.name?.toLowerCase().includes(s) ?? false) ||
-          (fam?.category?.toLowerCase().includes(s) ?? false)
-        );
-      })
-    : types;
+  const filteredTypes = types.filter((t) => {
+    const fam = familyMap[t.family_id];
+    if (mundoFilter !== "all" && (t.mundo ?? "todos") !== mundoFilter) return false;
+    if (categoryFilter !== "all" && fam?.category !== categoryFilter) return false;
+    if (familyFilter !== "all" && t.family_id !== familyFilter) return false;
+    if (!s) return true;
+    return (
+      t.name.toLowerCase().includes(s) ||
+      (fam?.name?.toLowerCase().includes(s) ?? false) ||
+      (fam?.category?.toLowerCase().includes(s) ?? false)
+    );
+  });
+
+  const categoryOptions = Array.from(new Set(families.map((f) => f.category))).sort();
+  const familyOptions = categoryFilter === "all"
+    ? families
+    : families.filter((f) => f.category === categoryFilter);
 
   // Agrupar por família (e mostrar categoria da família)
   const grouped = families
@@ -180,14 +190,40 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="pt-1">
+        {/* Search + filtros */}
+        <div className="pt-1 space-y-2">
           <Input
             placeholder="Pesquisar tipo, família ou categoria..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8"
           />
+          <div className="grid grid-cols-3 gap-2">
+            <Select value={mundoFilter} onValueChange={setMundoFilter}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os mundos</SelectItem>
+                <SelectItem value="seguranca">Segurança</SelectItem>
+                <SelectItem value="escritorio">Escritório</SelectItem>
+                <SelectItem value="economato">Economato</SelectItem>
+                <SelectItem value="todos">Genérico</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas categorias</SelectItem>
+                {categoryOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={familyFilter} onValueChange={setFamilyFilter}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas famílias</SelectItem>
+                {familyOptions.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* List */}

@@ -93,10 +93,15 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
     }
   };
 
+  const [mundoFilter, setMundoFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const s = search.trim().toLowerCase();
-  const filteredFamilies = s
-    ? families.filter((f) => f.name.toLowerCase().includes(s) || f.category.toLowerCase().includes(s))
-    : families;
+  const filteredFamilies = families.filter((f) => {
+    if (mundoFilter !== "all" && (f.mundo ?? "todos") !== mundoFilter) return false;
+    if (categoryFilter !== "all" && f.category !== categoryFilter) return false;
+    if (!s) return true;
+    return f.name.toLowerCase().includes(s) || f.category.toLowerCase().includes(s);
+  });
 
   const grouped = categories.map((cat) => ({
     category: cat,
@@ -154,14 +159,33 @@ export function ManageFamiliesDialog({ families, categories }: ManageFamiliesDia
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="pt-1">
+        {/* Search + filtros */}
+        <div className="pt-1 space-y-2">
           <Input
             placeholder="Pesquisar família..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8"
           />
+          <div className="grid grid-cols-2 gap-2">
+            <Select value={mundoFilter} onValueChange={setMundoFilter}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os mundos</SelectItem>
+                <SelectItem value="seguranca">Segurança</SelectItem>
+                <SelectItem value="escritorio">Escritório</SelectItem>
+                <SelectItem value="economato">Economato</SelectItem>
+                <SelectItem value="todos">Genérico</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* List */}

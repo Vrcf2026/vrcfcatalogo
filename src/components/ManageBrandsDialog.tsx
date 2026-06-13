@@ -46,11 +46,15 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [name, setName] = useState("");
   const [mundo, setMundo] = useState("todos");
   const [search, setSearch] = useState("");
+  const [mundoFilter, setMundoFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const filteredBrands = brands.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredBrands = brands.filter((b) => {
+    if (mundoFilter !== "all" && (b.mundo ?? "todos") !== mundoFilter) return false;
+    return b.name.toLowerCase().includes(search.toLowerCase());
+  });
 
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
@@ -233,13 +237,23 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
           </Button>
         </div>
 
-        <div className="pt-2">
+        <div className="pt-2 flex gap-2">
           <Input
             placeholder="Pesquisar marca..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8"
+            className="h-8 flex-1"
           />
+          <Select value={mundoFilter} onValueChange={setMundoFilter}>
+            <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os mundos</SelectItem>
+              <SelectItem value="seguranca">Segurança</SelectItem>
+              <SelectItem value="escritorio">Escritório</SelectItem>
+              <SelectItem value="economato">Economato</SelectItem>
+              <SelectItem value="todos">Genérico</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="space-y-2">
