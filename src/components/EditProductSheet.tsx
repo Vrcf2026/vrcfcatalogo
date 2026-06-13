@@ -21,6 +21,7 @@ interface EditProductSheetProps {
   families: { id: string; name: string; category: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
+  types?: { id: string; name: string; family_id: string }[];
 }
 
 const TECLADO_OPTIONS = ["PT", "ES", "Internacional", "Personalizável"];
