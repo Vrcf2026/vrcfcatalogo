@@ -68,6 +68,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
     setCategory(product.category || "");
     setFamilyId(product.family_id || "none");
     setBrandId(product.brand_id || "none");
+    setTypeId(product.type_id || "none");
     setFamilyText(product.family || "");
     setBrandText(product.brand || "");
     setPrice(product.price?.toString() || "");
