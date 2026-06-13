@@ -190,6 +190,21 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["tipo"] = "Servidor"
     elif any(x in fl for x in ["sff", "sobremesa", "torre", "mini pc", "tiny"]):
         specs["tipo"] = "Desktop"
+    elif "monitor" in fl:
+        specs["tipo"] = "Monitor"
+    elif "tpv" in fl:
+        specs["tipo"] = "TPV"
+    elif "tablet" in fl:
+        specs["tipo"] = "Tablet"
+    elif "impresora" in fl or "escáner" in fl or "escaner" in fl:
+        specs["tipo"] = "Impressora"
+    elif "apple" in fl:
+        if any(x in nl for x in ["macbook", "portátil"]):
+            specs["tipo"] = "Portátil"
+        elif any(x in nl for x in ["imac", "mac mini", "mac studio", "mac pro"]):
+            specs["tipo"] = "Desktop"
+        elif "ipad" in nl:
+            specs["tipo"] = "Tablet"
 
     # ── PROCESSADOR ──
     proc = re.search(
@@ -199,9 +214,16 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["processador"] = proc.group(1).strip()
 
     # ── GERAÇÃO ──
-    gen = re.search(r"i\d[-\s]?(\d{1,2})\d{3}", texto_orig, re.IGNORECASE)
+    gen = re.search(r"i[3579][-\s]?(\d{4,5})", texto_orig, re.IGNORECASE)
     if gen:
-        specs["geracao"] = gen.group(1) + "ª Gen"
+        num = gen.group(1)
+        if len(num) == 5:
+            ger = num[:2]
+        elif len(num) == 4 and num[0] == "1":
+            ger = num[:2]
+        else:
+            ger = num[0]
+        specs["geracao"] = ger + "ª Gen"
 
     # ── PLACA GRÁFICA ──
     graf = re.search(r"Gr[áa]fica integrada\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
@@ -244,7 +266,7 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
 
     # ── ECRã ──
     ecra = re.search(r'(\d+(?:[.,]\d+)?)\s*"', texto_orig)
-    if ecra and specs.get("tipo") in ("Portátil", "Tudo-em-Um"):
+    if ecra and specs.get("tipo") in ("Portátil", "Tudo-em-Um", "Monitor", "TPV", "Tablet"):
         specs["ecra_polegadas"] = ecra.group(1).replace(",", ".")
 
     if re.search(r"FHD|Full HD|1920.?x.?1080", texto_orig, re.IGNORECASE):
@@ -661,6 +683,7 @@ def main(local=False):
     print(f"  Traduzidos via Claude: {traduzidos_claude}")
     print(f"  Teclado PT: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'PT')}")
     print(f"  Teclado ES: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'ES')}")
+    print(f"  Teclado Internacional: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'Internacional')}")
     print(f"  Teclado Personalizável: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'Personalizável')}")
     print(f"  Sem stock: {sum(1 for p in produtos if p['stock_status'] == 'on_request')}")
 
