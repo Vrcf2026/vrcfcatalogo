@@ -17,13 +17,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo } from "react";
-import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download } from "lucide-react";
+import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
-const FORNECEDORES = ["diginova", "visiotech", "allto", "bydemes", "manual"];
+const FORNECEDORES = ["diginova", "visiotech", "bydemes", "manual"];
 const PAGE_SIZE = 50;
 
 const Admin = () => {
@@ -162,90 +162,6 @@ const Admin = () => {
     queryClient.invalidateQueries({ queryKey: ["products"] });
   };
 
-  const [exporting, setExporting] = useState(false);
-
-  const handleExport = async (mundo: string) => {
-    setExporting(true);
-    try {
-      // Buscar TODOS os produtos do mundo (paginado — Supabase limita a 1000/pedido)
-      let all: any[] = [];
-      let from = 0;
-      const pageSize = 1000;
-      while (true) {
-        let q = supabase.from("products").select("*").range(from, from + pageSize - 1);
-        if (mundo !== "all") q = q.eq("mundo", mundo);
-        const { data, error } = await q;
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all = all.concat(data);
-        if (data.length < pageSize) break;
-        from += pageSize;
-      }
-
-      if (all.length === 0) {
-        toast.error("Sem produtos para exportar");
-        return;
-      }
-
-      // Colunas principais + especificações achatadas (uma coluna por chave técnica)
-      const baseCols = [
-        "sku", "slug", "name", "mundo", "fornecedor", "category", "family",
-        "brand", "price", "price_tier2", "price_tier3", "purchase_price",
-        "stock_status", "sob_encomenda", "envio_especial", "weight",
-        "ean", "include_in_catalog", "featured", "show_on_homepage",
-      ];
-
-      // Recolher todas as chaves de especificacoes presentes
-      const specKeys = new Set<string>();
-      all.forEach((p) => {
-        const specs = p.especificacoes || {};
-        Object.keys(specs).forEach((k) => {
-          if (k !== "teclado_nota") specKeys.add(k);
-        });
-      });
-      const specCols = Array.from(specKeys).sort();
-
-      const headers = [...baseCols, ...specCols.map((k) => `spec_${k}`)];
-
-      const escapeCsv = (val: any) => {
-        if (val == null) return "";
-        const s = String(val);
-        if (s.includes(";") || s.includes("\n") || s.includes('"')) {
-          return `"${s.replace(/"/g, '""')}"`;
-        }
-        return s;
-      };
-
-      const lines = [headers.join(";")];
-      all.forEach((p) => {
-        const specs = p.especificacoes || {};
-        const row = [
-          ...baseCols.map((c) => escapeCsv(p[c])),
-          ...specCols.map((k) => escapeCsv(specs[k])),
-        ];
-        lines.push(row.join(";"));
-      });
-
-      const csv = "\uFEFF" + lines.join("\n"); // BOM para acentos no Excel
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const data_str = new Date().toISOString().slice(0, 10);
-      a.href = url;
-      a.download = `produtos_${mundo}_${data_str}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success(`${all.length} produtos exportados`);
-    } catch (err: any) {
-      toast.error("Erro ao exportar: " + (err.message || "desconhecido"));
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const SortIcon = ({ col }: { col: string }) => {
     if (sortCol !== col) return null;
     return sortDir === "asc" ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />;
@@ -284,7 +200,7 @@ const Admin = () => {
             <ManageBrandsDialog brands={brands} />
             <ManageTypesDialog types={types} families={families as any} />
             <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
-            <AddProductDialog families={families} categories={categoryNames} brands={brands} />
+            <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
@@ -333,7 +249,6 @@ const Admin = () => {
                   <SelectItem value="all">Mundo</SelectItem>
                   <SelectItem value="escritorio">Escritório</SelectItem>
                   <SelectItem value="seguranca">Segurança</SelectItem>
-                  <SelectItem value="economato">Economato</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setPage(1); }}>
@@ -372,17 +287,6 @@ const Admin = () => {
                   setBrandFilter("all"); setFornecedorFilter("all"); setMundoFilter("all"); setStockFilter("all"); setPage(1);
                 }}>Limpar filtros</Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 gap-1.5"
-                disabled={exporting}
-                onClick={() => handleExport(mundoFilter)}
-                title="Exporta os produtos do mundo seleccionado (ou todos) para CSV"
-              >
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                Exportar {mundoFilter === "all" ? "Tudo" : mundoFilter === "escritorio" ? "Escritório" : mundoFilter === "seguranca" ? "Segurança" : "Economato"}
-              </Button>
             </div>
 
             {/* Contador */}
@@ -520,6 +424,7 @@ const Admin = () => {
           onOpenChange={(open) => !open && setEditingProduct(null)}
           product={editingProduct}
           families={families}
+          types={types}
           categories={categoryNames}
           brands={brands}
         />

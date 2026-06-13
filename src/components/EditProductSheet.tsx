@@ -18,7 +18,8 @@ interface EditProductSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: any;
-  families: { id: string; name: string; category: string }[];
+  families: { id: string; name: string; category: string; mundo?: string }[];
+  types?: { id: string; name: string; family_id: string; mundo?: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
 }
@@ -27,11 +28,12 @@ const TECLADO_OPTIONS = ["PT", "ES", "Internacional", "Personalizável"];
 const GRAU_OPTIONS = ["A", "B", "C"];
 const STOCK_OPTIONS = ["high", "low", "out"];
 
-export function EditProductSheet({ open, onOpenChange, product, families, categories, brands }: EditProductSheetProps) {
+export function EditProductSheet({ open, onOpenChange, product, families, types = [], categories, brands }: EditProductSheetProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
+  const [typeId, setTypeId] = useState("none");
   const [brandId, setBrandId] = useState("none");
   const [familyText, setFamilyText] = useState("");
   const [brandText, setBrandText] = useState("");
@@ -53,6 +55,11 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
+  // Tipos (Nível 3) disponíveis para a família escolhida — qualquer que seja
+  // o mundo do produto, ou tipos marcados como "todos"
+  const filteredTypes = types.filter(
+    (t) => t.family_id === familyId && (!t.mundo || t.mundo === "todos" || t.mundo === mundo)
+  );
 
   // Margem calculada
   const margem = purchasePrice && price
@@ -65,6 +72,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
     setDescription(product.description || "");
     setCategory(product.category || "");
     setFamilyId(product.family_id || "none");
+    setTypeId(product.type_id || "none");
     setBrandId(product.brand_id || "none");
     setFamilyText(product.family || "");
     setBrandText(product.brand || "");
@@ -101,6 +109,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
         description: description.trim() || null,
         category: category || null,
         family_id: familyId === "none" ? null : familyId,
+        type_id: typeId === "none" ? null : typeId,
         brand_id: brandId === "none" ? null : brandId,
         family: familyText || null,
         brand: brandText || null,
@@ -198,11 +207,13 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Mundo</Label>
-                <Select value={mundo} onValueChange={setMundo}>
+                <Select value={mundo} onValueChange={(v) => { setMundo(v); setTypeId("none"); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="escritorio">Escritório & IT</SelectItem>
                     <SelectItem value="seguranca">Segurança & Redes</SelectItem>
+                    <SelectItem value="economato">Economato</SelectItem>
+                    <SelectItem value="todos">Todos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -230,7 +241,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
               </div>
               <div className="space-y-2">
                 <Label>Família</Label>
-                <Select value={familyId} onValueChange={setFamilyId}>
+                <Select value={familyId} onValueChange={(v) => { setFamilyId(v); setTypeId("none"); }}>
                   <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Sem família</SelectItem>
@@ -239,6 +250,21 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
                 </Select>
                 {familyText && <p className="text-xs text-muted-foreground">Importado: {familyText}</p>}
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo (Nível 3)</Label>
+              <Select value={typeId} onValueChange={setTypeId} disabled={filteredTypes.length === 0}>
+                <SelectTrigger><SelectValue placeholder={filteredFamilies.length === 0 || familyId === "none" ? "Escolha primeiro a família" : "Sem tipo"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem tipo</SelectItem>
+                  {filteredTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {familyId !== "none" && filteredTypes.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Esta família ainda não tem tipos criados — usa o botão "Tipos" no Admin.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Marca</Label>

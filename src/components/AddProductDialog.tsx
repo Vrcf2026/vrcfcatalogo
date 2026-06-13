@@ -12,20 +12,21 @@ import { Plus, Wand2, Loader2, Sparkles } from "lucide-react";
 import { ImageSlotPicker, type ImageSlot } from "@/components/ImageSlotPicker";
 
 interface AddProductDialogProps {
-  families: { id: string; name: string; category: string }[];
+  families: { id: string; name: string; category: string; mundo?: string }[];
+  types?: { id: string; name: string; family_id: string; mundo?: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
-  types?: { id: string; name: string; family_id: string }[];
 }
 
-export function AddProductDialog({ families, categories, brands, types = [] }: AddProductDialogProps) {
+export function AddProductDialog({ families, types = [], categories, brands }: AddProductDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
-  const [brandId, setBrandId] = useState("none");
   const [typeId, setTypeId] = useState("none");
+  const [brandId, setBrandId] = useState("none");
+  const [mundo, setMundo] = useState("escritorio");
   const [price, setPrice] = useState("");
   const [loading, setLoading] = useState(false);
   const [generatingDesc, setGeneratingDesc] = useState(false);
@@ -33,7 +34,9 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
   const queryClient = useQueryClient();
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
-  const filteredTypes = types.filter((t) => familyId !== "none" && t.family_id === familyId);
+  const filteredTypes = types.filter(
+    (t) => t.family_id === familyId && (!t.mundo || t.mundo === "todos" || t.mundo === mundo)
+  );
 
   const handleGenerateDescription = async () => {
     if (!name.trim()) {
@@ -101,9 +104,9 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
           category: category || null,
           price: price ? parseFloat(price) : null,
           family_id: familyId === "none" ? null : familyId,
-          brand_id: brandId === "none" ? null : brandId,
           type_id: typeId === "none" ? null : typeId,
-          type: typeId === "none" ? null : (types.find((t) => t.id === typeId)?.name ?? null),
+          brand_id: brandId === "none" ? null : brandId,
+          mundo,
         })
         .select()
         .single();
@@ -142,8 +145,9 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
     setCategory("");
     setPrice("");
     setFamilyId("none");
-    setBrandId("none");
     setTypeId("none");
+    setBrandId("none");
+    setMundo("escritorio");
     setImageSlots([]);
   };
 
@@ -188,13 +192,14 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <Label>Mundo</Label>
+              <Select value={mundo} onValueChange={(v) => { setMundo(v); setTypeId("none"); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
+                  <SelectItem value="escritorio">Escritório & IT</SelectItem>
+                  <SelectItem value="seguranca">Segurança & Redes</SelectItem>
+                  <SelectItem value="economato">Economato</SelectItem>
+                  <SelectItem value="todos">Todos</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -206,13 +211,39 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Família</Label>
-              <Select value={familyId} onValueChange={setFamilyId}>
+              <Select value={familyId} onValueChange={(v) => { setFamilyId(v); setTypeId("none"); }}>
                 <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem família</SelectItem>
                   {filteredFamilies.map((f) => (
                     <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Tipo (Nível 3)</Label>
+              <Select value={typeId} onValueChange={setTypeId} disabled={filteredTypes.length === 0}>
+                <SelectTrigger><SelectValue placeholder={familyId === "none" ? "Escolha primeiro a família" : "Sem tipo"} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem tipo</SelectItem>
+                  {filteredTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -229,21 +260,6 @@ export function AddProductDialog({ families, categories, brands, types = [] }: A
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Tipo (nível 3)</Label>
-            <Select value={typeId} onValueChange={setTypeId} disabled={familyId === "none"}>
-              <SelectTrigger>
-                <SelectValue placeholder={familyId === "none" ? "Escolhe família primeiro" : "Sem tipo"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem tipo</SelectItem>
-                {filteredTypes.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <ImageSlotPicker
