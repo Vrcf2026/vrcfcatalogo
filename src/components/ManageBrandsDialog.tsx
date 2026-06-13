@@ -330,6 +330,10 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
                   </PopoverContent>
                 </Popover>
 
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Switch checked={b.visivel ?? true} onCheckedChange={(v) => handleToggleVisible(b.id, v)} />
+                </div>
+
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(b.id)}>
                   <Trash2 className="h-3 w-3 text-destructive" />
                 </Button>
