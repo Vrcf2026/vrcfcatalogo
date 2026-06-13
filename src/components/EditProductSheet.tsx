@@ -250,6 +250,20 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
               </Select>
               {brandText && <p className="text-xs text-muted-foreground">Importado: {brandText}</p>}
             </div>
+            <div className="space-y-2">
+              <Label>Tipo (nível 3)</Label>
+              <Select value={typeId} onValueChange={setTypeId} disabled={familyId === "none"}>
+                <SelectTrigger>
+                  <SelectValue placeholder={familyId === "none" ? "Escolhe família primeiro" : "Sem tipo"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem tipo</SelectItem>
+                  {filteredTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {product?.type && typeId === "none" && (
+                <p className="text-xs text-muted-foreground">Importado: {product.type}</p>
+              )}
             <Separator />
             <div className="grid grid-cols-2 gap-4">
               {[
