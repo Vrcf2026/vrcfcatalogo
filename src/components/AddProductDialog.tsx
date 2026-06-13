@@ -15,6 +15,12 @@ interface AddProductDialogProps {
   families: { id: string; name: string; category: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
+  types?: { id: string; name: string; family_id: string }[];
+}
+
+export function AddProductDialog({ families, categories, brands, types = [] }: AddProductDialogProps) {
+  categories: string[];
+  brands: { id: string; name: string }[];
 }
 
 export function AddProductDialog({ families, categories, brands }: AddProductDialogProps) {
