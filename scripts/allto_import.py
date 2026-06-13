@@ -328,6 +328,17 @@ def carregar_api() -> list:
             print("  ⚠ usado(s) pelos runners do GitHub Actions (ou usar um IP fixo/proxy).")
         return []
 
+    # Página HTML (ex: challenge anti-bot "a verificar o seu browser...",
+    # com setTimeout + reload) em vez do CSV esperado.
+    content_type = resp.headers.get("Content-Type", "")
+    if texto.lstrip().startswith(("<!DOCTYPE", "<html")) or "text/html" in content_type:
+        print("  ❌ API ALL.TO devolveu uma página HTML em vez de CSV "
+              "(provável challenge anti-bot/Imunify360).")
+        print("  ⚠ O IP usado pelo GitHub Actions está provavelmente a ser bloqueado pela ALL.TO.")
+        print("  ⚠ É necessário contactar a ALL.TO para fazer whitelisting do(s) IP(s)")
+        print("  ⚠ usado(s) pelos runners do GitHub Actions (ou usar um IP fixo/proxy).")
+        return []
+
     reader = csv.DictReader(io.StringIO(resp.text), delimiter=";")
     # Mapeamento de colunas v1 (com espaços) → nomes com underscore usados
     # no resto do script.
@@ -355,6 +366,14 @@ def carregar_api() -> list:
 
     if not rows:
         print("  ❌ CSV vazio ou em formato inesperado")
+        return []
+
+    # Salvaguarda: confirmar que as colunas esperadas existem (Referencia,
+    # PVR) — se não, a resposta não é o CSV real da ALL.TO (ex: HTML/erro
+    # mal detectado acima por algum motivo).
+    if "Referencia" not in rows[0] or "PVR" not in rows[0]:
+        print(f"  ❌ Resposta não tem o formato esperado do CSV ALL.TO "
+              f"(colunas: {list(rows[0].keys())[:5]}...)")
         return []
 
     print(f"  API ALL.TO: {len(rows)} produtos")
