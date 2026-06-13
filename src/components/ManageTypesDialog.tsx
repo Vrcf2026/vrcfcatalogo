@@ -190,14 +190,40 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
           </Button>
         </div>
 
-        {/* Search */}
-        <div className="pt-1">
+        {/* Search + filtros */}
+        <div className="pt-1 space-y-2">
           <Input
             placeholder="Pesquisar tipo, família ou categoria..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8"
           />
+          <div className="grid grid-cols-3 gap-2">
+            <Select value={mundoFilter} onValueChange={setMundoFilter}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os mundos</SelectItem>
+                <SelectItem value="seguranca">Segurança</SelectItem>
+                <SelectItem value="escritorio">Escritório</SelectItem>
+                <SelectItem value="economato">Economato</SelectItem>
+                <SelectItem value="todos">Genérico</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); }}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas categorias</SelectItem>
+                {categoryOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={familyFilter} onValueChange={setFamilyFilter}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas famílias</SelectItem>
+                {familyOptions.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* List */}
