@@ -28,7 +28,7 @@ const TECLADO_OPTIONS = ["PT", "ES", "Internacional", "Personalizável"];
 const GRAU_OPTIONS = ["A", "B", "C"];
 const STOCK_OPTIONS = ["high", "low", "out"];
 
-export function EditProductSheet({ open, onOpenChange, product, families, categories, brands }: EditProductSheetProps) {
+export function EditProductSheet({ open, onOpenChange, product, families, categories, brands, types = [] }: EditProductSheetProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
