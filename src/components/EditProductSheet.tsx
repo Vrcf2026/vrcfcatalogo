@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Plus, X } from "lucide-react";
+import { Loader2, Save, Trash2, Plus, X, Lock, Unlock } from "lucide-react";
 
 interface EditProductSheetProps {
   open: boolean;
@@ -47,6 +47,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
   const [featured, setFeatured] = useState(false);
   const [showOnHomepage, setShowOnHomepage] = useState(false);
   const [specs, setSpecs] = useState<Record<string, string>>({});
+  const [specsLocked, setSpecsLocked] = useState<string[]>([]);
   const [upgrades, setUpgrades] = useState<{ tipo: string; descricao: string; preco: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
@@ -84,6 +85,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
       ? JSON.parse(product.especificacoes || "{}")
       : (product.especificacoes || {});
     setSpecs(rawSpecs);
+    setSpecsLocked(Array.isArray(product.specs_locked) ? product.specs_locked : []);
 
     // Upgrades
     const rawUpgrades = Array.isArray(product.upgrades) ? product.upgrades : [];
@@ -114,6 +116,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
         featured,
         show_on_homepage: showOnHomepage,
         especificacoes: specs,
+        specs_locked: specsLocked,
         upgrades: upgrades.filter(u => u.tipo || u.descricao),
       }).eq("id", product.id);
       if (error) throw error;
@@ -146,6 +149,10 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
 
   const updateSpec = (key: string, val: string) => {
     setSpecs(prev => val ? { ...prev, [key]: val } : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key)));
+  };
+
+  const toggleLock = (key: string) => {
+    setSpecsLocked(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
   };
 
   const addUpgrade = () => setUpgrades(prev => [...prev, { tipo: "", descricao: "", preco: "" }]);
@@ -302,6 +309,10 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
 
           {/* ── SPECS ── */}
           <TabsContent value="specs" className="space-y-3">
+            <p className="text-xs text-muted-foreground -mt-1 mb-2">
+              <Lock className="inline h-3 w-3 mr-1" />
+              Trancar um campo impede que a próxima importação o sobrescreva.
+            </p>
             {[
               { key: "tipo", label: "Tipo", options: ["Portátil", "Desktop", "Tudo-em-Um", "Servidor", "Monitor", "Tablet"] },
               { key: "grau", label: "Grau", options: ["A", "B", "C"] },
@@ -325,22 +336,32 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
               { key: "bluetooth", label: "Bluetooth", options: ["Sim", "Não"] },
               { key: "portas", label: "Portas" },
               { key: "cor", label: "Cor" },
-            ].map(({ key, label, options }) => (
-              <div key={key} className="grid grid-cols-2 gap-3 items-center">
-                <Label className="text-sm">{label}</Label>
-                {options ? (
-                  <Select value={specs[key] || ""} onValueChange={(v) => updateSpec(key, v === "_none" ? "" : v)}>
-                    <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="_none">—</SelectItem>
-                      {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input className="h-8 text-sm" value={specs[key] || ""} onChange={(e) => updateSpec(key, e.target.value)} placeholder="—" />
-                )}
-              </div>
-            ))}
+            ].map(({ key, label, options }) => {
+              const locked = specsLocked.includes(key);
+              return (
+                <div key={key} className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">
+                  <Label className="text-sm">{label}</Label>
+                  {options ? (
+                    <Select value={specs[key] || ""} onValueChange={(v) => updateSpec(key, v === "_none" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_none">—</SelectItem>
+                        {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input className="h-8 text-sm" value={specs[key] || ""} onChange={(e) => updateSpec(key, e.target.value)} placeholder="—" />
+                  )}
+                  <Button
+                    type="button" variant="ghost" size="icon" className="h-8 w-8"
+                    title={locked ? "Trancado — a importação não vai alterar este campo" : "Trancar este campo"}
+                    onClick={() => toggleLock(key)}
+                  >
+                    {locked ? <Lock className="h-3.5 w-3.5 text-primary" /> : <Unlock className="h-3.5 w-3.5 text-muted-foreground" />}
+                  </Button>
+                </div>
+              );
+            })}
             {specs.teclado && specs.teclado !== "PT" && (
               <div className="space-y-2">
                 <Label className="text-sm">Nota de teclado</Label>

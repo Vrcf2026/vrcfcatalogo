@@ -89,6 +89,8 @@ TRADUCOES = {
     "Disco duro": "Disco Rígido", "Memorias": "Memória",
     "Memoria": "Memória", "Gráfica": "Placa Gráfica",
     "Pantalla": "Ecrã", "Batería": "Bateria",
+    "Resolución": "Resolução", "Profundidad": "Profundidade",
+    "Grises": "Cinzentos", "Colores": "Cores",
     "Lector": "Leitor", "Grabador": "Gravador",
     "Lector/Grabador": "Leitor/Gravador",
     "Conexiones": "Ligações", "Conectividad": "Conectividade",
@@ -149,7 +151,7 @@ TRADUCOES = {
     "teclado internacional": "teclado internacional",
     "Especificaciones": "Especificações",
     "Marca": "Marca", "Procesador": "Processador",
-    "Negro": "Preto", "Plata": "Prateado",
+    "Negro": "Preto", "Plata": "Prateado", "Blanco": "Branco", "Gris": "Cinzento",
     "SI": "SIM", "No.": "Não",
     "Pulgadas LED": "Polegadas LED",
 }
@@ -158,6 +160,22 @@ def traduzir_texto(texto: str) -> str:
     for es, pt in TRADUCOES.items():
         texto = texto.replace(es, pt)
     return texto
+
+def nome_a_partir_da_imagem(imagem: str, marca: str, ref: str) -> str:
+    """Fallback para NOMBREARTICULO vazio (comum em Monitores) — deriva um
+    nome legível a partir do ficheiro de imagem, ex:
+    'Monitor-ACER-B246HL-GRADO-B---LED-24-FHD---VGADVI---NegroGris.jpg'
+    → 'Monitor ACER B246HL LED 24 FHD VGADVI NegroGris'
+    """
+    if not imagem:
+        return f"{marca} {ref}".strip() or ref
+    nome_ficheiro = imagem.rsplit("/", 1)[-1]
+    nome_ficheiro = re.sub(r"\.\w{3,4}$", "", nome_ficheiro)  # remover extensão
+    nome_ficheiro = re.sub(r"-+", " ", nome_ficheiro).strip()
+    # Remover "GRADO A"/"GRADO B" — já é um campo próprio (spec "grau")
+    nome_ficheiro = re.sub(r"\bGRADO\s+[AB]\b", "", nome_ficheiro, flags=re.IGNORECASE)
+    nome_ficheiro = re.sub(r"\s{2,}", " ", nome_ficheiro).strip()
+    return nome_ficheiro or f"{marca} {ref}".strip() or ref
 
 def limpar_html(html: str) -> str:
     text = re.sub(r'<br[^>]*>', ' ', html)
@@ -188,23 +206,60 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["tipo"] = "Servidor"
     elif any(x in fl for x in ["sff", "sobremesa", "torre", "mini pc", "tiny"]):
         specs["tipo"] = "Desktop"
+    elif "monitor" in fl:
+        specs["tipo"] = "Monitor"
+    elif "tablet" in fl:
+        specs["tipo"] = "Tablet"
+    elif fl == "tpv":
+        specs["tipo"] = "TPV"
+    elif "apple" in fl:
+        if "macbook" in nl:
+            specs["tipo"] = "Portátil"
+        elif "ipad" in nl:
+            specs["tipo"] = "Tablet"
+        elif any(x in nl for x in ["imac", "mac mini", "mac pro", "mac studio"]):
+            specs["tipo"] = "Desktop"
+    # Fallback: a Diginova por vezes mete monitores noutras famílias
+    # (ex: "Informática Premium") — deteta pelo nome do produto.
+    if "tipo" not in specs and "monitor" in nl:
+        specs["tipo"] = "Monitor"
 
     # ── PROCESSADOR ──
     proc = re.search(
-        r"(Intel Core (?:i\d[-\s]?\d{4,5}[A-Z]*|Ultra \d+)|AMD Ryzen \d \d{4}[A-Z]*|Intel Celeron \w+|Intel Pentium \w+|Intel Xeon \w+|AMD EPYC \w+|AMD Athlon \w+)",
+        r"(Intel Core (?:i\d[-\s]?\d{4,5}[A-Z]*|m\d[-\s]?\d[A-Za-z]\d{2}|Ultra \d+)"
+        r"|Intel i\d[-\s]?\d{4,5}[A-Z]*"
+        r"|AMD Ryzen \d+ ?(?:PRO|Pro)? ?\d{4}[A-Z]*"
+        r"|AMD Ryzen \d+ Surface Edition"
+        r"|(?:Intel )?Pentium[\s-]*[A-Z]?\s*\d{3,4}\w*"
+        r"|(?:\d+ Procesadores )?(?:Intel )?Xeon[\s-]+\w+"
+        r"|AMD Opteron \w+"
+        r"|Intel Atom \w[\d\s-]*[A-Za-z]\d{3,4}"
+        r"|AMD A\d-?\s*\d{3,4}\w*"
+        r"|Intel Celeron \w+|AMD EPYC \w+|AMD Athlon \w+)",
         texto_orig, re.IGNORECASE)
     if proc:
-        specs["processador"] = proc.group(1).strip()
+        specs["processador"] = re.sub(r"\s{2,}", " ", proc.group(1).strip())
 
     # ── GERAÇÃO ──
-    gen = re.search(r"i\d[-\s]?(\d{1,2})\d{3}", texto_orig, re.IGNORECASE)
+    # CPUs Intel Core 10ª+: modelo de 5 dígitos → 1ºs 2 dígitos são a geração
+    # (i5-10210U → 10). Modelos de 4 dígitos: 11ª-14ª gen usam "1X" (1255U → 12),
+    # gerações 7ª-9ª usam só o 1º dígito (8265U → 8, 9700K → 9, 7700K → 7).
+    gen = re.search(r"i[3579][-\s]?(\d{4,5})", texto_orig, re.IGNORECASE)
     if gen:
-        specs["geracao"] = gen.group(1) + "ª Gen"
+        digitos = gen.group(1)
+        if len(digitos) == 5:
+            ger = digitos[:2]
+        else:
+            primeiros2 = int(digitos[:2])
+            ger = digitos[:2] if 10 <= primeiros2 <= 14 else digitos[:1]
+        specs["geracao"] = f"{ger}ª Gen"
 
     # ── PLACA GRÁFICA ──
-    graf = re.search(r"Gr[áa]fica\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    graf = re.search(r"Gr[áa]fica integrada\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
     if not graf:
-        graf = re.search(r"(NVIDIA\s+\w[\w\s]+?\d+GB|Intel\s+(?:UHD|HD|Iris\s+\w+)\s+\w+|AMD\s+Radeon\s+\w+)", texto_orig, re.IGNORECASE)
+        graf = re.search(r"Gr[áa]fica\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    if not graf:
+        graf = re.search(r"(NVIDIA\s+\w[\w\s]+?\d+GB|Intel\s+(?:UHD|HD|Iris\s+\w+)(?:\s+\w+)?|AMD\s+Radeon\s+\w+)", texto_orig, re.IGNORECASE)
     if graf:
         val = graf.group(1).strip().rstrip('<').strip()
         if val:
@@ -229,9 +284,13 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["ram_ampliavel"] = "Não"
 
     # ── ARMAZENAMENTO ──
+    emmc = re.search(r"(\d+)\s*(?:GB|TB)\s*(?:SSD[-\s]?)?eMMC", texto_orig, re.IGNORECASE)
     ssd = re.search(r"(\d+)\s*(?:GB|TB)\s+SSD[-\s]?(NVMe|SATA)?", texto_orig, re.IGNORECASE)
-    hdd = re.search(r"(\d+)\s*(?:GB|TB)\s+HDD", texto_orig, re.IGNORECASE)
-    if ssd:
+    hdd = re.search(r"(\d+)\s*(?:GB|TB)\s+(?:SATA\s+)?HDD", texto_orig, re.IGNORECASE)
+    if emmc:
+        specs["armazenamento_gb"] = emmc.group(1)
+        specs["armazenamento_tipo"] = "eMMC"
+    elif ssd:
         specs["armazenamento_gb"] = ssd.group(1)
         specs["armazenamento_tipo"] = f"SSD {(ssd.group(2) or 'SATA').upper()}"
     elif hdd:
@@ -240,7 +299,7 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
 
     # ── ECRã ──
     ecra = re.search(r'(\d+(?:[.,]\d+)?)\s*"', texto_orig)
-    if ecra and specs.get("tipo") in ("Portátil", "Tudo-em-Um"):
+    if ecra and specs.get("tipo") in ("Portátil", "Tudo-em-Um", "Monitor", "TPV", "Tablet"):
         specs["ecra_polegadas"] = ecra.group(1).replace(",", ".")
 
     if re.search(r"FHD|Full HD|1920.?x.?1080", texto_orig, re.IGNORECASE):
@@ -268,7 +327,7 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
         specs["sistema_operativo"] = "Windows 10"
     elif re.search(r"Chrome OS|ChromeOS", texto_orig, re.IGNORECASE):
         specs["sistema_operativo"] = "Chrome OS"
-    elif re.search(r"sin sistema|sem sistema|FreeDOS", texto_orig, re.IGNORECASE):
+    elif re.search(r"sin sistema|sem sistema|FreeDOS|no incluye[ny]?\s+sistema operativo", texto_orig, re.IGNORECASE):
         specs["sistema_operativo"] = "Sem sistema operativo"
 
     # ── GRAU ──
@@ -289,29 +348,48 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
             specs["leitor_gravador"] = "Não"
 
     # ── WEBCAM ──
-    wcam = re.search(r"Webcam\s{2,}(\S+)", texto_orig, re.IGNORECASE)
+    wcam = re.search(r"Webcam\s{2,}([^<]+)", texto_orig, re.IGNORECASE)
     if wcam:
         val = wcam.group(1).strip().upper()
-        specs["webcam"] = "Sim" if val in ("SI", "SIM", "YES") else "Não"
+        if val.startswith("NO"):
+            specs["webcam"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["webcam"] = "Sim"
+        elif val:
+            specs["webcam"] = "Não"
     elif "webcam" in texto:
         specs["webcam"] = "Sim"
 
     # ── WIFI ──
-    wifi = re.search(r"\bWifi\b\s{2,}(\S+)", texto_orig, re.IGNORECASE)
+    wifi = re.search(r"\bWifi\b\s{2,}([^<]+)", texto_orig, re.IGNORECASE)
     if wifi:
         val = wifi.group(1).strip().upper()
-        specs["wifi"] = "Sim" if val in ("SI", "SIM", "YES") else "Não"
+        if val.startswith("NO"):
+            specs["wifi"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["wifi"] = "Sim"
+        elif val:
+            specs["wifi"] = "Não"
 
     # ── BLUETOOTH ──
-    bt = re.search(r"Bluetooth\s{2,}(\S+)", texto_orig, re.IGNORECASE)
+    bt = re.search(r"Bluetooth\s{2,}([^<]+)", texto_orig, re.IGNORECASE)
     if bt:
         val = bt.group(1).strip().upper()
-        specs["bluetooth"] = "Sim" if val in ("SI", "SIM", "YES") else "Não"
+        if val.startswith("NO"):
+            specs["bluetooth"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["bluetooth"] = "Sim"
+        elif val:
+            specs["bluetooth"] = "Não"
 
     # ── PORTAS ──
     portas_front = re.search(r"[Cc]onexiones frontales\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
     if portas_front:
         specs["portas_frontais"] = portas_front.group(1).strip()[:100]
+
+    portas_tras = re.search(r"[Cc]onexiones traseras\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if portas_tras:
+        specs["portas_traseiras"] = portas_tras.group(1).strip()[:150]
 
     portas_adic = re.search(r"[Cc]onexiones adicionales\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
     if portas_adic:
@@ -324,34 +402,99 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
     # ── COR ──
     cor = re.search(r"[Cc]olor\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
     if cor:
-        val = cor.group(1).strip()
+        val = cor.group(1).strip().rstrip(".").strip()
         specs["cor"] = traduzir_texto(val)[:30]
 
-    # ── TECLADO ──
-    texto_teclado = f"{nome_es} {desc_es}".lower()
-    teclado_valor = None
-    teclado_nota = None
+    # ── DIMENSÕES ──
+    medidas = re.search(r"[Mm]edidas\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig)
+    if medidas:
+        specs["dimensoes"] = medidas.group(1).strip()[:100]
 
-    if any(x in texto_teclado for x in ["portugués", "portugues", "kit portugu", "tecl. num. portugu", "teclado em portugu", "teclado portugu"]):
-        teclado_valor = "PT"
+    # ── ÁUDIO (alto-falantes incorporados — Sim/Não) ──
+    audio = re.search(r"[Ss]onido\s{2,}([^<]+)", texto_orig)
+    if audio:
+        val = audio.group(1).strip().upper()
+        if val.startswith("NO"):
+            specs["audio"] = "Não"
+        elif val.startswith(("SI", "SIM", "YES")):
+            specs["audio"] = "Sim"
+        elif val:
+            specs["audio"] = traduzir_texto(audio.group(1).strip())[:60]
+
+    # ── TIPO DE PAINEL (monitores) ──
+    painel = re.search(r"Tipo Panel\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    if painel:
+        val = painel.group(1).strip()
+        specs["tipo_painel"] = traduzir_texto(val)[:60]
+        # Tentar extrair polegadas a partir do texto (ex: "24 Pulgadas LED")
+        if "ecra_polegadas" not in specs:
+            pol = re.search(r"(\d+(?:[.,]\d+)?)\s*Pulgadas?", val, re.IGNORECASE)
+            if pol:
+                specs["ecra_polegadas"] = pol.group(1).replace(",", ".")
+
+    # ── RESOLUÇÃO EXACTA (monitores — substitui a estimativa por palavra-chave) ──
+    resol = re.search(r"Resoluci[oó]n\s{2,}(.+?)(?:<br|·|\n|$)", texto_orig, re.IGNORECASE)
+    if resol:
+        specs["resolucao"] = resol.group(1).strip()[:30]
+
+    # ── VESA (suporte de montagem — monitores) ──
+    vesa = re.search(r"\bVESA\b\s+([0-9Xx ]+mm)", texto_orig, re.IGNORECASE)
+    if vesa:
+        specs["vesa"] = vesa.group(1).strip()
+
+    # ── CAMPOS GENÉRICOS (catch-all) ──
+    # Captura qualquer "· Label    Valor<br" não tratado pelas regras específicas
+    # acima — garante que não se perde informação de categorias menos comuns
+    # (ex: scanners com "Resolución Máxima", "Profundidad de color", etc.)
+    LABELS_JA_TRATADOS = {
+        "marca", "procesador", "memorias", "memoria", "lector/grabador", "lector/gravador",
+        "disco duro", "gráfica", "grafica", "gráfica integrada", "grafica integrada",
+        "panel", "tipo panel", "webcam", "wifi", "bluetooth",
+        "conexiones", "conexiones frontales", "conexiones traseras", "conexiones adicionales",
+        "color", "resolución", "resolucion", "sonido", "medidas", "vesa", "tipo",
+        # Garantia: nunca mostrar info de garantia do fornecedor — está sujeita à
+        # lei portuguesa (DL de garantias) e não pode vir do feed espanhol.
+        "garantía", "garantia", "garanzia",
+    }
+    VALORES_VAZIOS = {"", "-", "n/a", "no aplica", "não aplicável"}
+
+    for m in re.finditer(r"·\s*([A-Za-zÀ-ÿ/\. ]{2,30}?)\s{2,}([^<]+)<", texto_orig):
+        label_raw = m.group(1).strip()
+        val_raw = m.group(2).strip()
+        if not val_raw or val_raw.lower() in VALORES_VAZIOS:
+            continue
+        if label_raw.lower() in LABELS_JA_TRATADOS:
+            continue
+        key_slug = slugify(traduzir_texto(label_raw), separator="_")
+        if key_slug and key_slug not in specs:
+            specs[key_slug] = traduzir_texto(val_raw)[:80]
+
+    # ── TECLADO — só para portáteis e AIO ──
+    if specs.get("tipo") in ("Portátil", "Tudo-em-Um"):
+        texto_teclado = f"{nome_es} {desc_es}".lower()
+        teclado_valor = None
         teclado_nota = None
-    elif any(x in texto_teclado for x in ["castellano", "kit castellano", "tecl. num. castellano"]):
-        teclado_valor = "ES"
-        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-    elif "teclado internacional" in texto_teclado:
-        teclado_valor = "Internacional"
-        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
-    elif teclado_personalizavel:
-        teclado_valor = "Personalizável"
-        teclado_nota = "Teclado não PT. Possibilidade de colocar PT — contacte-nos para saber disponibilidade e valor."
-    else:
-        teclado_valor = "Internacional"
-        teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
 
-    if teclado_valor:
-        specs["teclado"] = teclado_valor
-    if teclado_nota:
-        specs["teclado_nota"] = teclado_nota
+        if any(x in texto_teclado for x in ["portugués", "portugues", "kit portugu", "tecl. num. portugu", "teclado em portugu", "teclado portugu"]):
+            teclado_valor = "PT"
+            teclado_nota = None
+        elif any(x in texto_teclado for x in ["castellano", "kit castellano", "tecl. num. castellano"]):
+            teclado_valor = "ES"
+            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+        elif "teclado internacional" in texto_teclado:
+            teclado_valor = "Internacional"
+            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+        elif teclado_personalizavel:
+            teclado_valor = "Personalizável"
+            teclado_nota = "Teclado não PT. Possibilidade de colocar PT — contacte-nos para saber disponibilidade e valor."
+        else:
+            teclado_valor = "Internacional"
+            teclado_nota = f"Teclado não português. Pode adquirir autocolantes PT para o seu teclado — ver em {LINK_ACESSORIOS_PT}"
+
+        if teclado_valor:
+            specs["teclado"] = teclado_valor
+        if teclado_nota:
+            specs["teclado_nota"] = teclado_nota
 
     return specs
 
@@ -488,6 +631,16 @@ def main(local=False):
         stock_raw = row.get("STOCK", "0").strip()
         imagem   = row.get("IMAGEN", "").strip()
 
+        # Marca — fallback para "Fabricante" do CSV simples quando MARCA vem vazia
+        simples = rows_simples.get(ref, {})
+        if not marca:
+            marca = simples.get("Fabricante", "").strip()
+
+        # Fallback de nome — alguns produtos (sobretudo Monitores) vêm com
+        # NOMBREARTICULO vazio no feed; o nome real está no ficheiro de imagem.
+        if not nome_es:
+            nome_es = nome_a_partir_da_imagem(imagem, marca, ref)
+
         precos = calcular_precos(precio, familia)
         if precos is None:
             continue
@@ -497,11 +650,10 @@ def main(local=False):
             stock_qty = int(stock_raw)
         except ValueError:
             stock_qty = 0
-        stock_status = "high" if stock_qty >= 5 else ("low" if stock_qty > 0 else "out")
+        stock_status = "high" if stock_qty >= 5 else ("low" if stock_qty > 0 else "on_request")
         sob_encomenda = stock_qty == 0
 
         # Teclado personalizável (CSV simples)
-        simples = rows_simples.get(ref, {})
         teclado_pers = "personaliz" in simples.get("Teclado personalizable", "").lower()
 
         # Tradução
@@ -575,7 +727,7 @@ def main(local=False):
     print(f"  Teclado PT: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'PT')}")
     print(f"  Teclado ES: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'ES')}")
     print(f"  Teclado Personalizável: {sum(1 for p in produtos if p['especificacoes'].get('teclado') == 'Personalizável')}")
-    print(f"  Sem stock: {sum(1 for p in produtos if p['stock_status'] == 'out')}")
+    print(f"  Sem stock: {sum(1 for p in produtos if p['stock_status'] == 'on_request')}")
 
     if not IMPORT_API_KEY:
         print("\n⚠️  IMPORT_API_KEY não definida — a guardar preview local")
