@@ -95,11 +95,33 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
     }
   };
 
+  const handleToggleVisible = async (id: string, v: boolean) => {
+    try {
+      const { error } = await supabase.from("product_types").update({ visivel: v } as any).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["types"] });
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const s = search.trim().toLowerCase();
+  const filteredTypes = s
+    ? types.filter((t) => {
+        const fam = familyMap[t.family_id];
+        return (
+          t.name.toLowerCase().includes(s) ||
+          (fam?.name?.toLowerCase().includes(s) ?? false) ||
+          (fam?.category?.toLowerCase().includes(s) ?? false)
+        );
+      })
+    : types;
+
   // Agrupar por família (e mostrar categoria da família)
   const grouped = families
     .map((fam) => ({
       family: fam,
-      items: types.filter((t) => t.family_id === fam.id),
+      items: filteredTypes.filter((t) => t.family_id === fam.id),
     }))
     .filter((g) => g.items.length > 0);
 
