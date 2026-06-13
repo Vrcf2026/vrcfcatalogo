@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X } from "lucide-react";
 
 interface Brand {
@@ -21,6 +22,7 @@ interface Brand {
   name: string;
   logo_url: string | null;
   mundo?: string;
+  visivel?: boolean;
 }
 
 interface ManageBrandsDialogProps {
