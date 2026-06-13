@@ -46,11 +46,15 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [name, setName] = useState("");
   const [mundo, setMundo] = useState("todos");
   const [search, setSearch] = useState("");
+  const [mundoFilter, setMundoFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const filteredBrands = brands.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredBrands = brands.filter((b) => {
+    if (mundoFilter !== "all" && (b.mundo ?? "todos") !== mundoFilter) return false;
+    return b.name.toLowerCase().includes(search.toLowerCase());
+  });
 
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
