@@ -45,9 +45,12 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [mundo, setMundo] = useState("todos");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  const filteredBrands = brands.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
 
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
