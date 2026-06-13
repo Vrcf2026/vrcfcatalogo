@@ -104,6 +104,8 @@ export function EditProductSheet({ open, onOpenChange, product, families, catego
         category: category || null,
         family_id: familyId === "none" ? null : familyId,
         brand_id: brandId === "none" ? null : brandId,
+        type_id: typeId === "none" ? null : typeId,
+        type: typeId === "none" ? null : (types.find((t) => t.id === typeId)?.name ?? null),
         family: familyText || null,
         brand: brandText || null,
         price: price ? parseFloat(price) : null,
