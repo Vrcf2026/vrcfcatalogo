@@ -111,6 +111,16 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
     }
   };
 
+  const handleToggleVisible = async (id: string, v: boolean) => {
+    try {
+      const { error } = await supabase.from("brands").update({ visivel: v } as any).eq("id", id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["brands"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase.from("brands").delete().eq("id", id);
