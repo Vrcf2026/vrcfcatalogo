@@ -36,6 +36,7 @@ export function ManageTypesDialog({ types, families }: ManageTypesDialogProps) {
   const [familyId, setFamilyId] = useState("");
   const [mundo, setMundo] = useState("todos");
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
 
   const familyMap = Object.fromEntries(families.map((f) => [f.id, f]));
