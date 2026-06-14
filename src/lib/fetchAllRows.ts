@@ -4,7 +4,7 @@ const PAGE_SIZE = 1000;
 const CONCURRENCY = 3;
 
 export const PRODUCT_COLUMNS =
-  "id,name,sku,description,short_description,category,categoria_pai,price,image_url,family_id,brand_id,featured,include_in_catalog,mundo,fornecedor,slug,stock_status,especificacoes,destaques,conteudo_embalagem,produtos_relacionados,sob_encomenda,created_at,updated_at";
+  "id,sku,name,slug,description,short_description,category,categoria_pai,family,family_id,type,type_id,brand,brand_id,price,price_tier2,price_tier3,purchase_price,purchase_price_vat,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,sob_encomenda,envio_especial,weight,ean,especificacoes,specs_locked,destaques,conteudo_embalagem,produtos_relacionados,upgrades,min_sale_qty,visivel,created_at,updated_at";
 
 type FetchAllOptions = {
   table: string;
