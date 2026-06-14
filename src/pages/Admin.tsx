@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo } from "react";
-import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid } from "lucide-react";
+import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download, Shuffle } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -154,6 +154,76 @@ const Admin = () => {
     if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortCol(col); setSortDir("asc"); }
     setPage(1);
+  };
+
+  // Exporta a listagem actual (com os filtros aplicados, todas as páginas)
+  // para CSV — útil para revisão offline ou partilha com fornecedores.
+  const handleExport = () => {
+    const cols = [
+      "sku", "name", "category", "family", "type", "brand", "mundo",
+      "fornecedor", "price", "purchase_price", "stock_status", "min_sale_qty",
+      "featured", "show_on_homepage", "include_in_catalog", "slug",
+    ];
+    const escapeCsv = (val: unknown) => {
+      const s = val === null || val === undefined ? "" : String(val);
+      return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = cols.join(";");
+    const rows = filtered.map((p: any) =>
+      cols.map((c) => escapeCsv(p[c] === true ? "sim" : p[c] === false ? "não" : p[c])).join(";")
+    );
+    const csv = "\uFEFF" + [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `vrcf-produtos-${mundoFilter !== "all" ? mundoFilter + "-" : ""}${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`${filtered.length} produtos exportados`);
+  };
+
+  // Marca aleatoriamente alguns produtos da listagem actual (já filtrada,
+  // ex: por mundo/categoria/família) como destaque — útil para preencher
+  // rapidamente "Destaque na família" e "Destaque na homepage" enquanto não
+  // há tempo para curadoria manual.
+  const handleRandomizeFeatured = async () => {
+    if (filtered.length === 0) return;
+    if (filtered.length > 500) {
+      toast.error("Demasiados produtos na listagem actual (>500) — aplica um filtro (ex: categoria ou família) antes de usar o botão Aleatório.");
+      return;
+    }
+    const pool = [...filtered];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    const nFamily = Math.min(6, pool.length);
+    const nHomepage = Math.min(6, pool.length);
+    const familyIds = new Set(pool.slice(0, nFamily).map((p: any) => p.id));
+    const homepageIds = new Set(pool.slice(0, nHomepage).map((p: any) => p.id));
+    const allIds = filtered.map((p: any) => p.id);
+
+    try {
+      // Limpa o destaque anterior apenas dentro da listagem filtrada, depois
+      // marca os novos escolhidos.
+      await supabase.from("products").update({ featured: false }).in("id", allIds);
+      await supabase.from("products").update({ show_on_homepage: false }).in("id", allIds);
+      if (familyIds.size > 0) {
+        await supabase.from("products").update({ featured: true }).in("id", Array.from(familyIds));
+      }
+      if (homepageIds.size > 0) {
+        await supabase.from("products").update({ show_on_homepage: true }).in("id", Array.from(homepageIds));
+      }
+      toast.success(`${familyIds.size} produtos marcados como destaque, ${homepageIds.size} na homepage`);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["hp-featured"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao marcar destaques");
+    }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
@@ -313,9 +383,27 @@ const Admin = () => {
                 Erro ao carregar produtos: {(productsError as any)?.message || String(productsError)}
               </div>
             )}
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-sm text-muted-foreground gap-2 flex-wrap">
               <span>{filtered.length} produto{filtered.length !== 1 ? "s" : ""} {filtered.length !== products.length && `(de ${products.length})`}</span>
-              <span>Página {page} de {totalPages || 1}</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline" size="sm" className="h-8 gap-1.5"
+                  onClick={handleRandomizeFeatured}
+                  disabled={filtered.length === 0}
+                  title="Marca aleatoriamente alguns produtos da listagem actual como 'Destaque na família' e 'Destaque na homepage'"
+                >
+                  <Shuffle className="h-3.5 w-3.5" /> Aleatório
+                </Button>
+                <Button
+                  variant="outline" size="sm" className="h-8 gap-1.5"
+                  onClick={handleExport}
+                  disabled={filtered.length === 0}
+                  title="Exportar a listagem actual (com os filtros aplicados) para CSV"
+                >
+                  <Download className="h-3.5 w-3.5" /> Exportar
+                </Button>
+                <span>Página {page} de {totalPages || 1}</span>
+              </div>
             </div>
 
             {/* Tabela */}
