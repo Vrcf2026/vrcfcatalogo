@@ -99,6 +99,16 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Relação marca ↔ família (para cascata de marcas por categoria/família)
+  const { data: brandFamilies = [] } = useQuery({
+    queryKey: ["brand_families"],
+    queryFn: async () => {
+      const { data } = await supabase.from("brand_families").select("brand_id, family_id");
+      return data ?? [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Products query
   const productsQuery = useQuery({
     queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
