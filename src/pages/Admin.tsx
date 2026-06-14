@@ -22,6 +22,7 @@ import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { fetchAllProducts } from "@/lib/fetchAllRows";
 
 const FORNECEDORES = ["diginova", "visiotech", "bydemes", "manual"];
 const PAGE_SIZE = 50;
@@ -50,15 +51,9 @@ const Admin = () => {
   };
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ["products", "all"],
+    queryFn: () => fetchAllProducts(),
+    staleTime: 2 * 60 * 1000,
   });
 
   const { data: families = [] } = useQuery({
@@ -132,6 +127,28 @@ const Admin = () => {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Navegação anterior/seguinte dentro do EditProductSheet — usa a lista
+  // filtrada actual (todos os produtos que correspondem aos filtros, não só
+  // a página visível), para que "seguinte" continue mesmo na fronteira
+  // entre páginas.
+  const navigateProduct = (dir: -1 | 1) => {
+    if (!editingProduct) return;
+    const idx = filtered.findIndex((p: any) => p.id === editingProduct.id);
+    if (idx === -1) return;
+    const next = filtered[idx + dir];
+    if (next) {
+      // Se o produto seguinte estiver noutra página, ajusta a página actual
+      const nextIdx = idx + dir;
+      const nextPage = Math.floor(nextIdx / PAGE_SIZE) + 1;
+      if (nextPage !== page) setPage(nextPage);
+      setEditingProduct(next);
+    }
+  };
+
+  const editingIdx = editingProduct ? filtered.findIndex((p: any) => p.id === editingProduct.id) : -1;
+  const hasPrev = editingIdx > 0;
+  const hasNext = editingIdx >= 0 && editingIdx < filtered.length - 1;
 
   const handleSort = (col: string) => {
     if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -399,7 +416,21 @@ const Admin = () => {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Anterior</Button>
-                <span className="text-sm text-muted-foreground px-2">{page} / {totalPages}</span>
+                <div className="flex items-center gap-1.5 text-sm px-2">
+                  <span>Página</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={page}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (!Number.isNaN(v)) setPage(Math.min(totalPages, Math.max(1, v)));
+                    }}
+                    className="h-8 w-16 text-center"
+                  />
+                  <span>de {totalPages}</span>
+                </div>
                 <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Seguinte</Button>
               </div>
             )}
@@ -427,6 +458,10 @@ const Admin = () => {
           types={types}
           categories={categoryNames}
           brands={brands}
+          onPrev={() => navigateProduct(-1)}
+          onNext={() => navigateProduct(1)}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
         />
       )}
     </div>
