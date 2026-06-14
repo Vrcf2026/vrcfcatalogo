@@ -31,6 +31,7 @@ const Admin = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState("all");
   const [fornecedorFilter, setFornecedorFilter] = useState("all");
   const [mundoFilter, setMundoFilter] = useState("all");
@@ -96,12 +97,24 @@ const Admin = () => {
   const brandMap = Object.fromEntries(brands.map((b: any) => [b.id, b.name]));
   const categoryNames = dbCategories.map((c: any) => c.name);
 
+  // Família e Tipo (Nível 3) só mostram opções que existem dentro da
+  // categoria/família actualmente seleccionada — evita sugerir combinações
+  // que não existem.
+  const visibleFamilies = categoryFilter === "all"
+    ? families
+    : families.filter((f: any) => f.category === categoryFilter);
+
+  const visibleTypes = familyFilter === "all"
+    ? types.filter((t: any) => visibleFamilies.some((f: any) => f.id === t.family_id))
+    : types.filter((t: any) => t.family_id === familyFilter);
+
   const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   const filtered = useMemo(() => {
     let result = products.filter((p: any) => {
       if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
       if (familyFilter !== "all" && p.family_id !== familyFilter && p.family !== familyFilter) return false;
+      if (typeFilter !== "all" && p.type_id !== typeFilter) return false;
       if (brandFilter !== "all" && p.brand_id !== brandFilter && p.brand !== brandFilter) return false;
       if (fornecedorFilter !== "all" && p.fornecedor !== fornecedorFilter) return false;
       if (mundoFilter !== "all" && p.mundo !== mundoFilter) return false;
@@ -123,7 +136,7 @@ const Admin = () => {
     });
 
     return result;
-  }, [products, categoryFilter, familyFilter, brandFilter, fornecedorFilter, mundoFilter, stockFilter, search, sortCol, sortDir]);
+  }, [products, categoryFilter, familyFilter, typeFilter, brandFilter, fornecedorFilter, mundoFilter, stockFilter, search, sortCol, sortDir]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -339,18 +352,25 @@ const Admin = () => {
                   <SelectItem value="economato">Economato</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setPage(1); }}>
+              <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setTypeFilter("all"); setPage(1); }}>
                 <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="Categoria" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Categoria</SelectItem>
                   {categoryNames.map((c: string) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={familyFilter} onValueChange={(v) => { setFamilyFilter(v); setPage(1); }}>
+              <Select value={familyFilter} onValueChange={(v) => { setFamilyFilter(v); setTypeFilter("all"); setPage(1); }}>
                 <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="Família" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Família</SelectItem>
-                  {families.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                  {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
+                <SelectTrigger className="w-[150px] h-9"><SelectValue placeholder="Tipo" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tipo</SelectItem>
+                  {visibleTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={brandFilter} onValueChange={(v) => { setBrandFilter(v); setPage(1); }}>
@@ -369,9 +389,9 @@ const Admin = () => {
                   <SelectItem value="out">Esgotado</SelectItem>
                 </SelectContent>
               </Select>
-              {(search || categoryFilter !== "all" || familyFilter !== "all" || brandFilter !== "all" || fornecedorFilter !== "all" || mundoFilter !== "all" || stockFilter !== "all") && (
+              {(search || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter !== "all" || fornecedorFilter !== "all" || mundoFilter !== "all" || stockFilter !== "all") && (
                 <Button variant="ghost" size="sm" className="h-9 text-muted-foreground" onClick={() => {
-                  setSearch(""); setCategoryFilter("all"); setFamilyFilter("all");
+                  setSearch(""); setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all");
                   setBrandFilter("all"); setFornecedorFilter("all"); setMundoFilter("all"); setStockFilter("all"); setPage(1);
                 }}>Limpar filtros</Button>
               )}
