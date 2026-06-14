@@ -126,6 +126,13 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
       if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
 
+      // Filtros técnicos (specs) — aplicados no servidor sobre o JSONB
+      // "especificacoes", para que a contagem/paginação considere TODOS os
+      // produtos correspondentes, não só os da página actual.
+      for (const [key, value] of Object.entries(techFilters)) {
+        q = q.eq(`especificacoes->>${key}`, value);
+      }
+
       if (sortBy === "featured") q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
       else if (sortBy === "price-asc") q = q.order("price", { ascending: true, nullsFirst: false });
       else if (sortBy === "price-desc") q = q.order("price", { ascending: false, nullsFirst: false });
@@ -174,16 +181,6 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       .slice(0, 10);
   }, [products]);
 
-  // Filtrar produtos por specs técnicas (client-side)
-  const filteredProducts = useMemo(() => {
-    if (Object.keys(techFilters).length === 0) return products;
-    return products.filter((p: any) => {
-      const specs = (typeof p.especificacoes === "string"
-        ? JSON.parse(p.especificacoes || "{}")
-        : p.especificacoes ?? {}) as Record<string, string>;
-      return Object.entries(techFilters).every(([k, v]) => specs[k] === v);
-    });
-  }, [products, techFilters]);
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
@@ -456,10 +453,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           {/* Grid */}
           {productsQuery.isLoading ? (
             <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-          ) : filteredProducts.length > 0 ? (
+          ) : products.length > 0 ? (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                {filteredProducts.map((product: any) => (
+                {products.map((product: any) => (
                   <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
                     <ProductCard
                       id={product.id} name={product.name} sku={product.sku} slug={product.slug}
