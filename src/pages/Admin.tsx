@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download, Shuffle } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { toast } from "sonner";
@@ -118,23 +118,54 @@ const Admin = () => {
 
   const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
+  // Predicado partilhado com os filtros activos, excepto o indicado em
+  // `except` — usado para derivar as opções de Marca a partir dos produtos
+  // que já correspondem aos outros filtros seleccionados.
+  const matchesFilters = (p: any, except?: "brand") => {
+    if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
+    if (familyFilter !== "all" && p.family_id !== familyFilter && p.family !== familyFilter) return false;
+    if (typeFilter !== "all" && p.type_id !== typeFilter) return false;
+    if (except !== "brand" && brandFilter !== "all" && p.brand_id !== brandFilter && p.brand !== brandFilter) return false;
+    if (fornecedorFilter !== "all" && p.fornecedor !== fornecedorFilter) return false;
+    if (mundoFilter !== "all" && p.mundo !== mundoFilter) return false;
+    if (stockFilter === "out" && p.stock_status !== "out") return false;
+    if (stockFilter === "low" && p.stock_status !== "low") return false;
+    if (stockFilter === "in" && p.stock_status === "out") return false;
+    if (search) {
+      const q = normalize(search);
+      return normalize(p.name || "").includes(q) || normalize(p.sku || "").includes(q);
+    }
+    return true;
+  };
+
+  // Marcas que existem entre os produtos que já correspondem aos restantes
+  // filtros (Mundo/Categoria/Família/Tipo/Fornecedor/Stock/pesquisa) — evita
+  // sugerir marcas sem produtos no contexto actual.
+  const visibleBrands = useMemo(() => {
+    const idsWithProducts = new Set<string>();
+    const namesWithProducts = new Set<string>();
+    for (const p of products) {
+      if (!matchesFilters(p, "brand")) continue;
+      if (p.brand_id) idsWithProducts.add(p.brand_id);
+      if (p.brand) namesWithProducts.add(p.brand);
+    }
+    return brands.filter((b: any) =>
+      idsWithProducts.has(b.id) || namesWithProducts.has(b.name)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, brands, categoryFilter, familyFilter, typeFilter, fornecedorFilter, mundoFilter, stockFilter, search]);
+
+  // Se a marca seleccionada deixar de ter produtos no contexto actual
+  // (ex: mudou-se a Categoria/Família/Mundo), volta a "Marca" (todas).
+  useEffect(() => {
+    if (brandFilter !== "all" && !visibleBrands.some((b: any) => b.id === brandFilter)) {
+      setBrandFilter("all");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleBrands]);
+
   const filtered = useMemo(() => {
-    let result = products.filter((p: any) => {
-      if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
-      if (familyFilter !== "all" && p.family_id !== familyFilter && p.family !== familyFilter) return false;
-      if (typeFilter !== "all" && p.type_id !== typeFilter) return false;
-      if (brandFilter !== "all" && p.brand_id !== brandFilter && p.brand !== brandFilter) return false;
-      if (fornecedorFilter !== "all" && p.fornecedor !== fornecedorFilter) return false;
-      if (mundoFilter !== "all" && p.mundo !== mundoFilter) return false;
-      if (stockFilter === "out" && p.stock_status !== "out") return false;
-      if (stockFilter === "low" && p.stock_status !== "low") return false;
-      if (stockFilter === "in" && p.stock_status === "out") return false;
-      if (search) {
-        const q = normalize(search);
-        return normalize(p.name || "").includes(q) || normalize(p.sku || "").includes(q);
-      }
-      return true;
-    });
+    let result = products.filter((p: any) => matchesFilters(p));
 
     result = [...result].sort((a: any, b: any) => {
       const va = a[sortCol] ?? "";
@@ -385,7 +416,7 @@ const Admin = () => {
                 <SelectTrigger className="w-[120px] h-9"><SelectValue placeholder="Marca" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Marca</SelectItem>
-                  {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                  {visibleBrands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={stockFilter} onValueChange={(v) => { setStockFilter(v); setPage(1); }}>
