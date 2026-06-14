@@ -95,18 +95,26 @@ const Admin = () => {
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const brandMap = Object.fromEntries(brands.map((b: any) => [b.id, b.name]));
-  const categoryNames = dbCategories.map((c: any) => c.name);
 
-  // Família e Tipo (Nível 3) só mostram opções que existem dentro da
-  // categoria/família actualmente seleccionada — evita sugerir combinações
-  // que não existem.
-  const visibleFamilies = categoryFilter === "all"
-    ? families
-    : families.filter((f: any) => f.category === categoryFilter);
+  // Categoria, Família e Tipo (Nível 3) formam uma cascata de filtros:
+  // Mundo → Categoria → Família → Tipo. Cada nível só mostra opções que
+  // existem dentro do(s) nível(eis) acima seleccionado(s), incluindo
+  // entradas marcadas como mundo "todos" (transversais).
+  const inMundo = (m: string | null | undefined) =>
+    mundoFilter === "all" || m === mundoFilter || m === "todos" || !m;
 
-  const visibleTypes = familyFilter === "all"
-    ? types.filter((t: any) => visibleFamilies.some((f: any) => f.id === t.family_id))
-    : types.filter((t: any) => t.family_id === familyFilter);
+  const visibleCategories = dbCategories.filter((c: any) => inMundo(c.mundo));
+  const categoryNames = visibleCategories.map((c: any) => c.name);
+
+  const visibleFamilies = families.filter((f: any) =>
+    inMundo(f.mundo) && (categoryFilter === "all" || f.category === categoryFilter)
+  );
+
+  const visibleTypes = types.filter((t: any) =>
+    inMundo(t.mundo) && (familyFilter === "all"
+      ? visibleFamilies.some((f: any) => f.id === t.family_id)
+      : t.family_id === familyFilter)
+  );
 
   const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
@@ -343,7 +351,7 @@ const Admin = () => {
                   {FORNECEDORES.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select value={mundoFilter} onValueChange={(v) => { setMundoFilter(v); setPage(1); }}>
+              <Select value={mundoFilter} onValueChange={(v) => { setMundoFilter(v); setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setPage(1); }}>
                 <SelectTrigger className="w-[120px] h-9"><SelectValue placeholder="Mundo" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Mundo</SelectItem>
