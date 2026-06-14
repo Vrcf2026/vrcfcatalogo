@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Plus, X, Lock, Unlock } from "lucide-react";
+import { Loader2, Save, Trash2, Plus, X, Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface EditProductSheetProps {
   open: boolean;
@@ -22,13 +22,17 @@ interface EditProductSheetProps {
   types?: { id: string; name: string; family_id: string; mundo?: string }[];
   categories: string[];
   brands: { id: string; name: string }[];
+  onPrev?: () => void;
+  onNext?: () => void;
+  hasPrev?: boolean;
+  hasNext?: boolean;
 }
 
 const TECLADO_OPTIONS = ["PT", "ES", "Internacional", "Personalizável"];
 const GRAU_OPTIONS = ["A", "B", "C"];
 const STOCK_OPTIONS = ["high", "low", "out"];
 
-export function EditProductSheet({ open, onOpenChange, product, families, types = [], categories, brands }: EditProductSheetProps) {
+export function EditProductSheet({ open, onOpenChange, product, families, types = [], categories, brands, onPrev, onNext, hasPrev, hasNext }: EditProductSheetProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -100,8 +104,8 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
     setUpgrades(rawUpgrades.length > 0 ? rawUpgrades : []);
   }, [open, product]);
 
-  const handleSave = async () => {
-    if (!name.trim()) { toast.error("Nome obrigatório"); return; }
+  const handleSave = async (afterSave?: () => void) => {
+    if (!name.trim()) { toast.error("Nome obrigatório"); return false; }
     setLoading(true);
     try {
       const { error } = await supabase.from("products").update({
@@ -131,9 +135,15 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
       if (error) throw error;
       toast.success("Produto guardado");
       queryClient.invalidateQueries({ queryKey: ["products"] });
-      onOpenChange(false);
+      if (afterSave) {
+        afterSave();
+      } else {
+        onOpenChange(false);
+      }
+      return true;
     } catch (e: any) {
       toast.error(e.message || "Erro ao guardar");
+      return false;
     } finally {
       setLoading(false);
     }
@@ -174,9 +184,31 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader className="pb-4">
-          <SheetTitle className="font-heading text-xl flex items-center gap-2">
-            Editar Produto
-            {product?.fornecedor && <Badge variant="outline" className="text-xs capitalize">{product.fornecedor}</Badge>}
+          <SheetTitle className="font-heading text-xl flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              Editar Produto
+              {product?.fornecedor && <Badge variant="outline" className="text-xs capitalize">{product.fornecedor}</Badge>}
+            </span>
+            {(onPrev || onNext) && (
+              <div className="flex items-center gap-1 mr-6">
+                <Button
+                  type="button" variant="outline" size="sm" className="h-8 px-2"
+                  disabled={!hasPrev || loading}
+                  onClick={() => handleSave(onPrev)}
+                  title="Guardar e ir para o anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button" variant="outline" size="sm" className="h-8 px-2"
+                  disabled={!hasNext || loading}
+                  onClick={() => handleSave(onNext)}
+                  title="Guardar e ir para o próximo"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </SheetTitle>
         </SheetHeader>
 
@@ -469,7 +501,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
 
         {/* Acções */}
         <div className="flex gap-2 pt-4 mt-4 border-t border-border">
-          <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2">
+          <Button onClick={() => handleSave()} disabled={loading} className="flex-1 gap-2">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Guardar alterações
           </Button>
