@@ -184,7 +184,22 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+  const visibleFamilyIds = new Set(visibleFamilies.map((f: any) => f.id));
+  const visibleTypes = types.filter((t: any) => {
+    if (familyFilter !== "all") return t.family_id === familyFilter;
+    if (categoryFilter !== "all") return visibleFamilyIds.has(t.family_id);
+    return false; // só mostrar tipos quando há contexto (categoria ou família)
+  });
+  const visibleBrands = (() => {
+    if (familyFilter === "all" && categoryFilter === "all") return brands;
+    const scopedFamilyIds = familyFilter !== "all" ? new Set([familyFilter]) : visibleFamilyIds;
+    const allowedBrandIds = new Set(
+      brandFamilies
+        .filter((bf: any) => scopedFamilyIds.has(bf.family_id))
+        .map((bf: any) => bf.brand_id),
+    );
+    return brands.filter((b: any) => allowedBrandIds.has(b.id));
+  })();
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
     categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
