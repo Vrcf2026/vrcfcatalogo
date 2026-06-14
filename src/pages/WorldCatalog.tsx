@@ -200,6 +200,23 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     );
     return brands.filter((b: any) => allowedBrandIds.has(b.id));
   })();
+
+  // Reset filhos quando deixam de ser válidos pela cascata
+  useEffect(() => {
+    if (familyFilter !== "all" && !visibleFamilies.some((f: any) => f.id === familyFilter)) {
+      setFamilyFilter("all"); setTypeFilter("all"); setPage(1);
+    }
+  }, [categoryFilter, families.length]);
+  useEffect(() => {
+    if (typeFilter !== "all" && !visibleTypes.some((t: any) => t.id === typeFilter)) {
+      setTypeFilter("all"); setPage(1);
+    }
+  }, [familyFilter, categoryFilter, types.length]);
+  useEffect(() => {
+    if (brandFilter !== "all" && !(familyFilter === "all" && categoryFilter === "all") && !visibleBrands.some((b: any) => b.id === brandFilter)) {
+      setBrandFilter("all"); setPage(1);
+    }
+  }, [familyFilter, categoryFilter, brandFamilies.length, brands.length]);
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
     categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
