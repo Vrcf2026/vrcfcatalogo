@@ -522,6 +522,7 @@ export type Database = {
           image_url: string | null
           imagens_extra: Json | null
           include_in_catalog: boolean
+          min_sale_qty: number
           mundo: string | null
           name: string
           price: number | null
@@ -536,6 +537,7 @@ export type Database = {
           sku: string | null
           slug: string | null
           sob_encomenda: boolean | null
+          specs_locked: string[]
           stock_status: string | null
           type: string | null
           type_id: string | null
@@ -563,6 +565,7 @@ export type Database = {
           image_url?: string | null
           imagens_extra?: Json | null
           include_in_catalog?: boolean
+          min_sale_qty?: number
           mundo?: string | null
           name: string
           price?: number | null
@@ -577,6 +580,7 @@ export type Database = {
           sku?: string | null
           slug?: string | null
           sob_encomenda?: boolean | null
+          specs_locked?: string[]
           stock_status?: string | null
           type?: string | null
           type_id?: string | null
@@ -604,6 +608,7 @@ export type Database = {
           image_url?: string | null
           imagens_extra?: Json | null
           include_in_catalog?: boolean
+          min_sale_qty?: number
           mundo?: string | null
           name?: string
           price?: number | null
@@ -618,6 +623,7 @@ export type Database = {
           sku?: string | null
           slug?: string | null
           sob_encomenda?: boolean | null
+          specs_locked?: string[]
           stock_status?: string | null
           type?: string | null
           type_id?: string | null
