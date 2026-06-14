@@ -264,7 +264,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as marcas</SelectItem>
-            {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+            {visibleBrands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
