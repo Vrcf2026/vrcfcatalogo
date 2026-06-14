@@ -265,6 +265,19 @@ def family_for(category_parent: str, category: str, brand_values: set) -> str:
     return cat
 
 
+def tipo_for(params: dict) -> str:
+    """Determina o Tipo de Nível 3 a partir do campo 'params' do feed.
+
+    Usa 'tipo' (44.8% cobertura) como primeira opção, com
+    'tipo-de-dispositivo' (mais usado em Networking) como fallback.
+    Devolve "" se nenhum dos dois existir — produto fica sem Nível 3.
+    """
+    tipo = str(params.get("tipo") or "").strip()
+    if tipo:
+        return tipo
+    return str(params.get("tipo-de-dispositivo") or "").strip()
+
+
 # ─────────────────────────────────────────────
 # FUNÇÕES DE EXTRACÇÃO
 # ─────────────────────────────────────────────
@@ -551,7 +564,8 @@ def main(local=False):
     stats = {
         "sem_preco": 0, "sob_encomenda": 0, "envio_especial": 0,
         "com_stock": 0, "preco_actualizado": 0, "preco_estavel": 0,
-        "com_imagens_extra": 0, "com_relacionados": 0, "quantidade_minima": 0,
+        "com_imagens_extra": 0, "com_relacionados": 0, "min_sale_qty_gt1": 0,
+        "com_tipo": 0,
     }
 
     for row in rows:
@@ -602,10 +616,18 @@ def main(local=False):
         if envio_especial: stats["envio_especial"] += 1
 
         # Specs — combinar params + specifications HTML
+        try:
+            params_dict = json.loads(row.get("params") or "{}")
+        except Exception:
+            params_dict = {}
         specs = extrair_specs_params(row.get("params", "{}"))
         specs_html = extrair_specs_html(row.get("specifications", ""))
         # HTML tem mais detalhe — sobrepõe onde existir
         specs.update(specs_html)
+
+        # Tipo (Nível 3) — a partir de params.tipo / params.tipo-de-dispositivo
+        tipo = tipo_for(params_dict)
+        if tipo: stats["com_tipo"] += 1
 
         # Imagens extra
         imagens_extra = extrair_imagens_extra(row.get("extra_images_paths", ""))
@@ -628,7 +650,7 @@ def main(local=False):
             qtd_minima = 1
         if qtd_minima < 1:
             qtd_minima = 1
-        if qtd_minima > 1: stats["quantidade_minima"] += 1
+        if qtd_minima > 1: stats["min_sale_qty_gt1"] += 1
 
         # Nota envio especial / quantidade mínima nos destaques
         destaques = []
@@ -656,6 +678,7 @@ def main(local=False):
             "brand":              brand,
             "category":           classify_category(row.get("category_parent", ""), row.get("category", ""), sku),
             "family":             family_for(row.get("category_parent", ""), row.get("category", ""), brand_values),
+            "type":               tipo,
             "price":              precos["price"],
             "price_tier2":        precos["price_tier2"],
             "price_tier3":        precos["price_tier3"],
@@ -663,7 +686,7 @@ def main(local=False):
             "stock_status":       stock_status,
             "sob_encomenda":      sob_encomenda,
             "envio_especial":     envio_especial,
-            "quantidade_minima":  qtd_minima,
+            "min_sale_qty":       qtd_minima,
             "include_in_catalog": True,
             "featured":           False,
             "show_on_homepage":   False,
@@ -688,7 +711,8 @@ def main(local=False):
     print(f"  Envio especial:         {stats['envio_especial']}")
     print(f"  Com imagens extra:      {stats['com_imagens_extra']}")
     print(f"  Com relacionados:       {stats['com_relacionados']}")
-    print(f"  Qtd. mínima > 1:        {stats['quantidade_minima']}")
+    print(f"  Qtd. mínima > 1:        {stats['min_sale_qty_gt1']}")
+    print(f"  Com Tipo (Nível 3):     {stats['com_tipo']}")
     print(f"  Preço actualizado:      {stats['preco_actualizado']}")
     print(f"  Preço estável (<{int(LIMIAR_VARIACAO*100)}%): {stats['preco_estavel']}")
     if alteracoes_preco:
