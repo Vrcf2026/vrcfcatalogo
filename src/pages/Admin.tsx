@@ -50,7 +50,7 @@ const Admin = () => {
     navigate("/");
   };
 
-  const { data: products = [], isLoading } = useQuery({
+  const { data: products = [], isLoading, error: productsError } = useQuery({
     queryKey: ["products", "all"],
     queryFn: () => fetchAllProducts(),
     staleTime: 2 * 60 * 1000,
@@ -266,6 +266,7 @@ const Admin = () => {
                   <SelectItem value="all">Mundo</SelectItem>
                   <SelectItem value="escritorio">Escritório</SelectItem>
                   <SelectItem value="seguranca">Segurança</SelectItem>
+                  <SelectItem value="economato">Economato</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setFamilyFilter("all"); setPage(1); }}>
@@ -307,6 +308,11 @@ const Admin = () => {
             </div>
 
             {/* Contador */}
+            {productsError && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Erro ao carregar produtos: {(productsError as any)?.message || String(productsError)}
+              </div>
+            )}
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>{filtered.length} produto{filtered.length !== 1 ? "s" : ""} {filtered.length !== products.length && `(de ${products.length})`}</span>
               <span>Página {page} de {totalPages || 1}</span>
