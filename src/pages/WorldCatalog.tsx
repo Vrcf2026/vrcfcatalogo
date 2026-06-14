@@ -48,6 +48,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Reset filhos quando deixam de ser válidos pela cascata
+  useEffect(() => {
+    if (familyFilter !== "all" && !families.some((f: any) => f.id === familyFilter && (categoryFilter === "all" || f.category === categoryFilter))) {
+      setFamilyFilter("all"); setTypeFilter("all"); setPage(1);
+    }
+  }, [categoryFilter, families]);
+  useEffect(() => {
+    if (typeFilter !== "all" && !types.some((t: any) => t.id === typeFilter && (familyFilter === "all" || t.family_id === familyFilter))) {
+      setTypeFilter("all"); setPage(1);
+    }
+  }, [familyFilter, types]);
+
   const submitGlobalSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = globalQuery.trim();
