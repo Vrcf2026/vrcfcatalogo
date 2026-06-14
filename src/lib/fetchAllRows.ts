@@ -4,7 +4,7 @@ const PAGE_SIZE = 1000;
 const CONCURRENCY = 3;
 
 export const PRODUCT_COLUMNS =
-  "id,sku,name,slug,description,short_description,category,categoria_pai,family,family_id,type,type_id,brand,brand_id,price,price_tier2,price_tier3,purchase_price,purchase_price_vat,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,sob_encomenda,envio_especial,weight,ean,especificacoes,specs_locked,destaques,conteudo_embalagem,produtos_relacionados,upgrades,min_sale_qty,visivel,created_at,updated_at";
+  "id,sku,name,slug,description,short_description,category,categoria_pai,family,family_id,type,type_id,brand,brand_id,price,purchase_price,purchase_price_vat,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,sob_encomenda,weight,especificacoes,specs_locked,destaques,conteudo_embalagem,produtos_relacionados,upgrades,min_sale_qty,created_at,updated_at";
 
 type FetchAllOptions = {
   table: string;
@@ -42,6 +42,17 @@ export const fetchAllRows = async <T,>({
       const { data, error } = await query.range(from, to);
       if (!error && data) return data as T[];
       lastError = error;
+      // Coluna inexistente na lista pedida — em vez de continuar a tentar
+      // (e falhar sempre), faz fallback para select("*") imediatamente.
+      if (error && (error as any).code === "42703") {
+        let fallbackQuery = client.from(table).select("*");
+        if (filter) Object.entries(filter).forEach(([k, v]) => { fallbackQuery = fallbackQuery.eq(k, v); });
+        if (orderBy) fallbackQuery = fallbackQuery.order(orderBy, { ascending });
+        if (orderBy !== "id") fallbackQuery = fallbackQuery.order("id", { ascending: true });
+        const { data: fbData, error: fbError } = await fallbackQuery.range(from, to);
+        if (!fbError && fbData) return fbData as T[];
+        lastError = fbError;
+      }
       await delay(400 * (attempt + 1));
     }
     throw lastError ?? new Error(`Falha ao carregar ${table}`);
