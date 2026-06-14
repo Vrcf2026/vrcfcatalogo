@@ -99,6 +99,16 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Relação marca ↔ família (para cascata de marcas por categoria/família)
+  const { data: brandFamilies = [] } = useQuery({
+    queryKey: ["brand_families"],
+    queryFn: async () => {
+      const { data } = await supabase.from("brand_families").select("brand_id, family_id");
+      return data ?? [];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Products query
   const productsQuery = useQuery({
     queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
@@ -174,7 +184,39 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+  const visibleFamilyIds = new Set(visibleFamilies.map((f: any) => f.id));
+  const visibleTypes = types.filter((t: any) => {
+    if (familyFilter !== "all") return t.family_id === familyFilter;
+    if (categoryFilter !== "all") return visibleFamilyIds.has(t.family_id);
+    return false; // só mostrar tipos quando há contexto (categoria ou família)
+  });
+  const visibleBrands = (() => {
+    if (familyFilter === "all" && categoryFilter === "all") return brands;
+    const scopedFamilyIds = familyFilter !== "all" ? new Set([familyFilter]) : visibleFamilyIds;
+    const allowedBrandIds = new Set(
+      brandFamilies
+        .filter((bf: any) => scopedFamilyIds.has(bf.family_id))
+        .map((bf: any) => bf.brand_id),
+    );
+    return brands.filter((b: any) => allowedBrandIds.has(b.id));
+  })();
+
+  // Reset filhos quando deixam de ser válidos pela cascata
+  useEffect(() => {
+    if (familyFilter !== "all" && !visibleFamilies.some((f: any) => f.id === familyFilter)) {
+      setFamilyFilter("all"); setTypeFilter("all"); setPage(1);
+    }
+  }, [categoryFilter, families.length]);
+  useEffect(() => {
+    if (typeFilter !== "all" && !visibleTypes.some((t: any) => t.id === typeFilter)) {
+      setTypeFilter("all"); setPage(1);
+    }
+  }, [familyFilter, categoryFilter, types.length]);
+  useEffect(() => {
+    if (brandFilter !== "all" && !(familyFilter === "all" && categoryFilter === "all") && !visibleBrands.some((b: any) => b.id === brandFilter)) {
+      setBrandFilter("all"); setPage(1);
+    }
+  }, [familyFilter, categoryFilter, brandFamilies.length, brands.length]);
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
     categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
@@ -239,7 +281,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todas as marcas</SelectItem>
-            {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+            {visibleBrands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
