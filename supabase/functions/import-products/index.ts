@@ -27,6 +27,7 @@ async function getOrCreateBrand(
   name: string,
   mundo: string,
 ): Promise<string> {
+  name = name.trim();
   const key = `${mundo.toLowerCase()}::${name.toLowerCase()}`;
   const cached = cache.get(key);
   if (cached) return cached;
@@ -49,15 +50,28 @@ async function getOrCreateBrand(
     .select("id")
     .single();
   if (insErr) {
+    // Outro produto do mesmo lote pode ter criado a marca em paralelo
+    // (race condition) — tentar encontrá-la de novo, primeiro por
+    // correspondência exacta, depois por ilike.
     const { data: again } = await supabase
       .from("brands")
       .select("id")
-      .ilike("name", name)
+      .eq("name", name)
       .eq("mundo", mundo)
       .maybeSingle();
     if (again?.id) {
       cache.set(key, again.id);
       return again.id;
+    }
+    const { data: againCi } = await supabase
+      .from("brands")
+      .select("id")
+      .ilike("name", name)
+      .eq("mundo", mundo)
+      .maybeSingle();
+    if (againCi?.id) {
+      cache.set(key, againCi.id);
+      return againCi.id;
     }
     throw new Error(`brands insert: ${insErr.message}`);
   }
