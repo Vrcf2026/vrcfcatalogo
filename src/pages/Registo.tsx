@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +15,7 @@ export default function Registo() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -24,6 +26,10 @@ export default function Registo() {
     e.preventDefault();
     if (password.length < 6) {
       toast.error("A palavra-passe deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (!acceptedTerms) {
+      toast.error("Deve aceitar os Termos e Condições e a Política de Privacidade para continuar.");
       return;
     }
     setSubmitting(true);
@@ -58,7 +64,24 @@ export default function Registo() {
               <Label htmlFor="password">Palavra-passe (mín. 6 caracteres)</Label>
               <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
             </div>
-            <Button type="submit" className="w-full gap-2" disabled={submitting}>
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="terms"
+                checked={acceptedTerms}
+                onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+              />
+              <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+                Li e aceito os{" "}
+                <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">
+                  Termos e Condições
+                </a>{" "}
+                e a{" "}
+                <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">
+                  Política de Privacidade
+                </a>.
+              </label>
+            </div>
+            <Button type="submit" className="w-full gap-2" disabled={submitting || !acceptedTerms}>
               {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
               Criar Conta
             </Button>

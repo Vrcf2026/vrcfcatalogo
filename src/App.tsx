@@ -17,6 +17,7 @@ import Economato from "./pages/Economato.tsx";
 import Produto from "./pages/Produto.tsx";
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.tsx";
 import Pesquisa from "./pages/Pesquisa.tsx";
 import Conta from "./pages/Conta.tsx";
 import ContaDashboard from "./pages/conta/Dashboard.tsx";
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/produto/:slug" element={<Produto />} />
               <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
               <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
+              <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
               <Route path="/pesquisa" element={<Pesquisa />} />
               <Route path="/login" element={<Login />} />
               <Route path="/registo" element={<Registo />} />

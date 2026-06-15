@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, ShieldAlert } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function ContaDados() {
@@ -93,6 +94,33 @@ export default function ContaDados() {
               Guardar
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+            Privacidade e Dados Pessoais
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Pode consultar e corrigir os seus dados acima em qualquer momento. Para outros direitos previstos no
+            RGPD — incluindo acesso, portabilidade ou eliminação definitiva da sua conta e dos dados associados —
+            consulte a nossa{" "}
+            <Link to="/politica-de-privacidade" className="text-primary hover:underline">Política de Privacidade</Link>.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Para solicitar a <strong className="text-foreground">eliminação da sua conta</strong>, envie-nos um
+            pedido por email. Responderemos no prazo de 30 dias, sem prejuízo da conservação de dados cuja
+            retenção seja legalmente obrigatória (ex.: faturação).
+          </p>
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <a href={`mailto:geral@vrcf.pt?subject=${encodeURIComponent("Pedido de eliminação de conta")}&body=${encodeURIComponent(`Solicito a eliminação da minha conta associada ao email: ${user?.email ?? ""}`)}`}>
+              Solicitar Eliminação da Conta
+            </a>
+          </Button>
         </CardContent>
       </Card>
     </div>

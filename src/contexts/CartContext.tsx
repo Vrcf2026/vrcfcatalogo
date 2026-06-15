@@ -1,5 +1,15 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 
+const COOKIE_CONSENT_KEY = "vrcf_cookie_consent";
+
+function hasFunctionalConsent(): boolean {
+  try {
+    return localStorage.getItem(COOKIE_CONSENT_KEY) === "accepted";
+  } catch {
+    return false;
+  }
+}
+
 export interface CartItem {
   id: string;
   name: string;
@@ -30,6 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
+      if (!hasFunctionalConsent()) return [];
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch {
@@ -40,6 +51,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
+      if (!hasFunctionalConsent()) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     } catch {
       /* ignore */
