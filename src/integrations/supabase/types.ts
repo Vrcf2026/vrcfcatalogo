@@ -90,6 +90,8 @@ export type Database = {
           logo_url: string | null
           mundo: string | null
           name: string
+          show_in_world_strip: boolean
+          show_on_homepage: boolean
           visivel: boolean
         }
         Insert: {
@@ -98,6 +100,8 @@ export type Database = {
           logo_url?: string | null
           mundo?: string | null
           name: string
+          show_in_world_strip?: boolean
+          show_on_homepage?: boolean
           visivel?: boolean
         }
         Update: {
@@ -106,6 +110,8 @@ export type Database = {
           logo_url?: string | null
           mundo?: string | null
           name?: string
+          show_in_world_strip?: boolean
+          show_on_homepage?: boolean
           visivel?: boolean
         }
         Relationships: []

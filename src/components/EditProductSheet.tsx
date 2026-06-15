@@ -526,7 +526,9 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
               <Lock className="inline h-3 w-3 mr-1" />
               Trancar um campo impede que a próxima importação o sobrescreva.
             </p>
-            {SPEC_FIELDS.map(({ key, label, options }) => {
+            {SPEC_FIELDS.map((field) => {
+              const { key, label } = field;
+              const options = "options" in field ? field.options : undefined;
               const locked = specsLocked.includes(key);
               return (
                 <div key={key} className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">

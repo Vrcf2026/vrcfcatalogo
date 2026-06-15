@@ -5,6 +5,11 @@ import { Cookie, X } from "lucide-react";
 
 const COOKIE_CONSENT_KEY = "vrcf_cookie_consent";
 
+export function openCookiePreferences() {
+  localStorage.removeItem(COOKIE_CONSENT_KEY);
+  window.location.reload();
+}
+
 export function CookieConsentBanner() {
   const [visible, setVisible] = useState(false);
 
