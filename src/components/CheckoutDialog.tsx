@@ -26,6 +26,7 @@ interface CustomItem {
 
 export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const { items, clearCart } = useCart();
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -39,6 +40,23 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
   const MAX_SUBMITS = 3;
   const RATE_WINDOW_MS = 60_000; // 1 minute
+
+  // Pre-fill data from profile when authenticated
+  useEffect(() => {
+    if (!open || !user) return;
+    setEmail((prev) => prev || user.email || "");
+    (async () => {
+      const { data } = await supabase
+        .from("customer_profiles")
+        .select("full_name,phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) {
+        setName((prev) => prev || data.full_name || "");
+        setPhone((prev) => prev || data.phone || "");
+      }
+    })();
+  }, [open, user]);
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
