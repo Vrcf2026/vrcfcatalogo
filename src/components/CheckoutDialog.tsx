@@ -5,11 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCart } from "@/contexts/CartContext";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Send, CheckCircle, Plus, Trash2 } from "lucide-react";
 import { trackEvent } from "@/lib/trackEvent";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "react-router-dom";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -24,6 +26,7 @@ interface CustomItem {
 
 export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const { items, clearCart } = useCart();
+  const { user } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -37,6 +40,23 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
   const MAX_SUBMITS = 3;
   const RATE_WINDOW_MS = 60_000; // 1 minute
+
+  // Pre-fill data from profile when authenticated
+  useEffect(() => {
+    if (!open || !user) return;
+    setEmail((prev) => prev || user.email || "");
+    (async () => {
+      const { data } = await supabase
+        .from("customer_profiles")
+        .select("full_name,phone")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data) {
+        setName((prev) => prev || data.full_name || "");
+        setPhone((prev) => prev || data.phone || "");
+      }
+    })();
+  }, [open, user]);
 
   const addCustomItem = () => {
     setCustomItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1 }]);
@@ -103,6 +123,41 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       });
       if (fnError) throw fnError;
 
+      // If authenticated, also save quote to DB for history
+      if (user) {
+        try {
+          const subtotal = items.reduce((s, i) => s + ((i.price ?? 0) * i.quantity), 0);
+          const { data: quote, error: qErr } = await supabase
+            .from("quotes")
+            .insert({
+              user_id: user.id,
+              status: "sent",
+              subtotal,
+              total: subtotal,
+              notes: notes.trim() || null,
+              customer_name: name.trim(),
+              customer_email: email.trim(),
+              customer_phone: phone.trim(),
+            })
+            .select("id")
+            .single();
+          if (!qErr && quote) {
+            const rows = items.map((i) => ({
+              quote_id: quote.id,
+              product_id: i.id,
+              product_name_snapshot: i.name,
+              product_image_snapshot: i.imageUrl,
+              unit_price: i.price ?? 0,
+              quantity: i.quantity,
+              line_total: (i.price ?? 0) * i.quantity,
+            }));
+            if (rows.length) await supabase.from("quote_items").insert(rows);
+          }
+        } catch (e) {
+          console.warn("Could not save quote history", e);
+        }
+      }
+
       setSuccess(true);
       // Track quote events for analytics
       items.forEach((item) => trackEvent(item.id, "quote"));
@@ -151,6 +206,17 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             Preencha os seus dados para receber um orçamento personalizado.
           </DialogDescription>
         </DialogHeader>
+
+        {!user && (
+          <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            <Link to="/login" className="text-primary font-medium hover:underline">Inicie sessão</Link>
+            {" ou "}
+            <Link to="/registo" className="text-primary font-medium hover:underline">crie conta</Link>
+            {" para guardar este orçamento no seu histórico."}
+          </div>
+        )}
+
+
 
         {/* Items summary */}
         {items.length > 0 && (

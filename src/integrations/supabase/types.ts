@@ -200,6 +200,57 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_profiles: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          company: string | null
+          country: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          notes: string | null
+          phone: string | null
+          postal_code: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -661,6 +712,60 @@ export type Database = {
           },
         ]
       }
+      quote_items: {
+        Row: {
+          created_at: string
+          id: string
+          line_total: number
+          product_id: string | null
+          product_image_snapshot: string | null
+          product_name_snapshot: string
+          product_sku_snapshot: string | null
+          quantity: number
+          quote_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          line_total?: number
+          product_id?: string | null
+          product_image_snapshot?: string | null
+          product_name_snapshot: string
+          product_sku_snapshot?: string | null
+          quantity?: number
+          quote_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          line_total?: number
+          product_id?: string | null
+          product_image_snapshot?: string | null
+          product_name_snapshot?: string
+          product_sku_snapshot?: string | null
+          quantity?: number
+          quote_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_requests: {
         Row: {
           created_at: string
@@ -690,6 +795,125 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      quotes: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          customer_company: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_tax_id: string | null
+          id: string
+          notes: string | null
+          quote_number: string
+          shipping_address: string | null
+          status: Database["public"]["Enums"]["quote_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
+          id?: string
+          notes?: string | null
+          quote_number?: string
+          shipping_address?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
+          id?: string
+          notes?: string | null
+          quote_number?: string
+          shipping_address?: string | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rma_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string | null
+          id: string
+          invoice_number: string | null
+          product_id: string | null
+          product_name: string
+          purchase_date: string | null
+          reason: string
+          resolution_notes: string | null
+          rma_number: string
+          serial_number: string | null
+          status: Database["public"]["Enums"]["rma_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_number?: string | null
+          product_id?: string | null
+          product_name: string
+          purchase_date?: string | null
+          reason: string
+          resolution_notes?: string | null
+          rma_number?: string
+          serial_number?: string | null
+          status?: Database["public"]["Enums"]["rma_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_number?: string | null
+          product_id?: string | null
+          product_name?: string
+          purchase_date?: string | null
+          reason?: string
+          resolution_notes?: string | null
+          rma_number?: string
+          serial_number?: string | null
+          status?: Database["public"]["Enums"]["rma_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rma_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shipping_config: {
         Row: {
@@ -797,9 +1021,28 @@ export type Database = {
           read_ct: number
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       app_role: "super_admin" | "admin"
+      quote_status:
+        | "pending"
+        | "sent"
+        | "in_review"
+        | "accepted"
+        | "rejected"
+        | "cancelled"
+        | "completed"
+      rma_status:
+        | "submitted"
+        | "in_review"
+        | "approved"
+        | "rejected"
+        | "in_repair"
+        | "shipped_back"
+        | "completed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -928,6 +1171,25 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["super_admin", "admin"],
+      quote_status: [
+        "pending",
+        "sent",
+        "in_review",
+        "accepted",
+        "rejected",
+        "cancelled",
+        "completed",
+      ],
+      rma_status: [
+        "submitted",
+        "in_review",
+        "approved",
+        "rejected",
+        "in_repair",
+        "shipped_back",
+        "completed",
+        "cancelled",
+      ],
     },
   },
 } as const
