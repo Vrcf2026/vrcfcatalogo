@@ -139,11 +139,50 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const productsQuery = useQuery({
     queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
     queryFn: async () => {
+      const from = (page - 1) * PAGE_SIZE;
+
+      // Quando há pesquisa por texto e nenhum filtro técnico (specs)
+      // activo, usa search_products: pesquisa "todas as palavras, em
+      // qualquer ordem" e insensível a acentos — "camara ip" encontra
+      // "Câmara IP Bullet 4MP". search_products não cobre filtros JSONB
+      // de especificações, por isso com techFilters activos mantém-se o
+      // .ilike() abaixo (sem normalização de acentos nesse caso).
+      if (search && Object.keys(techFilters).length === 0) {
+        const orderMap: Record<string, { by: string; asc: boolean }> = {
+          "featured":   { by: "featured",   asc: false },
+          "price-asc":  { by: "price",      asc: true },
+          "price-desc": { by: "price",      asc: false },
+          "name-asc":   { by: "name",       asc: true },
+          "name-desc":  { by: "name",       asc: false },
+          "newest":     { by: "created_at", asc: false },
+        };
+        const order = orderMap[sortBy] ?? orderMap.featured;
+        const brandName = brandFilter !== "all" ? brands.find((b: any) => b.id === brandFilter)?.name ?? null : null;
+
+        const { data, error } = await supabase.rpc("search_products", {
+          p_query: search,
+          p_mundo: mundo,
+          p_category: categoryFilter !== "all" ? categoryFilter : null,
+          p_family_id: familyFilter !== "all" ? familyFilter : null,
+          p_type_id: typeFilter !== "all" ? typeFilter : null,
+          p_brand_id: brandFilter !== "all" ? brandFilter : null,
+          p_brand: brandName,
+          p_limit: PAGE_SIZE,
+          p_offset: from,
+          p_order_by: order.by,
+          p_order_asc: order.asc,
+        });
+        if (error) throw error;
+        const rows = (data ?? []).map((r: any) => r.row_data);
+        const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
+        return { data: rows, count };
+      }
+
       let q = supabase.from("products").select("*", { count: "exact" })
         .eq("mundo", mundo)
         .eq("include_in_catalog", true);
 
-      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,short_description.ilike.%${search}%`);
+      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
       if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
       if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
       if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
@@ -166,8 +205,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       else if (sortBy === "name-desc") q = q.order("name", { ascending: false });
       else if (sortBy === "newest") q = q.order("created_at", { ascending: false });
 
-      const from = (page - 1) * PAGE_SIZE;
       q = q.range(from, from + PAGE_SIZE - 1);
+
 
       const { data, count, error } = await q;
       if (error) throw error;
@@ -181,10 +220,38 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const total = productsQuery.data?.count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  // Filtros técnicos — gerados a partir dos produtos da página actual
+  // Specs de TODOS os produtos que correspondem aos filtros base (mundo,
+  // categoria, família, tipo, marca, pesquisa) — excluindo os próprios
+  // techFilters, para que as opções de filtro técnico reflitam toda a
+  // categoria/família, não só os 24 produtos da página actual. Traz só a
+  // coluna "especificacoes" (JSONB), por isso é leve mesmo para centenas
+  // de produtos.
+  const specsAllQuery = useQuery({
+    queryKey: ["products-specs", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter],
+    queryFn: async () => {
+      let q = supabase.from("products").select("especificacoes")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true);
+
+      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+      if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
+      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
+      if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
+      if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
+
+      const { data, error } = await q.limit(2000);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 60 * 1000,
+  });
+
+  // Filtros técnicos — gerados a partir de TODOS os produtos que
+  // correspondem aos filtros base (não só os 24 da página actual).
   const techSpecOptions = useMemo(() => {
     const map: Record<string, Map<string, number>> = {};
-    products.forEach((p: any) => {
+    const source = specsAllQuery.data ?? [];
+    source.forEach((p: any) => {
       const specs = (typeof p.especificacoes === "string"
         ? JSON.parse(p.especificacoes || "{}")
         : p.especificacoes ?? {}) as Record<string, unknown>;
@@ -205,7 +272,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       .filter(g => g.values.length > 1)
       .sort((a, b) => b.values.length - a.values.length)
       .slice(0, 10);
-  }, [products]);
+  }, [specsAllQuery.data]);
 
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
