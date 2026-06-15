@@ -38,14 +38,26 @@ const Pesquisa = () => {
     queryKey: ["global-search", search, page],
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-      let q = supabase.from("products").select("*", { count: "exact" }).eq("include_in_catalog", true);
+
       if (search.trim()) {
-        const term = `%${search.trim()}%`;
-        q = q.or(`name.ilike.${term},sku.ilike.${term},description.ilike.${term}`);
+        // search_products: pesquisa "todas as palavras, em qualquer
+        // ordem" (insensível a acentos/maiúsculas) — "camara ip" encontra
+        // "Câmara IP Bullet 4MP", não só a frase exacta "camara ip".
+        const { data, error } = await supabase.rpc("search_products", {
+          p_query: search.trim(),
+          p_limit: PAGE_SIZE,
+          p_offset: from,
+          p_order_by: "featured",
+        });
+        if (error) throw error;
+        const rows = (data ?? []).map((r: any) => r.row_data);
+        const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
+        return { rows, count };
       }
+
+      let q = supabase.from("products").select("*", { count: "exact" }).eq("include_in_catalog", true);
       q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
-      const { data, error, count } = await q.range(from, to);
+      const { data, error, count } = await q.range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
       return { rows: data ?? [], count: count ?? 0 };
     },
