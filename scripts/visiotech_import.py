@@ -331,7 +331,19 @@ VALORES_VAZIOS = {
     "", "-", "n/a", "na", "não", "nao", "no",
     "não dispõe", "nao dispoe", "no disponible", "não disponível", "nao disponivel",
     "sin información", "sem informação",
+    # "Se tiveres" — placeholder do fornecedor (Visiotech/UNI-TREND) para
+    # campos de especificação não aplicáveis/preenchidos (ex: "Alarme
+    # sonoro: Se tiveres", "Modo silencioso: Se tiveres"). Não é um valor
+    # real, por isso é tratado como vazio (campo é omitido).
+    "se tiveres",
 }
+
+# Prefixos de valores que começam por um placeholder do fornecedor mas têm
+# texto adicional a seguir (ex: "Se tiveres: A luz indicadora muda de cor
+# de acordo com a voltagem") — também tratados como vazios, porque o
+# "Se tiveres" inicial indica que o campo não é aplicável independentemente
+# do texto que se segue.
+VALORES_VAZIOS_PREFIXOS = ("se tiveres",)
 
 SPECS_IGNORAR_HTML = {"marca", "modelo"}
 
@@ -348,7 +360,8 @@ def extrair_specs_params(params_json: str) -> dict:
         if sk is None:
             continue
         val = str(params.get(pk, "")).strip()
-        if val.lower() in VALORES_VAZIOS:
+        val_lower = val.lower()
+        if val_lower in VALORES_VAZIOS or val_lower.startswith(VALORES_VAZIOS_PREFIXOS):
             continue
         if sk == "instalacao":
             val = INSTALACAO_MAP.get(val, val)
@@ -379,7 +392,7 @@ def extrair_specs_html(specs_html: str) -> dict:
         v = re.sub(r'<[^>]+>', ' ', v)
         v = unescape(v)
         v = re.sub(r'\s+', ' ', v).strip()
-        if not v or v.lower() in VALORES_VAZIOS:
+        if not v or v.lower() in VALORES_VAZIOS or v.lower().startswith(VALORES_VAZIOS_PREFIXOS):
             continue
         key_slug = slugify(k, separator="_")
         if not key_slug or key_slug in SPECS_IGNORAR_HTML:
