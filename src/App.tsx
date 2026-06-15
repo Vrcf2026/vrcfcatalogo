@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { CartProvider } from "@/contexts/CartContext";
 import Index from "./pages/Index.tsx";
 import Login from "./pages/Login.tsx";
+import Registo from "./pages/Registo.tsx";
+import ResetPassword from "./pages/ResetPassword.tsx";
 import Admin from "./pages/Admin.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import Seguranca from "./pages/Seguranca.tsx";
@@ -16,6 +18,12 @@ import Produto from "./pages/Produto.tsx";
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
 import Pesquisa from "./pages/Pesquisa.tsx";
+import Conta from "./pages/Conta.tsx";
+import ContaDashboard from "./pages/conta/Dashboard.tsx";
+import ContaOrcamentos from "./pages/conta/Orcamentos.tsx";
+import OrcamentoDetalhe from "./pages/conta/OrcamentoDetalhe.tsx";
+import ContaRMA from "./pages/conta/RMA.tsx";
+import ContaDados from "./pages/conta/Dados.tsx";
 import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
 import { Loader2 } from "lucide-react";
 
@@ -53,6 +61,15 @@ const App = () => (
               <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
               <Route path="/pesquisa" element={<Pesquisa />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/registo" element={<Registo />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/conta" element={<Conta />}>
+                <Route index element={<ContaDashboard />} />
+                <Route path="orcamentos" element={<ContaOrcamentos />} />
+                <Route path="orcamentos/:id" element={<OrcamentoDetalhe />} />
+                <Route path="rma" element={<ContaRMA />} />
+                <Route path="dados" element={<ContaDados />} />
+              </Route>
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
