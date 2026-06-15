@@ -14,6 +14,7 @@ import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
+import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SPEC_LABELS } from "@/lib/specLabels";
@@ -351,6 +352,8 @@ const Produto = () => {
           <button className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl">&times;</button>
         </div>
       )}
+
+      <SiteFooter />
 
       <CartDrawer />
       <ContactFloatingBubble />

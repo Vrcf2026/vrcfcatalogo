@@ -20,6 +20,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
 import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import { SiteFooter } from "@/components/SiteFooter";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
@@ -36,6 +37,28 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [familyFilter, setFamilyFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [brandFilter, setBrandFilter] = useState(searchParams.get("marca") ?? "all");
+  const [bannerIdx, setBannerIdx] = useState(0);
+
+  const { data: banners = [] } = useQuery({
+    queryKey: ["world-banners", mundo],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("banners")
+        .select("*")
+        .eq("ativo", true)
+        .in("mundo", [mundo, "todos"])
+        .order("ordem");
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const timer = setInterval(() => setBannerIdx(i => (i + 1) % banners.length), 5000);
+    return () => clearInterval(timer);
+  }, [banners.length]);
 
   const [sortBy, setSortBy] = useState("featured");
   const [techFilters, setTechFilters] = useState<Record<string, string>>({});
@@ -330,6 +353,38 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         </div>
       </header>
 
+      {/* Banners deste mundo (ou transversais, mundo="todos") */}
+      {banners.length > 0 && (
+        <div className="relative overflow-hidden bg-black" style={{ maxHeight: 240 }}>
+          {banners.map((b: any, i: number) => (
+            <div key={b.id} className={`transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0 absolute inset-0"}`}>
+              {b.link
+                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} /></Link>
+                : <img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} />
+              }
+            </div>
+          ))}
+          {banners.length > 1 && (
+            <>
+              <button onClick={() => setBannerIdx(i => (i - 1 + banners.length) % banners.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button onClick={() => setBannerIdx(i => (i + 1) % banners.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {banners.map((_: any, i: number) => (
+                  <button key={i} onClick={() => setBannerIdx(i)}
+                    className={`h-1 rounded-full transition-all ${i === bannerIdx ? "w-5 bg-white" : "w-1 bg-white/50"}`} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {/* Hero */}
       <section className={`relative overflow-hidden border-b border-border py-8 sm:py-10`}>
         <div aria-hidden className={`absolute -top-20 left-1/2 -translate-x-1/2 h-[280px] w-[600px] rounded-full blur-3xl pointer-events-none ${mundo === "seguranca" ? "bg-primary/15" : "bg-blue-500/15"}`} />
@@ -522,6 +577,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           )}
         </div>
       </div>
+
+      <SiteFooter />
 
       {/* Mobile bottom nav */}
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">

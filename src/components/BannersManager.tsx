@@ -101,9 +101,10 @@ export function BannersManager() {
               <Select value={mundo} onValueChange={setMundo}>
                 <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos (homepage)</SelectItem>
+                  <SelectItem value="todos">Todos (homepage + todos os mundos)</SelectItem>
                   <SelectItem value="escritorio">Escritório & IT</SelectItem>
                   <SelectItem value="seguranca">Segurança & Redes</SelectItem>
+                  <SelectItem value="economato">Economato</SelectItem>
                 </SelectContent>
               </Select>
             </div>

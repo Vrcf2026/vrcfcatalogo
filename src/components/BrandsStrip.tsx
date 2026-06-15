@@ -16,7 +16,7 @@ const BrandsStrip = ({ mundo }: BrandsStripProps) => {
       let query = supabase
         .from("brands")
         .select("id, name, logo_url")
-        .eq("show_in_strip", true)
+        .eq("show_in_world_strip", true)
         .order("name", { ascending: true });
       if (mundo) {
         // Marcas do próprio mundo, ou marcadas como "todos" (transversais)

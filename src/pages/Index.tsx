@@ -2,7 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ShieldCheck, Monitor, Search, ShoppingCart, Phone, Mail, MapPin,
+  ShieldCheck, Monitor, Search, ShoppingCart,
   ArrowRight, ChevronLeft, ChevronRight, Star, Package, Send, Zap,
   Wifi, Camera, Lock, Cpu, Printer, Tablet, ShoppingBag,
 } from "lucide-react";
@@ -15,11 +15,10 @@ import { ProductCard } from "@/components/ProductCard";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { useCart } from "@/contexts/CartContext";
 import { useState, useEffect, useRef } from "react";
-import { SuggestionDialog } from "@/components/SuggestionDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
-import vrcfShield from "@/assets/vrcf-shield.png";
+import { SiteFooter } from "@/components/SiteFooter";
 
 // ── HOOKS ────────────────────────────────────────────────────────────────────
 
@@ -75,7 +74,7 @@ const useBrands = () =>
     queryKey: ["hp-brands"],
     queryFn: async () => {
       const { data } = await supabase.from("brands").select("id,name,logo_url")
-        .eq("show_in_strip", true).order("name").limit(16);
+        .eq("show_on_homepage", true).order("name").limit(16);
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
@@ -97,7 +96,6 @@ const useBanners = () =>
 const Index = () => {
   const { totalItems, setIsOpen } = useCart();
   const [query, setQuery] = useState("");
-  const [suggestionOpen, setSuggestionOpen] = useState(false);
   const [bannerIdx, setBannerIdx] = useState(0);
   const [activeMundo, setActiveMundo] = useState<"seguranca" | "escritorio" | "economato">("seguranca");
   const navigate = useNavigate();
@@ -162,8 +160,32 @@ const Index = () => {
         </div>
       </header>
 
-      {/* ── BANNERS ── */}
-      {banners.data && banners.data.length > 0 ? (
+      {/* ── HERO / TÍTULO + PESQUISA (sempre visível) ── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/50 border-b border-border py-8 px-4">
+        <div aria-hidden className="absolute inset-0 opacity-[0.035]"
+          style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+        <div className="relative max-w-xl mx-auto text-center">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-4">
+            <Zap className="h-3 w-3" /> Catálogo Online VRCF · Montijo
+          </div>
+          <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+            Tecnologia & Segurança
+          </h1>
+          <p className="text-muted-foreground text-sm mb-5">Câmaras, alarmes, redes e IT recondicionado. Peça orçamento online.</p>
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="O que procura?"
+              className="pl-11 pr-28 h-11 rounded-2xl bg-card border-border shadow-sm text-sm" />
+            <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-xl text-xs">
+              Pesquisar
+            </Button>
+          </form>
+        </div>
+      </section>
+
+      {/* ── BANNERS (adicional, abaixo do título) ── */}
+      {banners.data && banners.data.length > 0 && (
         <div className="relative overflow-hidden bg-black" style={{ maxHeight: 240 }}>
           {banners.data.map((b: any, i: number) => (
             <div key={b.id} className={`transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0 absolute inset-0"}`}>
@@ -192,30 +214,6 @@ const Index = () => {
             </>
           )}
         </div>
-      ) : (
-        /* Hero compacto quando não há banners */
-        <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/50 border-b border-border py-8 px-4">
-          <div aria-hidden className="absolute inset-0 opacity-[0.035]"
-            style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-          <div className="relative max-w-xl mx-auto text-center">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-4">
-              <Zap className="h-3 w-3" /> Catálogo Online VRCF · Montijo
-            </div>
-            <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight mb-2">
-              Tecnologia & Segurança
-            </h1>
-            <p className="text-muted-foreground text-sm mb-5">Câmaras, alarmes, redes e IT recondicionado. Peça orçamento online.</p>
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={query} onChange={e => setQuery(e.target.value)}
-                placeholder="O que procura?"
-                className="pl-11 pr-28 h-11 rounded-2xl bg-card border-border shadow-sm text-sm" />
-              <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-xl text-xs">
-                Pesquisar
-              </Button>
-            </form>
-          </div>
-        </section>
       )}
 
       {/* ── WORLD SELECTOR ── */}
@@ -365,34 +363,7 @@ const Index = () => {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-border py-7 px-4 bg-background">
-        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-          <div className="flex items-center gap-3">
-            <img src={vrcfShield} alt="VRCF" className="h-9 w-auto" />
-            <div>
-              <p className="font-bold text-sm">VRCF — Informática & Segurança</p>
-              <p className="text-xs text-muted-foreground">NIF 515237205 · Montijo</p>
-            </div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-sm">
-            <a href="tel:+351911564243" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
-              <Phone className="h-3.5 w-3.5" /> +351 911 564 243
-            </a>
-            <a href="mailto:geral@vrcf.pt" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
-              <Mail className="h-3.5 w-3.5" /> geral@vrcf.pt
-            </a>
-            <a href="https://maps.google.com/?q=Rua+Luis+Calado+Nunes+15+Montijo" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
-              <MapPin className="h-3.5 w-3.5" /> R. Luis Calado Nunes 15 LJ B
-            </a>
-          </div>
-          <div className="flex gap-3 text-xs text-muted-foreground">
-            <Link to="/termos-e-condicoes" className="hover:text-primary">Termos</Link>
-            <Link to="/politica-de-cookies" className="hover:text-primary">Cookies</Link>
-            <button onClick={() => setSuggestionOpen(true)} className="hover:text-primary">Sugestão</button>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
 
       {/* ── MOBILE BOTTOM NAV ── */}
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
@@ -432,7 +403,6 @@ const Index = () => {
 
       <CartDrawer />
       <ContactFloatingBubble />
-      <SuggestionDialog open={suggestionOpen} onOpenChange={setSuggestionOpen} />
     </div>
   );
 };

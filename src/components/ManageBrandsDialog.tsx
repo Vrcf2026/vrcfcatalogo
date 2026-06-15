@@ -14,14 +14,15 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X, Star } from "lucide-react";
+import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X, Star, Home } from "lucide-react";
 
 interface Brand {
   id: string;
   name: string;
   logo_url: string | null;
   mundo?: string;
-  show_in_strip?: boolean;
+  show_in_world_strip?: boolean;
+  show_on_homepage?: boolean;
 }
 
 interface ManageBrandsDialogProps {
@@ -107,12 +108,13 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
     }
   };
 
-  const handleToggleStrip = async (id: string, value: boolean) => {
+  const handleToggleFlag = async (id: string, field: "show_in_world_strip" | "show_on_homepage", value: boolean) => {
     try {
-      const { error } = await supabase.from("brands").update({ show_in_strip: value }).eq("id", id);
+      const { error } = await supabase.from("brands").update({ [field]: value }).eq("id", id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       queryClient.invalidateQueries({ queryKey: ["brands-strip"] });
+      queryClient.invalidateQueries({ queryKey: ["hp-brands"] });
     } catch (e: any) {
       toast.error(e.message || "Erro ao atualizar marca");
     }
@@ -207,10 +209,16 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
           <DialogTitle className="font-heading text-xl">Gerir Marcas</DialogTitle>
         </DialogHeader>
 
-        <p className="text-xs text-muted-foreground -mt-1">
-          <Star className="inline h-3 w-3 mr-1 fill-primary text-primary" />
-          Marca selecionada para aparecer na faixa "Marcas que trabalhamos" do catálogo.
-          Clica na estrela para adicionar/remover.
+        <p className="text-xs text-muted-foreground -mt-1 space-y-0.5">
+          <span className="flex items-center gap-1.5">
+            <Star className="inline h-3 w-3 fill-primary text-primary" />
+            Aparece na faixa "Marcas que trabalhamos" do respectivo mundo (Segurança/Escritório/Economato).
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Home className="inline h-3 w-3 fill-blue-500 text-blue-500" />
+            Aparece na faixa de marcas da página inicial.
+          </span>
+          <span className="block">Todas começam selecionadas — clica para remover as que não quiseres mostrar.</span>
         </p>
 
         <div className="space-y-3 border-b border-border pb-4">
@@ -280,10 +288,18 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
 
                 <Button
                   variant="ghost" size="icon" className="h-7 w-7 shrink-0"
-                  title={b.show_in_strip ? "A aparecer na faixa de marcas — clica para remover" : "Não aparece na faixa de marcas — clica para mostrar"}
-                  onClick={() => handleToggleStrip(b.id, !b.show_in_strip)}
+                  title={b.show_in_world_strip ? "A aparecer na faixa de marcas do mundo — clica para remover" : "Não aparece na faixa de marcas do mundo — clica para mostrar"}
+                  onClick={() => handleToggleFlag(b.id, "show_in_world_strip", !b.show_in_world_strip)}
                 >
-                  <Star className={`h-3.5 w-3.5 ${b.show_in_strip ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                  <Star className={`h-3.5 w-3.5 ${b.show_in_world_strip ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                </Button>
+
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                  title={b.show_on_homepage ? "A aparecer na faixa de marcas da homepage — clica para remover" : "Não aparece na faixa de marcas da homepage — clica para mostrar"}
+                  onClick={() => handleToggleFlag(b.id, "show_on_homepage", !b.show_on_homepage)}
+                >
+                  <Home className={`h-3.5 w-3.5 ${b.show_on_homepage ? "fill-blue-500 text-blue-500" : "text-muted-foreground"}`} />
                 </Button>
 
                 {b.logo_url && (
