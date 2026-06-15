@@ -22,10 +22,56 @@ import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { fetchAllProducts } from "@/lib/fetchAllRows";
+import { LIST_COLUMNS, PRODUCT_COLUMNS } from "@/lib/fetchAllRows";
 
 const FORNECEDORES = ["diginova", "visiotech", "bydemes", "manual"];
 const PAGE_SIZE = 50;
+
+interface ProductFilters {
+  search: string;
+  categoryFilter: string;
+  familyFilter: string;
+  typeFilter: string;
+  brandFilter: string;
+  fornecedorFilter: string;
+  mundoFilter: string;
+  stockFilter: string;
+}
+
+// Aplica os filtros do Admin a uma query Supabase sobre "products".
+// Usado tanto na listagem paginada como nas operações que precisam de
+// TODOS os produtos que correspondem aos filtros (exportar, aleatório,
+// navegação anterior/seguinte) — mantém a lógica de filtragem num único
+// sítio, em sincronia com o servidor em vez de filtrar em JS.
+function applyProductFilters(query: any, f: ProductFilters, opts?: {
+  skipBrand?: boolean;
+  familyName?: string;
+  brandName?: string;
+}) {
+  if (f.categoryFilter !== "all") query = query.eq("category", f.categoryFilter);
+  if (f.familyFilter !== "all") {
+    query = opts?.familyName
+      ? query.or(`family_id.eq.${f.familyFilter},family.eq.${opts.familyName}`)
+      : query.eq("family_id", f.familyFilter);
+  }
+  if (f.typeFilter !== "all") query = query.eq("type_id", f.typeFilter);
+  if (!opts?.skipBrand && f.brandFilter !== "all") {
+    query = opts?.brandName
+      ? query.or(`brand_id.eq.${f.brandFilter},brand.eq.${opts.brandName}`)
+      : query.eq("brand_id", f.brandFilter);
+  }
+  if (f.fornecedorFilter !== "all") query = query.eq("fornecedor", f.fornecedorFilter);
+  if (f.mundoFilter !== "all") query = query.eq("mundo", f.mundoFilter);
+  if (f.stockFilter === "out") query = query.eq("stock_status", "out");
+  if (f.stockFilter === "low") query = query.eq("stock_status", "low");
+  if (f.stockFilter === "in") query = query.neq("stock_status", "out");
+  if (f.search.trim()) {
+    const q = f.search.trim();
+    query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%,description.ilike.%${q}%`);
+  }
+  return query;
+}
+
 
 const Admin = () => {
   const [search, setSearch] = useState("");
@@ -50,12 +96,6 @@ const Admin = () => {
     await signOut();
     navigate("/");
   };
-
-  const { data: products = [], isLoading, error: productsError } = useQuery({
-    queryKey: ["products", "all"],
-    queryFn: () => fetchAllProducts(),
-    staleTime: 2 * 60 * 1000,
-  });
 
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
@@ -95,6 +135,64 @@ const Admin = () => {
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const brandMap = Object.fromEntries(brands.map((b: any) => [b.id, b.name]));
+  const typeMap = Object.fromEntries(types.map((t: any) => [t.id, t.name]));
+
+  // Filtros activos, agrupados — usado como dependência das queries e
+  // passado a applyProductFilters.
+  const activeFilters: ProductFilters = {
+    search, categoryFilter, familyFilter, typeFilter, brandFilter,
+    fornecedorFilter, mundoFilter, stockFilter,
+  };
+
+  // Nome correspondente ao ID seleccionado — usado por applyProductFilters
+  // para também encontrar produtos legados que têm o nome em "family"/
+  // "brand" (texto) mas não o respectivo "_id" preenchido.
+  const filterOpts = {
+    familyName: familyFilter !== "all" ? familyMap[familyFilter] : undefined,
+    brandName: brandFilter !== "all" ? brandMap[brandFilter] : undefined,
+  };
+
+  // Listagem paginada — server-side: aplica todos os filtros + .range() no
+  // Supabase, com colunas reduzidas (LIST_COLUMNS). Substitui o antigo
+  // fetchAllProducts() que trazia os 27000+ produtos completos de cada vez.
+  const { data: productsData, isLoading, isFetching, error: productsError } = useQuery({
+    queryKey: ["products", "page", activeFilters, filterOpts, sortCol, sortDir, page],
+    queryFn: async () => {
+      let query = supabase.from("products").select(LIST_COLUMNS, { count: "exact" });
+      query = applyProductFilters(query, activeFilters, filterOpts);
+      query = query.order(sortCol, { ascending: sortDir === "asc", nullsFirst: false });
+      if (sortCol !== "id") query = query.order("id", { ascending: true });
+      const from = (page - 1) * PAGE_SIZE;
+      const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      return { rows: data ?? [], total: count ?? 0 };
+    },
+    staleTime: 60 * 1000,
+    placeholderData: (prev) => prev,
+  });
+
+  const paginated = productsData?.rows ?? [];
+  const totalFiltered = productsData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
+
+  // Se um filtro reduzir o nº de páginas (ex: estava na página 5 e o novo
+  // filtro só tem 2), volta para a última página válida.
+  useEffect(() => {
+    if (productsData && page > totalPages) setPage(totalPages);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalPages]);
+
+  // Total geral (sem filtros) — usado para "X produtos (de Y)".
+  const { data: totalAll = 0 } = useQuery({
+    queryKey: ["products", "count-all"],
+    queryFn: async () => {
+      const { count, error } = await supabase.from("products").select("id", { count: "exact", head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
 
   // Categoria, Família e Tipo (Nível 3) formam uma cascata de filtros:
   // Mundo → Categoria → Família → Tipo. Cada nível só mostra opções que
@@ -116,44 +214,31 @@ const Admin = () => {
       : t.family_id === familyFilter)
   );
 
-  const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-  // Predicado partilhado com os filtros activos, excepto o indicado em
-  // `except` — usado para derivar as opções de Marca a partir dos produtos
-  // que já correspondem aos outros filtros seleccionados.
-  const matchesFilters = (p: any, except?: "brand") => {
-    if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
-    if (familyFilter !== "all" && p.family_id !== familyFilter && p.family !== familyFilter) return false;
-    if (typeFilter !== "all" && p.type_id !== typeFilter) return false;
-    if (except !== "brand" && brandFilter !== "all" && p.brand_id !== brandFilter && p.brand !== brandFilter) return false;
-    if (fornecedorFilter !== "all" && p.fornecedor !== fornecedorFilter) return false;
-    if (mundoFilter !== "all" && p.mundo !== mundoFilter) return false;
-    if (stockFilter === "out" && p.stock_status !== "out") return false;
-    if (stockFilter === "low" && p.stock_status !== "low") return false;
-    if (stockFilter === "in" && p.stock_status === "out") return false;
-    if (search) {
-      const q = normalize(search);
-      return normalize(p.name || "").includes(q) || normalize(p.sku || "").includes(q);
-    }
-    return true;
-  };
-
   // Marcas que existem entre os produtos que já correspondem aos restantes
   // filtros (Mundo/Categoria/Família/Tipo/Fornecedor/Stock/pesquisa) — evita
-  // sugerir marcas sem produtos no contexto actual.
+  // sugerir marcas sem produtos no contexto actual. Query leve (só
+  // brand_id/brand), não os produtos completos.
+  const { data: visibleBrandRefs = [] } = useQuery({
+    queryKey: ["products", "brand-refs", { ...activeFilters, brandFilter: "all" }],
+    queryFn: async () => {
+      let query = supabase.from("products").select("brand_id,brand");
+      query = applyProductFilters(query, activeFilters, { ...filterOpts, skipBrand: true });
+      const { data, error } = await query.limit(5000);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 60 * 1000,
+  });
+
   const visibleBrands = useMemo(() => {
-    const idsWithProducts = new Set<string>();
-    const namesWithProducts = new Set<string>();
-    for (const p of products) {
-      if (!matchesFilters(p, "brand")) continue;
-      if (p.brand_id) idsWithProducts.add(p.brand_id);
-      if (p.brand) namesWithProducts.add(p.brand);
+    const ids = new Set<string>();
+    const names = new Set<string>();
+    for (const r of visibleBrandRefs as any[]) {
+      if (r.brand_id) ids.add(r.brand_id);
+      if (r.brand) names.add(r.brand);
     }
-    return brands.filter((b: any) =>
-      idsWithProducts.has(b.id) || namesWithProducts.has(b.name)
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products, brands, categoryFilter, familyFilter, typeFilter, fornecedorFilter, mundoFilter, stockFilter, search]);
+    return brands.filter((b: any) => ids.has(b.id) || names.has(b.name));
+  }, [visibleBrandRefs, brands]);
 
   // Se a marca seleccionada deixar de ter produtos no contexto actual
   // (ex: mudou-se a Categoria/Família/Mundo), volta a "Marca" (todas).
@@ -164,43 +249,33 @@ const Admin = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visibleBrands]);
 
-  const filtered = useMemo(() => {
-    let result = products.filter((p: any) => matchesFilters(p));
+  // Lista de IDs (apenas IDs, leve) de TODOS os produtos que correspondem
+  // aos filtros activos, na mesma ordenação da tabela — usada para
+  // navegação anterior/seguinte no EditProductSheet sem precisar de
+  // carregar os produtos completos.
+  const { data: filteredIds = [] } = useQuery({
+    queryKey: ["products", "ids", activeFilters, filterOpts, sortCol, sortDir],
+    queryFn: async () => {
+      let query = supabase.from("products").select("id");
+      query = applyProductFilters(query, activeFilters, filterOpts);
+      query = query.order(sortCol, { ascending: sortDir === "asc", nullsFirst: false });
+      if (sortCol !== "id") query = query.order("id", { ascending: true });
 
-    result = [...result].sort((a: any, b: any) => {
-      const va = a[sortCol] ?? "";
-      const vb = b[sortCol] ?? "";
-      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-
-    return result;
-  }, [products, categoryFilter, familyFilter, typeFilter, brandFilter, fornecedorFilter, mundoFilter, stockFilter, search, sortCol, sortDir]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // Navegação anterior/seguinte dentro do EditProductSheet — usa a lista
-  // filtrada actual (todos os produtos que correspondem aos filtros, não só
-  // a página visível), para que "seguinte" continue mesmo na fronteira
-  // entre páginas.
-  const navigateProduct = (dir: -1 | 1) => {
-    if (!editingProduct) return;
-    const idx = filtered.findIndex((p: any) => p.id === editingProduct.id);
-    if (idx === -1) return;
-    const next = filtered[idx + dir];
-    if (next) {
-      // Se o produto seguinte estiver noutra página, ajusta a página actual
-      const nextIdx = idx + dir;
-      const nextPage = Math.floor(nextIdx / PAGE_SIZE) + 1;
-      if (nextPage !== page) setPage(nextPage);
-      setEditingProduct(next);
-    }
-  };
-
-  const editingIdx = editingProduct ? filtered.findIndex((p: any) => p.id === editingProduct.id) : -1;
-  const hasPrev = editingIdx > 0;
-  const hasNext = editingIdx >= 0 && editingIdx < filtered.length - 1;
+      const PAGE = 1000;
+      const all: { id: string }[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await query.range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...(data as any[]));
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      return all.map((r) => r.id);
+    },
+    staleTime: 60 * 1000,
+  });
 
   const handleSort = (col: string) => {
     if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -208,9 +283,44 @@ const Admin = () => {
     setPage(1);
   };
 
+  // Navegação anterior/seguinte dentro do EditProductSheet — usa
+  // filteredIds (todos os produtos que correspondem aos filtros, não só a
+  // página visível). Busca o produto completo correspondente ao novo ID.
+  const navigateProduct = async (dir: -1 | 1) => {
+    if (!editingProduct) return;
+    const idx = filteredIds.indexOf(editingProduct.id);
+    if (idx === -1) return;
+    const nextId = filteredIds[idx + dir];
+    if (!nextId) return;
+    const nextPage = Math.floor((idx + dir) / PAGE_SIZE) + 1;
+    if (nextPage !== page) setPage(nextPage);
+    const { data, error } = await supabase.from("products").select(PRODUCT_COLUMNS).eq("id", nextId).maybeSingle();
+    if (error || !data) { toast.error("Erro ao carregar produto"); return; }
+    setEditingProduct(data);
+  };
+
+  const editingIdx = editingProduct ? filteredIds.indexOf(editingProduct.id) : -1;
+  const hasPrev = editingIdx > 0;
+  const hasNext = editingIdx >= 0 && editingIdx < filteredIds.length - 1;
+
   // Exporta a listagem actual (com os filtros aplicados, todas as páginas)
   // para CSV — útil para revisão offline ou partilha com fornecedores.
-  const handleExport = () => {
+  const handleExport = async () => {
+    toast.info("A preparar exportação...");
+    let query = supabase.from("products").select(PRODUCT_COLUMNS);
+    query = applyProductFilters(query, activeFilters, filterOpts);
+    const PAGE = 1000;
+    const all: any[] = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await query.range(from, from + PAGE - 1);
+      if (error) { toast.error(error.message); return; }
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+
     const cols = [
       "sku", "name", "category", "family", "type", "brand", "mundo",
       "fornecedor", "price", "purchase_price", "stock_status", "min_sale_qty",
@@ -221,7 +331,7 @@ const Admin = () => {
       return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const header = cols.join(";");
-    const rows = filtered.map((p: any) =>
+    const rows = all.map((p: any) =>
       cols.map((c) => escapeCsv(p[c] === true ? "sim" : p[c] === false ? "não" : p[c])).join(";")
     );
     const csv = "\uFEFF" + [header, ...rows].join("\n");
@@ -235,7 +345,7 @@ const Admin = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} produtos exportados`);
+    toast.success(`${all.length} produtos exportados`);
   };
 
   // Marca aleatoriamente alguns produtos da listagem actual (já filtrada,
@@ -243,34 +353,34 @@ const Admin = () => {
   // rapidamente "Destaque na família" e "Destaque na homepage" enquanto não
   // há tempo para curadoria manual.
   const handleRandomizeFeatured = async () => {
-    if (filtered.length === 0) return;
-    if (filtered.length > 500) {
+    if (totalFiltered === 0) return;
+    if (totalFiltered > 500) {
       toast.error("Demasiados produtos na listagem actual (>500) — aplica um filtro (ex: categoria ou família) antes de usar o botão Aleatório.");
       return;
     }
-    const pool = [...filtered];
+    const allIds = [...filteredIds];
+    const pool = [...allIds];
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     const nFamily = Math.min(6, pool.length);
     const nHomepage = Math.min(6, pool.length);
-    const familyIds = new Set(pool.slice(0, nFamily).map((p: any) => p.id));
-    const homepageIds = new Set(pool.slice(0, nHomepage).map((p: any) => p.id));
-    const allIds = filtered.map((p: any) => p.id);
+    const familyIds = pool.slice(0, nFamily);
+    const homepageIds = pool.slice(0, nHomepage);
 
     try {
       // Limpa o destaque anterior apenas dentro da listagem filtrada, depois
       // marca os novos escolhidos.
       await supabase.from("products").update({ featured: false }).in("id", allIds);
       await supabase.from("products").update({ show_on_homepage: false }).in("id", allIds);
-      if (familyIds.size > 0) {
-        await supabase.from("products").update({ featured: true }).in("id", Array.from(familyIds));
+      if (familyIds.length > 0) {
+        await supabase.from("products").update({ featured: true }).in("id", familyIds);
       }
-      if (homepageIds.size > 0) {
-        await supabase.from("products").update({ show_on_homepage: true }).in("id", Array.from(homepageIds));
+      if (homepageIds.length > 0) {
+        await supabase.from("products").update({ show_on_homepage: true }).in("id", homepageIds);
       }
-      toast.success(`${familyIds.size} produtos marcados como destaque, ${homepageIds.size} na homepage`);
+      toast.success(`${familyIds.length} produtos marcados como destaque, ${homepageIds.length} na homepage`);
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["hp-featured"] });
     } catch (e: any) {
@@ -350,13 +460,13 @@ const Admin = () => {
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Dashboard */}
-        <AdminDashboard products={products} productImages={[]} families={families} brands={brands} />
+        <AdminDashboard />
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="produtos" className="gap-1.5">
-              <Package className="h-4 w-4" /> Produtos ({products.length})
+              <Package className="h-4 w-4" /> Produtos ({totalAll})
             </TabsTrigger>
             <TabsTrigger value="banners" className="gap-1.5">
               <Image className="h-4 w-4" /> Banners
@@ -443,12 +553,15 @@ const Admin = () => {
               </div>
             )}
             <div className="flex items-center justify-between text-sm text-muted-foreground gap-2 flex-wrap">
-              <span>{filtered.length} produto{filtered.length !== 1 ? "s" : ""} {filtered.length !== products.length && `(de ${products.length})`}</span>
+              <span className="flex items-center gap-1.5">
+                {totalFiltered} produto{totalFiltered !== 1 ? "s" : ""} {totalFiltered !== totalAll && `(de ${totalAll})`}
+                {isFetching && !isLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              </span>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline" size="sm" className="h-8 gap-1.5"
                   onClick={handleRandomizeFeatured}
-                  disabled={filtered.length === 0}
+                  disabled={totalFiltered === 0}
                   title="Marca aleatoriamente alguns produtos da listagem actual como 'Destaque na família' e 'Destaque na homepage'"
                 >
                   <Shuffle className="h-3.5 w-3.5" /> Aleatório
@@ -456,7 +569,7 @@ const Admin = () => {
                 <Button
                   variant="outline" size="sm" className="h-8 gap-1.5"
                   onClick={handleExport}
-                  disabled={filtered.length === 0}
+                  disabled={totalFiltered === 0}
                   title="Exportar a listagem actual (com os filtros aplicados) para CSV"
                 >
                   <Download className="h-3.5 w-3.5" /> Exportar
@@ -482,6 +595,7 @@ const Admin = () => {
                         <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">SKU</th>
                         <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Fornecedor</th>
                         <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Família</th>
+                        <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Tipo</th>
                         <th className="text-left px-3 py-2.5 font-medium text-muted-foreground whitespace-nowrap">Marca</th>
                         <th className="text-right px-3 py-2.5 font-medium text-muted-foreground cursor-pointer hover:text-foreground whitespace-nowrap" onClick={() => handleSort("purchase_price")}>
                           Compra <SortIcon col="purchase_price" />
@@ -499,7 +613,7 @@ const Admin = () => {
                     <tbody className="divide-y divide-border">
                       {paginated.length === 0 ? (
                         <tr>
-                          <td colSpan={12} className="text-center py-16 text-muted-foreground">
+                          <td colSpan={13} className="text-center py-16 text-muted-foreground">
                             <Package className="h-10 w-10 mx-auto mb-3 opacity-30" />
                             Nenhum produto encontrado
                           </td>
@@ -507,6 +621,7 @@ const Admin = () => {
                       ) : paginated.map((p: any) => {
                         const specs = typeof p.especificacoes === "string" ? JSON.parse(p.especificacoes || "{}") : (p.especificacoes || {});
                         const familyName = p.family || (p.family_id ? familyMap[p.family_id] : null) || "—";
+                        const typeName = p.type || (p.type_id ? typeMap[p.type_id] : null) || "—";
                         const brandName = p.brand || (p.brand_id ? brandMap[p.brand_id] : null) || "—";
                         return (
                           <tr key={p.id}
@@ -527,6 +642,7 @@ const Admin = () => {
                               ) : "—"}
                             </td>
                             <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[120px] truncate" title={familyName}>{familyName}</td>
+                            <td className="px-3 py-2.5 text-muted-foreground text-xs max-w-[120px] truncate" title={typeName}>{typeName}</td>
                             <td className="px-3 py-2.5 text-muted-foreground text-xs">{brandName}</td>
                             <td className="px-3 py-2.5 text-right tabular-nums text-xs text-muted-foreground whitespace-nowrap">
                               {p.purchase_price ? `${p.purchase_price.toFixed(2)}€` : "—"}

@@ -6,6 +6,13 @@ const CONCURRENCY = 3;
 export const PRODUCT_COLUMNS =
   "id,sku,name,slug,description,short_description,category,categoria_pai,family,family_id,type,type_id,brand,brand_id,price,purchase_price,purchase_price_vat,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,sob_encomenda,weight,especificacoes,specs_locked,destaques,conteudo_embalagem,produtos_relacionados,upgrades,min_sale_qty,created_at,updated_at";
 
+// Colunas "leves" para a tabela do Admin — sem campos grandes (descrição,
+// especificações, upgrades, relacionados) que só são precisos ao abrir o
+// EditProductSheet para um produto específico. Isto reduz drasticamente o
+// volume de dados transferido para a listagem paginada.
+export const LIST_COLUMNS =
+  "id,sku,name,category,family,family_id,type,type_id,brand,brand_id,price,purchase_price,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,min_sale_qty,especificacoes,created_at";
+
 type FetchAllOptions = {
   table: string;
   select: string;

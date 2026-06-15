@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, Package, ImageOff, Star, MousePointerClick, ShoppingCart, Eye, Trash2, CalendarDays, Truck, RefreshCw } from "lucide-react";
@@ -9,14 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-interface AdminDashboardProps {
-  products: any[];
-  productImages: any[];
-  families: { id: string; name: string; category: string }[];
-  brands: { id: string; name: string }[];
-}
+interface AdminDashboardProps {}
 
-export function AdminDashboard({ products, productImages, families, brands }: AdminDashboardProps) {
+const FORNECEDORES_DASH = ["diginova", "visiotech", "bydemes", "manual"];
+
+export function AdminDashboard(_props: AdminDashboardProps = {}) {
   const [dateRange, setDateRange] = useState("all");
   const [clearing, setClearing] = useState(false);
   const queryClient = useQueryClient();
@@ -59,21 +56,46 @@ export function AdminDashboard({ products, productImages, families, brands }: Ad
     }
   };
 
-  // Stats gerais
-  const total = products.length;
-  const noCatalog = products.filter(p => p.include_in_catalog).length;
-  const featured = products.filter(p => p.featured).length;
-  const semImagem = products.filter(p => !p.image_url).length;
+  // Stats gerais — contagens feitas no servidor (head:true não transfere
+  // linhas), em vez de carregar os 27000+ produtos para o browser.
+  const { data: stats } = useQuery({
+    queryKey: ["admin-dashboard-stats"],
+    queryFn: async () => {
+      const countOf = async (build: (q: any) => any) => {
+        let q = supabase.from("products").select("id", { count: "exact", head: true });
+        q = build(q);
+        const { count, error } = await q;
+        if (error) throw error;
+        return count ?? 0;
+      };
 
-  // Por fornecedor
-  const porFornecedor: Record<string, { total: number; comStock: number; semStock: number }> = {};
-  products.forEach(p => {
-    const f = p.fornecedor || "manual";
-    if (!porFornecedor[f]) porFornecedor[f] = { total: 0, comStock: 0, semStock: 0 };
-    porFornecedor[f].total++;
-    if (p.stock_status === "out") porFornecedor[f].semStock++;
-    else porFornecedor[f].comStock++;
+      const [total, noCatalog, featured, semImagem, porFornecedor] = await Promise.all([
+        countOf((q) => q),
+        countOf((q) => q.eq("include_in_catalog", true)),
+        countOf((q) => q.eq("featured", true)),
+        countOf((q) => q.is("image_url", null)),
+        Promise.all(FORNECEDORES_DASH.map(async (f) => {
+          const [total, semStock] = await Promise.all([
+            countOf((q) => q.eq("fornecedor", f)),
+            countOf((q) => q.eq("fornecedor", f).eq("stock_status", "out")),
+          ]);
+          return [f, { total, comStock: total - semStock, semStock }] as const;
+        })),
+      ]);
+
+      return {
+        total, noCatalog, featured, semImagem,
+        porFornecedor: Object.fromEntries(porFornecedor.filter(([, s]) => s.total > 0)),
+      };
+    },
+    staleTime: 60 * 1000,
   });
+
+  const total = stats?.total ?? 0;
+  const noCatalog = stats?.noCatalog ?? 0;
+  const featured = stats?.featured ?? 0;
+  const semImagem = stats?.semImagem ?? 0;
+  const porFornecedor = stats?.porFornecedor ?? {};
 
   // Analytics
   const clickCounts: Record<string, number> = {};
@@ -85,11 +107,36 @@ export function AdminDashboard({ products, productImages, families, brands }: Ad
     if (e.event_type === "catalog_view") viewCounts[e.product_id] = (viewCounts[e.product_id] || 0) + 1;
   });
 
-  const productName = (id: string) => products.find(p => p.id === id)?.name || "Produto removido";
   const topClicked = Object.entries(clickCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
   const topQuoted = Object.entries(quoteCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
   const totalClicks = analytics.filter(e => e.event_type === "click").length;
   const totalQuotes = analytics.filter(e => e.event_type === "quote").length;
+
+  // Nomes dos produtos nos rankings — só os ~20 IDs necessários, não os
+  // 27000 produtos. Serializado para evitar recomputar/refetch a cada
+  // render (topClicked/topQuoted são arrays novos sempre que analytics
+  // muda de referência, mas o conteúdo é normalmente o mesmo).
+  const rankingIdsKey = useMemo(() => {
+    const ids = new Set<string>();
+    topClicked.forEach(([id]) => ids.add(id));
+    topQuoted.forEach(([id]) => ids.add(id));
+    return Array.from(ids).sort().join(",");
+  }, [topClicked, topQuoted]);
+
+  const rankingIds = useMemo(() => rankingIdsKey ? rankingIdsKey.split(",") : [], [rankingIdsKey]);
+
+  const { data: rankingNames = {} } = useQuery({
+    queryKey: ["admin-dashboard-ranking-names", rankingIdsKey],
+    queryFn: async () => {
+      if (rankingIds.length === 0) return {};
+      const { data, error } = await supabase.from("products").select("id,name").in("id", rankingIds);
+      if (error) throw error;
+      return Object.fromEntries((data ?? []).map((p: any) => [p.id, p.name]));
+    },
+    enabled: rankingIds.length > 0,
+  });
+
+  const productName = (id: string) => rankingNames[id] || "Produto removido";
 
   return (
     <div className="space-y-4">
@@ -105,16 +152,16 @@ export function AdminDashboard({ products, productImages, families, brands }: Ad
 
       {/* Por fornecedor */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {Object.entries(porFornecedor).map(([f, stats]) => (
+        {Object.entries(porFornecedor).map(([f, fStats]) => (
           <Card key={f}>
             <CardContent className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <Badge variant="outline" className="capitalize text-xs">{f}</Badge>
-                <span className="text-lg font-bold">{stats.total}</span>
+                <span className="text-lg font-bold">{(fStats as any).total}</span>
               </div>
               <div className="flex gap-3 text-xs text-muted-foreground">
-                <span className="text-green-600">✓ {stats.comStock}</span>
-                {stats.semStock > 0 && <span className="text-red-500">✗ {stats.semStock}</span>}
+                <span className="text-green-600">✓ {(fStats as any).comStock}</span>
+                {(fStats as any).semStock > 0 && <span className="text-red-500">✗ {(fStats as any).semStock}</span>}
               </div>
             </CardContent>
           </Card>

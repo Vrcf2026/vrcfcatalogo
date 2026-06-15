@@ -85,7 +85,7 @@ const useBanners = () =>
     queryKey: ["hp-banners"],
     queryFn: async () => {
       const { data } = await supabase.from("banners").select("*")
-        .eq("ativo", true).in("mundo", ["todos"]).order("ordem");
+        .eq("ativo", true).in("mundo", ["todos", "homepage"]).order("ordem");
       return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
