@@ -45,13 +45,14 @@ interface ProductCardProps {
   fornecedor?: string | null;
   envioEspecial?: boolean;
   teclado?: string | null;
+  minSaleQty?: number | null;
   onEdit?: () => void;
   isAdmin?: boolean;
   onClick?: () => void;
 }
 
 export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
-  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, onEdit, isAdmin, onClick }, ref) {
+  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, minSaleQty, onEdit, isAdmin, onClick }, ref) {
     const { addItem } = useCart();
     const allImages = images.length > 0
       ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
@@ -61,8 +62,9 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
 
     const handleAddToCart = (e: React.MouseEvent) => {
       e.stopPropagation();
-      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category, weight: weight ?? null, fornecedor: fornecedor ?? null, envio_especial: envioEspecial ?? false }, 1);
-      toast.success(`${name} adicionado ao orçamento`);
+      const qty = minSaleQty && minSaleQty > 1 ? minSaleQty : 1;
+      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category, weight: weight ?? null, fornecedor: fornecedor ?? null, envio_especial: envioEspecial ?? false, minSaleQty: qty }, qty);
+      toast.success(qty > 1 ? `${qty}x ${name} adicionado ao orçamento (embalagem mínima)` : `${name} adicionado ao orçamento`);
       trackEvent(id, "quote");
     };
 
@@ -89,12 +91,6 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
             </span>
           )}
         </div>
-        {/* Bandeira PT — teclado português */}
-        {teclado === "PT" && (
-          <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
-            <span className="text-base leading-none">🇵🇹</span>
-          </div>
-        )}
         {/* Bandeira PT — teclado português */}
         {teclado === "PT" && (
           <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">

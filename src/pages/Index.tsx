@@ -297,6 +297,7 @@ const Index = () => {
                   imageUrl={p.image_url} images={[]}
                   familyName={null} brandName={p.brand || null}
                   featured={p.featured} stockStatus={p.stock_status}
+                  minSaleQty={p.min_sale_qty ?? null}
                 />
               </Link>
             ))}

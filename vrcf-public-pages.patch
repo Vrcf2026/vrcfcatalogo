@@ -1,0 +1,203 @@
+diff -ruN a/src/components/CartDrawer.tsx b/src/components/CartDrawer.tsx
+--- a/src/components/CartDrawer.tsx	2026-06-15 20:23:34.820831569 +0000
++++ b/src/components/CartDrawer.tsx	2026-06-15 20:23:40.873316081 +0000
+@@ -37,13 +37,17 @@
+   const totalValueSemVat = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
+   const totalValueComVat = totalValueSemVat * 1.23;
+ 
+-  // Calcular peso total e porte DHL
++  // Peso total (informativo, todos os fornecedores) vs peso só dos
++  // produtos ALL.TO (usado no cálculo de portes DHL — os outros
++  // fornecedores têm portes "calculados no orçamento", não DHL).
+   const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
+-  const temPesoAllto = items.some(i => (i as any).fornecedor === "allto" && ((i as any).weight ?? 0) > 0);
++  const pesoAllto = items.reduce((sum, i) =>
++    (i as any).fornecedor === "allto" ? sum + ((i as any).weight ?? 0) * i.quantity : sum, 0);
++  const temPesoAllto = pesoAllto > 0;
+   const temOutrosFornecedores = items.some(i => (i as any).fornecedor !== "allto");
+   const temEnvioEspecial = items.some(i => (i as any).envio_especial);
+ 
+-  const porteDHL = temPesoAllto ? calcularPorteDHL(pesoTotal) : null;
++  const porteDHL = temPesoAllto ? calcularPorteDHL(pesoAllto) : null;
+   const porteDHLComIva = porteDHL ? porteDHL * 1.23 : null;
+ 
+   return (
+@@ -94,12 +98,17 @@
+                       {(item as any).weight > 0 && (
+                         <p className="text-[10px] text-muted-foreground">{(item as any).weight} kg/un.</p>
+                       )}
++                      {(item as any).minSaleQty > 1 && (
++                        <p className="text-[10px] text-muted-foreground">Embalagem de {(item as any).minSaleQty} unidades</p>
++                      )}
+                       <div className="flex items-center gap-2 mt-2">
+-                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
++                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
++                          onClick={() => updateQuantity(item.id, item.quantity - ((item as any).minSaleQty > 1 ? (item as any).minSaleQty : 1))}>
+                           <Minus className="h-3 w-3" />
+                         </Button>
+                         <span className="text-sm font-bold w-6 text-center">{item.quantity}</span>
+-                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
++                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
++                          onClick={() => updateQuantity(item.id, item.quantity + ((item as any).minSaleQty > 1 ? (item as any).minSaleQty : 1))}>
+                           <Plus className="h-3 w-3" />
+                         </Button>
+                         <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-destructive hover:text-destructive" onClick={() => removeItem(item.id)}>
+@@ -149,7 +158,7 @@
+                     {porteDHL ? (
+                       <>
+                         <div className="flex justify-between text-sm font-bold">
+-                          <span>Portes ({pesoTotal.toFixed(2)}kg) c/ IVA:</span>
++                          <span>Portes ({pesoAllto.toFixed(2)}kg) c/ IVA:</span>
+                           <span className="text-primary">{porteDHLComIva!.toFixed(2).replace(".", ",")} €</span>
+                         </div>
+                         <p className="text-[10px] text-muted-foreground">Portugal Continental · DHL · valor indicativo</p>
+diff -ruN a/src/components/ProductCard.tsx b/src/components/ProductCard.tsx
+--- a/src/components/ProductCard.tsx	2026-06-15 20:23:34.823185277 +0000
++++ b/src/components/ProductCard.tsx	2026-06-15 20:23:40.876143175 +0000
+@@ -45,13 +45,14 @@
+   fornecedor?: string | null;
+   envioEspecial?: boolean;
+   teclado?: string | null;
++  minSaleQty?: number | null;
+   onEdit?: () => void;
+   isAdmin?: boolean;
+   onClick?: () => void;
+ }
+ 
+ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
+-  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, onEdit, isAdmin, onClick }, ref) {
++  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, minSaleQty, onEdit, isAdmin, onClick }, ref) {
+     const { addItem } = useCart();
+     const allImages = images.length > 0
+       ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
+@@ -61,8 +62,9 @@
+ 
+     const handleAddToCart = (e: React.MouseEvent) => {
+       e.stopPropagation();
+-      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category, weight: weight ?? null, fornecedor: fornecedor ?? null, envio_especial: envioEspecial ?? false }, 1);
+-      toast.success(`${name} adicionado ao orçamento`);
++      const qty = minSaleQty && minSaleQty > 1 ? minSaleQty : 1;
++      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category, weight: weight ?? null, fornecedor: fornecedor ?? null, envio_especial: envioEspecial ?? false, minSaleQty: qty }, qty);
++      toast.success(qty > 1 ? `${qty}x ${name} adicionado ao orçamento (embalagem mínima)` : `${name} adicionado ao orçamento`);
+       trackEvent(id, "quote");
+     };
+ 
+@@ -92,12 +94,6 @@
+         {/* Bandeira PT — teclado português */}
+         {teclado === "PT" && (
+           <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
+-            <span className="text-base leading-none">🇵🇹</span>
+-          </div>
+-        )}
+-        {/* Bandeira PT — teclado português */}
+-        {teclado === "PT" && (
+-          <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
+             <span className="text-base leading-none">🇵🇹</span>
+           </div>
+         )}
+diff -ruN a/src/contexts/CartContext.tsx b/src/contexts/CartContext.tsx
+--- a/src/contexts/CartContext.tsx	2026-06-15 20:23:34.828082355 +0000
++++ b/src/contexts/CartContext.tsx	2026-06-15 20:23:40.870500605 +0000
+@@ -20,6 +20,9 @@
+   weight?: number | null;
+   fornecedor?: string | null;
+   envio_especial?: boolean;
++  // Quantidade mínima de venda (embalagem/MOQ) — quando definida (>1), a
++  // quantidade no carrinho nunca pode ficar abaixo deste valor.
++  minSaleQty?: number | null;
+ }
+ 
+ interface CartContextType {
+@@ -77,11 +80,16 @@
+   }, []);
+ 
+   const updateQuantity = useCallback((id: string, quantity: number) => {
+-    if (quantity <= 0) {
+-      setItems((prev) => prev.filter((i) => i.id !== id));
+-    } else {
+-      setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity } : i));
+-    }
++    setItems((prev) => {
++      const existing = prev.find((i) => i.id === id);
++      const min = existing?.minSaleQty && existing.minSaleQty > 1 ? existing.minSaleQty : 1;
++      if (quantity < min) {
++        // Abaixo da quantidade mínima de venda: remove o item em vez de
++        // deixar uma quantidade inconsistente com a embalagem do produto.
++        return prev.filter((i) => i.id !== id);
++      }
++      return prev.map((i) => i.id === id ? { ...i, quantity } : i);
++    });
+   }, []);
+ 
+   const clearCart = useCallback(() => setItems([]), []);
+diff -ruN a/src/pages/Index.tsx b/src/pages/Index.tsx
+--- a/src/pages/Index.tsx	2026-06-15 20:23:34.829787665 +0000
++++ b/src/pages/Index.tsx	2026-06-15 20:23:40.880184539 +0000
+@@ -297,6 +297,7 @@
+                   imageUrl={p.image_url} images={[]}
+                   familyName={null} brandName={p.brand || null}
+                   featured={p.featured} stockStatus={p.stock_status}
++                  minSaleQty={p.min_sale_qty ?? null}
+                 />
+               </Link>
+             ))}
+diff -ruN a/src/pages/Pesquisa.tsx b/src/pages/Pesquisa.tsx
+--- a/src/pages/Pesquisa.tsx	2026-06-15 20:23:34.830306751 +0000
++++ b/src/pages/Pesquisa.tsx	2026-06-15 20:23:40.884915781 +0000
+@@ -12,6 +12,7 @@
+ import { CartDrawer } from "@/components/CartDrawer";
+ import { useCart } from "@/contexts/CartContext";
+ import vrcfLogo from "@/assets/vrcf-logo.png";
++import { SiteFooter } from "@/components/SiteFooter";
+ 
+ const PAGE_SIZE = 24;
+ 
+@@ -38,7 +39,7 @@
+     queryFn: async () => {
+       const from = (page - 1) * PAGE_SIZE;
+       const to = from + PAGE_SIZE - 1;
+-      let q = supabase.from("products").select("*", { count: "exact" });
++      let q = supabase.from("products").select("*", { count: "exact" }).eq("include_in_catalog", true);
+       if (search.trim()) {
+         const term = `%${search.trim()}%`;
+         q = q.or(`name.ilike.${term},sku.ilike.${term},description.ilike.${term}`);
+@@ -124,6 +125,7 @@
+                     images={[]}
+                     familyName={null}
+                     featured={product.featured}
++                    minSaleQty={product.min_sale_qty ?? null}
+                   />
+                 </Link>
+               ))}
+@@ -149,6 +151,8 @@
+         )}
+       </section>
+ 
++      <SiteFooter />
++
+       <CartDrawer />
+       <ContactFloatingBubble />
+     </div>
+diff -ruN a/src/pages/Produto.tsx b/src/pages/Produto.tsx
+--- a/src/pages/Produto.tsx	2026-06-15 20:23:34.830563869 +0000
++++ b/src/pages/Produto.tsx	2026-06-15 20:23:40.888449107 +0000
+@@ -103,7 +103,7 @@
+   const minSaleQty = product.min_sale_qty && product.min_sale_qty > 1 ? product.min_sale_qty : 1;
+ 
+   const handleAddToCart = () => {
+-    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, minSaleQty);
++    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category, weight: product.weight ?? null, fornecedor: product.fornecedor ?? null, envio_especial: envio_especial, minSaleQty }, minSaleQty);
+     toast.success(
+       minSaleQty > 1
+         ? `${minSaleQty}x ${product.name} adicionado ao orçamento (embalagem mínima)`
+diff -ruN a/src/pages/WorldCatalog.tsx b/src/pages/WorldCatalog.tsx
+--- a/src/pages/WorldCatalog.tsx	2026-06-15 20:23:34.831329314 +0000
++++ b/src/pages/WorldCatalog.tsx	2026-06-15 20:23:40.877697586 +0000
+@@ -535,6 +535,7 @@
+                       fornecedor={product.fornecedor ?? null}
+                       envioEspecial={product.envio_especial ?? false}
+                       teclado={(product.especificacoes as any)?.teclado ?? null}
++                      minSaleQty={product.min_sale_qty ?? null}
+                     />
+                   </Link>
+                 ))}

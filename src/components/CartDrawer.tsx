@@ -37,13 +37,17 @@ export function CartDrawer() {
   const totalValueSemVat = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
   const totalValueComVat = totalValueSemVat * 1.23;
 
-  // Calcular peso total e porte DHL
+  // Peso total (informativo, todos os fornecedores) vs peso só dos
+  // produtos ALL.TO (usado no cálculo de portes DHL — os outros
+  // fornecedores têm portes "calculados no orçamento", não DHL).
   const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
-  const temPesoAllto = items.some(i => (i as any).fornecedor === "allto" && ((i as any).weight ?? 0) > 0);
+  const pesoAllto = items.reduce((sum, i) =>
+    (i as any).fornecedor === "allto" ? sum + ((i as any).weight ?? 0) * i.quantity : sum, 0);
+  const temPesoAllto = pesoAllto > 0;
   const temOutrosFornecedores = items.some(i => (i as any).fornecedor !== "allto");
   const temEnvioEspecial = items.some(i => (i as any).envio_especial);
 
-  const porteDHL = temPesoAllto ? calcularPorteDHL(pesoTotal) : null;
+  const porteDHL = temPesoAllto ? calcularPorteDHL(pesoAllto) : null;
   const porteDHLComIva = porteDHL ? porteDHL * 1.23 : null;
 
   return (
@@ -94,12 +98,17 @@ export function CartDrawer() {
                       {(item as any).weight > 0 && (
                         <p className="text-[10px] text-muted-foreground">{(item as any).weight} kg/un.</p>
                       )}
+                      {(item as any).minSaleQty > 1 && (
+                        <p className="text-[10px] text-muted-foreground">Embalagem de {(item as any).minSaleQty} unidades</p>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
-                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
+                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                          onClick={() => updateQuantity(item.id, item.quantity - ((item as any).minSaleQty > 1 ? (item as any).minSaleQty : 1))}>
                           <Minus className="h-3 w-3" />
                         </Button>
                         <span className="text-sm font-bold w-6 text-center">{item.quantity}</span>
-                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
+                        <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                          onClick={() => updateQuantity(item.id, item.quantity + ((item as any).minSaleQty > 1 ? (item as any).minSaleQty : 1))}>
                           <Plus className="h-3 w-3" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-destructive hover:text-destructive" onClick={() => removeItem(item.id)}>
@@ -149,7 +158,7 @@ export function CartDrawer() {
                     {porteDHL ? (
                       <>
                         <div className="flex justify-between text-sm font-bold">
-                          <span>Portes ({pesoTotal.toFixed(2)}kg) c/ IVA:</span>
+                          <span>Portes ({pesoAllto.toFixed(2)}kg) c/ IVA:</span>
                           <span className="text-primary">{porteDHLComIva!.toFixed(2).replace(".", ",")} €</span>
                         </div>
                         <p className="text-[10px] text-muted-foreground">Portugal Continental · DHL · valor indicativo</p>

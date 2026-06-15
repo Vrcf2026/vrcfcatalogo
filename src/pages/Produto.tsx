@@ -103,7 +103,7 @@ const Produto = () => {
   const minSaleQty = product.min_sale_qty && product.min_sale_qty > 1 ? product.min_sale_qty : 1;
 
   const handleAddToCart = () => {
-    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, minSaleQty);
+    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category, weight: product.weight ?? null, fornecedor: product.fornecedor ?? null, envio_especial: envio_especial, minSaleQty }, minSaleQty);
     toast.success(
       minSaleQty > 1
         ? `${minSaleQty}x ${product.name} adicionado ao orçamento (embalagem mínima)`

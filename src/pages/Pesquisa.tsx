@@ -12,6 +12,7 @@ import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { CartDrawer } from "@/components/CartDrawer";
 import { useCart } from "@/contexts/CartContext";
 import vrcfLogo from "@/assets/vrcf-logo.png";
+import { SiteFooter } from "@/components/SiteFooter";
 
 const PAGE_SIZE = 24;
 
@@ -38,7 +39,7 @@ const Pesquisa = () => {
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      let q = supabase.from("products").select("*", { count: "exact" });
+      let q = supabase.from("products").select("*", { count: "exact" }).eq("include_in_catalog", true);
       if (search.trim()) {
         const term = `%${search.trim()}%`;
         q = q.or(`name.ilike.${term},sku.ilike.${term},description.ilike.${term}`);
@@ -124,6 +125,7 @@ const Pesquisa = () => {
                     images={[]}
                     familyName={null}
                     featured={product.featured}
+                    minSaleQty={product.min_sale_qty ?? null}
                   />
                 </Link>
               ))}
@@ -148,6 +150,8 @@ const Pesquisa = () => {
           </div>
         )}
       </section>
+
+      <SiteFooter />
 
       <CartDrawer />
       <ContactFloatingBubble />

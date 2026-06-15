@@ -20,6 +20,9 @@ export interface CartItem {
   weight?: number | null;
   fornecedor?: string | null;
   envio_especial?: boolean;
+  // Quantidade mínima de venda (embalagem/MOQ) — quando definida (>1), a
+  // quantidade no carrinho nunca pode ficar abaixo deste valor.
+  minSaleQty?: number | null;
 }
 
 interface CartContextType {
@@ -77,11 +80,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateQuantity = useCallback((id: string, quantity: number) => {
-    if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.id !== id));
-    } else {
-      setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity } : i));
-    }
+    setItems((prev) => {
+      const existing = prev.find((i) => i.id === id);
+      const min = existing?.minSaleQty && existing.minSaleQty > 1 ? existing.minSaleQty : 1;
+      if (quantity < min) {
+        // Abaixo da quantidade mínima de venda: remove o item em vez de
+        // deixar uma quantidade inconsistente com a embalagem do produto.
+        return prev.filter((i) => i.id !== id);
+      }
+      return prev.map((i) => i.id === id ? { ...i, quantity } : i);
+    });
   }, []);
 
   const clearCart = useCallback(() => setItems([]), []);

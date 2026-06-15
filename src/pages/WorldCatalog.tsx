@@ -535,6 +535,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                       fornecedor={product.fornecedor ?? null}
                       envioEspecial={product.envio_especial ?? false}
                       teclado={(product.especificacoes as any)?.teclado ?? null}
+                      minSaleQty={product.min_sale_qty ?? null}
                     />
                   </Link>
                 ))}
