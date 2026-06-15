@@ -51,6 +51,7 @@ export function SiteFooter() {
               <Link to="/termos-e-condicoes" className="text-primary hover:underline transition-colors">Termos e Condições</Link>
               <Link to="/politica-de-privacidade" className="text-primary hover:underline transition-colors">Privacidade</Link>
               <Link to="/politica-de-cookies" className="text-primary hover:underline transition-colors">Cookies</Link>
+              <Link to="/conta" className="text-primary hover:underline transition-colors">A Minha Conta</Link>
               <button type="button" onClick={openCookiePreferences} className="text-primary hover:underline transition-colors">Gerir Cookies</button>
               <a href="https://www.livroreclamacoes.pt" target="_blank" rel="noopener noreferrer"
                 className="text-primary hover:underline transition-colors">
