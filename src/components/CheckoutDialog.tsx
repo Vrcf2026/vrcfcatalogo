@@ -207,6 +207,17 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
+        {!user && (
+          <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+            <Link to="/login" className="text-primary font-medium hover:underline">Inicie sessão</Link>
+            {" ou "}
+            <Link to="/registo" className="text-primary font-medium hover:underline">crie conta</Link>
+            {" para guardar este orçamento no seu histórico."}
+          </div>
+        )}
+
+
+
         {/* Items summary */}
         {items.length > 0 && (
           <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2 max-h-40 overflow-y-auto">
