@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300">
+  <defs>
+    <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7a1f1f"/>
+      <stop offset="100%" stop-color="#3a0d0d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg5)"/>
+  <circle cx="1020" cy="150" r="180" fill="#ffd166" opacity="0.10"/>
+  <text x="80" y="100" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#ffd166" letter-spacing="4">PROMOÇÃO</text>
+  <text x="80" y="170" font-family="Arial, sans-serif" font-size="56" font-weight="800" fill="#ffffff">Até 20% de desconto</text>
+  <text x="80" y="210" font-family="Arial, sans-serif" font-size="26" fill="#f5c6c6">Em consumíveis de impressão seleccionados — stock limitado</text>
+  <rect x="80" y="232" width="200" height="50" rx="25" fill="#ffd166"/>
+  <text x="180" y="265" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#3a0d0d" text-anchor="middle">Aproveitar</text>
+</svg>

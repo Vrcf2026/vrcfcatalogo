@@ -53,7 +53,7 @@ const useCategories = (mundo: string) =>
     queryFn: async () => {
       const { data } = await supabase.from("categories").select("*")
         .in("mundo", [mundo, "todos"]).eq("visivel", true)
-        .order("ordem").limit(8);
+        .order("ordem");
       return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
@@ -74,7 +74,8 @@ const useBrands = () =>
   useQuery({
     queryKey: ["hp-brands"],
     queryFn: async () => {
-      const { data } = await supabase.from("brands").select("id,name,logo_url").order("name").limit(16);
+      const { data } = await supabase.from("brands").select("id,name,logo_url")
+        .eq("show_in_strip", true).order("name").limit(16);
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
@@ -324,7 +325,7 @@ const Index = () => {
       <section className="border-t border-border py-5 px-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-screen-xl mx-auto">
           {[
-            { icon: "🛡️", title: "Instalação incluída", desc: "Apoio técnico especializado" },
+            { icon: "🛠️", title: "Instalação disponível", desc: "Serviço opcional, sob consulta" },
             { icon: "📋", title: "Orçamento gratuito", desc: "Resposta rápida e sem compromisso" },
             { icon: "🔧", title: "Suporte pós-venda", desc: "Acompanhamento contínuo" },
             { icon: "📍", title: "Montijo & região", desc: "Atendimento presencial disponível" },

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0d1b2a"/>
+      <stop offset="100%" stop-color="#1b3a4b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg2)"/>
+  <!-- camera icon shape -->
+  <g transform="translate(880,70)" opacity="0.18">
+    <rect x="0" y="40" width="220" height="120" rx="20" fill="#5fd0ff"/>
+    <circle cx="60" cy="100" r="45" fill="#0d1b2a"/>
+    <circle cx="60" cy="100" r="28" fill="#5fd0ff"/>
+    <rect x="180" y="70" width="60" height="60" rx="10" fill="#5fd0ff"/>
+  </g>
+  <text x="80" y="110" font-family="Arial, sans-serif" font-size="50" font-weight="800" fill="#ffffff">Segurança &amp; CCTV</text>
+  <text x="80" y="160" font-family="Arial, sans-serif" font-size="26" fill="#9fd8f0">Câmaras, alarmes e controlo de acessos com instalação profissional</text>
+  <rect x="80" y="200" width="260" height="56" rx="28" fill="#5fd0ff"/>
+  <text x="210" y="236" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#0d1b2a" text-anchor="middle">Explorar Segurança</text>
+</svg>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Loader2, Save, Trash2, Plus, X, Lock, Unlock, ChevronLeft, ChevronRight } from "lucide-react";
+import { SPEC_LABELS } from "@/lib/specLabels";
+import { Loader2, Save, Trash2, Plus, X, Lock, Unlock, ChevronLeft, ChevronRight, History, TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface EditProductSheetProps {
   open: boolean;
@@ -29,6 +30,45 @@ interface EditProductSheetProps {
 }
 
 const TECLADO_OPTIONS = ["PT", "ES", "Internacional", "Personalizável"];
+
+// Campos fixos do separador "Specs" — pensados originalmente para o mundo
+// Escritório (computadores/portáteis). Para outros mundos (Segurança,
+// Economato), specs específicas (ex: "resolucao_camara", "gramagem",
+// "alcance_ir") não estão nesta lista — aparecem automaticamente na secção
+// "Outras especificações" (specs já existentes no produto, normalmente
+// vindas da importação) e podem ser adicionadas livremente por
+// "Adicionar especificação".
+const SPEC_FIELDS = [
+  { key: "tipo", label: "Tipo", options: ["Portátil", "Desktop", "Tudo-em-Um", "Servidor", "Monitor", "Tablet"] },
+  { key: "grau", label: "Grau", options: ["A", "B", "C"] },
+  { key: "teclado", label: "Teclado", options: TECLADO_OPTIONS },
+  { key: "processador", label: "Processador" },
+  { key: "geracao", label: "Geração" },
+  { key: "grafica", label: "Placa Gráfica" },
+  { key: "ram_gb", label: "RAM (GB)" },
+  { key: "ram_tipo", label: "Tipo RAM" },
+  { key: "ram_slots", label: "Slots RAM" },
+  { key: "ram_ampliavel", label: "RAM Ampliável", options: ["Sim", "Não"] },
+  { key: "armazenamento_gb", label: "Armazenamento (GB)" },
+  { key: "armazenamento_tipo", label: "Tipo Armazenamento" },
+  { key: "ecra_polegadas", label: "Ecrã (polegadas)" },
+  { key: "resolucao", label: "Resolução", options: ["HD", "HD+", "Full HD", "4K"] },
+  { key: "tactil", label: "Táctil", options: ["Sim", "Não"] },
+  { key: "sistema_operativo", label: "Sistema Operativo" },
+  { key: "leitor_gravador", label: "Leitor/Gravador", options: ["DVD", "Não"] },
+  { key: "webcam", label: "Webcam", options: ["Sim", "Não"] },
+  { key: "wifi", label: "Wi-Fi", options: ["Sim", "Não"] },
+  { key: "bluetooth", label: "Bluetooth", options: ["Sim", "Não"] },
+  { key: "portas", label: "Portas" },
+  { key: "cor", label: "Cor" },
+] as const;
+
+const SPEC_FIELD_KEYS = new Set(SPEC_FIELDS.map(f => f.key as string));
+
+// Campos com tratamento especial fora da lista de specs (ex: nota de
+// teclado), para não os mostrar duplicados em "Outras especificações".
+const SPEC_SPECIAL_KEYS = new Set(["teclado_nota"]);
+
 const GRAU_OPTIONS = ["A", "B", "C"];
 const STOCK_OPTIONS = ["high", "low", "out"];
 
@@ -54,9 +94,31 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
   const [showOnHomepage, setShowOnHomepage] = useState(false);
   const [specs, setSpecs] = useState<Record<string, string>>({});
   const [specsLocked, setSpecsLocked] = useState<string[]>([]);
+  const [newSpecKey, setNewSpecKey] = useState("");
+  const [newSpecValue, setNewSpecValue] = useState("");
   const [upgrades, setUpgrades] = useState<{ tipo: string; descricao: string; preco: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const queryClient = useQueryClient();
+
+  // Histórico de alterações de preço de compra/venda (registado
+  // automaticamente pelos importadores ALL.TO/Visiotech quando o preço
+  // do fornecedor varia mais do que o limiar configurado).
+  const { data: priceHistory = [], isLoading: loadingHistory } = useQuery({
+    queryKey: ["price_history", product?.sku],
+    queryFn: async () => {
+      if (!product?.sku) return [];
+      const { data, error } = await supabase
+        .from("price_history")
+        .select("*")
+        .eq("sku", product.sku)
+        .order("changed_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: open && !!product?.sku,
+  });
+
 
   const filteredFamilies = families.filter((f) => !category || f.category === category);
   // Tipos (Nível 3) disponíveis para a família escolhida — qualquer que seja
@@ -172,6 +234,25 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
 
   const toggleLock = (key: string) => {
     setSpecsLocked(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+
+  // Converte um texto livre (ex: "Alcance Infravermelhos") numa chave
+  // snake_case (ex: "alcance_infravermelhos") consistente com as restantes
+  // chaves de "especificacoes".
+  const slugifyKey = (label: string) =>
+    label.trim().toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+
+  const addCustomSpec = () => {
+    const key = slugifyKey(newSpecKey);
+    if (!key) { toast.error("Indica o nome da especificação"); return; }
+    if (!newSpecValue.trim()) { toast.error("Indica o valor da especificação"); return; }
+    if (specs[key] !== undefined) { toast.error("Já existe uma especificação com esse nome"); return; }
+    updateSpec(key, newSpecValue.trim());
+    setNewSpecKey("");
+    setNewSpecValue("");
   };
 
   const addUpgrade = () => setUpgrades(prev => [...prev, { tipo: "", descricao: "", preco: "" }]);
@@ -363,6 +444,80 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
               <p>• Fornecedor: <span className="font-medium capitalize">{product?.fornecedor || "—"}</span></p>
               <p>• Portes: ver separador <strong>Portes</strong> no Admin</p>
             </div>
+
+            {/* ── Histórico de preços ──
+                Registado automaticamente pelos importadores ALL.TO e
+                Visiotech quando o preço do fornecedor varia. */}
+            <Separator />
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <History className="h-3.5 w-3.5" /> Histórico de preços de compra
+              </p>
+              {loadingHistory ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : priceHistory.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">
+                  Sem alterações de preço registadas para este produto.
+                </p>
+              ) : (
+                <div className="rounded-lg border border-border overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left px-2 py-1.5 font-medium text-muted-foreground">Data</th>
+                        <th className="text-right px-2 py-1.5 font-medium text-muted-foreground">Custo</th>
+                        <th className="text-right px-2 py-1.5 font-medium text-muted-foreground">Venda</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {priceHistory.map((h: any) => {
+                        const oldP = h.purchase_price_old;
+                        const newP = h.purchase_price_new;
+                        const diff = oldP != null && newP != null ? newP - oldP : null;
+                        return (
+                          <tr key={h.id} className="border-t border-border">
+                            <td className="px-2 py-1.5 text-muted-foreground whitespace-nowrap">
+                              {new Date(h.changed_at).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "2-digit" })}
+                            </td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                              {oldP != null && newP != null ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="text-muted-foreground line-through">{Number(oldP).toFixed(2)}€</span>
+                                  <span className="font-medium">{Number(newP).toFixed(2)}€</span>
+                                  {diff != null && diff !== 0 && (
+                                    diff > 0
+                                      ? <TrendingUp className="h-3 w-3 text-destructive" />
+                                      : <TrendingDown className="h-3 w-3 text-green-600" />
+                                  )}
+                                </span>
+                              ) : newP != null ? (
+                                <span className="font-medium">{Number(newP).toFixed(2)}€</span>
+                              ) : (
+                                <Minus className="h-3 w-3 text-muted-foreground inline" />
+                              )}
+                            </td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">
+                              {h.price_old != null && h.price_new != null ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="text-muted-foreground line-through">{Number(h.price_old).toFixed(2)}€</span>
+                                  <span className="font-medium">{Number(h.price_new).toFixed(2)}€</span>
+                                </span>
+                              ) : h.price_new != null ? (
+                                <span className="font-medium">{Number(h.price_new).toFixed(2)}€</span>
+                              ) : (
+                                <Minus className="h-3 w-3 text-muted-foreground inline" />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           {/* ── SPECS ── */}
@@ -371,30 +526,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
               <Lock className="inline h-3 w-3 mr-1" />
               Trancar um campo impede que a próxima importação o sobrescreva.
             </p>
-            {[
-              { key: "tipo", label: "Tipo", options: ["Portátil", "Desktop", "Tudo-em-Um", "Servidor", "Monitor", "Tablet"] },
-              { key: "grau", label: "Grau", options: ["A", "B", "C"] },
-              { key: "teclado", label: "Teclado", options: TECLADO_OPTIONS },
-              { key: "processador", label: "Processador" },
-              { key: "geracao", label: "Geração" },
-              { key: "grafica", label: "Placa Gráfica" },
-              { key: "ram_gb", label: "RAM (GB)" },
-              { key: "ram_tipo", label: "Tipo RAM" },
-              { key: "ram_slots", label: "Slots RAM" },
-              { key: "ram_ampliavel", label: "RAM Ampliável", options: ["Sim", "Não"] },
-              { key: "armazenamento_gb", label: "Armazenamento (GB)" },
-              { key: "armazenamento_tipo", label: "Tipo Armazenamento" },
-              { key: "ecra_polegadas", label: "Ecrã (polegadas)" },
-              { key: "resolucao", label: "Resolução", options: ["HD", "HD+", "Full HD", "4K"] },
-              { key: "tactil", label: "Táctil", options: ["Sim", "Não"] },
-              { key: "sistema_operativo", label: "Sistema Operativo" },
-              { key: "leitor_gravador", label: "Leitor/Gravador", options: ["DVD", "Não"] },
-              { key: "webcam", label: "Webcam", options: ["Sim", "Não"] },
-              { key: "wifi", label: "Wi-Fi", options: ["Sim", "Não"] },
-              { key: "bluetooth", label: "Bluetooth", options: ["Sim", "Não"] },
-              { key: "portas", label: "Portas" },
-              { key: "cor", label: "Cor" },
-            ].map(({ key, label, options }) => {
+            {SPEC_FIELDS.map(({ key, label, options }) => {
               const locked = specsLocked.includes(key);
               return (
                 <div key={key} className="grid grid-cols-[1fr_2fr_auto] gap-2 items-center">
@@ -432,6 +564,81 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
                 />
               </div>
             )}
+
+            {/* ── Outras especificações ──
+                Specs já existentes no produto (normalmente vindas da
+                importação Segurança/Economato) que não fazem parte da
+                lista fixa acima (pensada para o mundo Escritório). */}
+            {Object.keys(specs).filter(k => !SPEC_FIELD_KEYS.has(k) && !SPEC_SPECIAL_KEYS.has(k)).length > 0 && (
+              <div className="space-y-3 pt-4 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Outras especificações
+                </p>
+                {Object.keys(specs)
+                  .filter(k => !SPEC_FIELD_KEYS.has(k) && !SPEC_SPECIAL_KEYS.has(k))
+                  .sort()
+                  .map((key) => {
+                    const locked = specsLocked.includes(key);
+                    const label = SPEC_LABELS[key] ?? key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                    return (
+                      <div key={key} className="grid grid-cols-[1fr_2fr_auto_auto] gap-2 items-center">
+                        <Label className="text-sm" title={key}>{label}</Label>
+                        <Input
+                          className="h-8 text-sm"
+                          value={specs[key] || ""}
+                          onChange={(e) => updateSpec(key, e.target.value)}
+                          placeholder="—"
+                        />
+                        <Button
+                          type="button" variant="ghost" size="icon" className="h-8 w-8"
+                          title={locked ? "Trancado — a importação não vai alterar este campo" : "Trancar este campo"}
+                          onClick={() => toggleLock(key)}
+                        >
+                          {locked ? <Lock className="h-3.5 w-3.5 text-primary" /> : <Unlock className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </Button>
+                        <Button
+                          type="button" variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          title="Remover esta especificação"
+                          onClick={() => updateSpec(key, "")}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+
+            {/* ── Adicionar especificação ──
+                Para mundos sem campos pré-definidos (Segurança, Economato)
+                ou para qualquer spec adicional específica deste produto. */}
+            <div className="space-y-2 pt-4 border-t border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Adicionar especificação
+              </p>
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                <Input
+                  className="h-8 text-sm"
+                  placeholder="Nome (ex: Alcance Infravermelhos)"
+                  value={newSpecKey}
+                  onChange={(e) => setNewSpecKey(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSpec(); } }}
+                />
+                <Input
+                  className="h-8 text-sm"
+                  placeholder="Valor (ex: 30 metros)"
+                  value={newSpecValue}
+                  onChange={(e) => setNewSpecValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSpec(); } }}
+                />
+                <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={addCustomSpec} title="Adicionar especificação">
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Fica disponível como filtro técnico no catálogo (ex: "Alcance Infravermelhos" → 30 metros).
+              </p>
+            </div>
           </TabsContent>
 
           {/* ── UPGRADES ── */}

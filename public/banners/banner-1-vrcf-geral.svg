@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300">
+  <defs>
+    <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a5f"/>
+      <stop offset="100%" stop-color="#0f1f33"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg1)"/>
+  <circle cx="1050" cy="60" r="160" fill="#ff7a00" opacity="0.08"/>
+  <circle cx="1100" cy="240" r="100" fill="#ff7a00" opacity="0.12"/>
+  <text x="80" y="120" font-family="Arial, sans-serif" font-size="54" font-weight="800" fill="#ffffff">VRCF Informática &amp; Segurança</text>
+  <text x="80" y="175" font-family="Arial, sans-serif" font-size="28" fill="#cbd5e1">Tudo o que precisa para a sua empresa — num só lugar</text>
+  <rect x="80" y="210" width="220" height="56" rx="28" fill="#ff7a00"/>
+  <text x="190" y="246" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#0f1f33" text-anchor="middle">Ver Catálogo</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300">
+  <defs>
+    <linearGradient id="bg4" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1f3d2b"/>
+      <stop offset="100%" stop-color="#2f5b3f"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg4)"/>
+  <g transform="translate(900,55)" opacity="0.18">
+    <rect x="0" y="0" width="170" height="190" rx="10" fill="#a8e0b8"/>
+    <rect x="30" y="-20" width="110" height="40" rx="6" fill="#a8e0b8"/>
+    <circle cx="220" cy="100" r="60" fill="#a8e0b8"/>
+  </g>
+  <text x="80" y="110" font-family="Arial, sans-serif" font-size="50" font-weight="800" fill="#ffffff">Economato &amp; Escritório</text>
+  <text x="80" y="160" font-family="Arial, sans-serif" font-size="26" fill="#cdeed8">Papel, consumíveis de impressão, higiene e muito mais</text>
+  <rect x="80" y="200" width="240" height="56" rx="28" fill="#a8e0b8"/>
+  <text x="200" y="236" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1f3d2b" text-anchor="middle">Ver Economato</text>
+</svg>

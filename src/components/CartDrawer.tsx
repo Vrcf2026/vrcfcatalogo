@@ -5,7 +5,7 @@ import { Minus, Plus, Trash2, ShoppingCart, Send, XCircle, Truck, Clock, Info, P
 import { useState } from "react";
 import { CheckoutDialog } from "./CheckoutDialog";
 
-// Tabela DHL Portugal Continental (s/IVA)
+// Tabela DHL Portugal Continental (s/IVA) — custo real cobrado pela DHL
 const DHL_TABELA: [number, number][] = [
   [1, 3.65], [3, 3.78], [5, 3.78], [10, 4.37], [20, 4.88],
   [30, 5.20], [40, 6.22], [50, 7.59], [60, 9.08], [70, 10.59],
@@ -13,12 +13,21 @@ const DHL_TABELA: [number, number][] = [
   [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
 ];
 
+// Margem aplicada sobre o custo real DHL (gestão administrativa de portes)
+const MARGEM_PORTES = 0.15;
+
 function calcularPorteDHL(pesoKg: number): number | null {
-  if (pesoKg <= 0) return DHL_TABELA[0][1];
-  for (const [limite, preco] of DHL_TABELA) {
-    if (pesoKg <= limite) return preco;
+  let custoBase: number | null;
+  if (pesoKg <= 0) {
+    custoBase = DHL_TABELA[0][1];
+  } else {
+    custoBase = null;
+    for (const [limite, preco] of DHL_TABELA) {
+      if (pesoKg <= limite) { custoBase = preco; break; }
+    }
   }
-  return null; // >250kg
+  if (custoBase === null) return null; // >250kg
+  return Math.round(custoBase * (1 + MARGEM_PORTES) * 100) / 100;
 }
 
 export function CartDrawer() {

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2b2640"/>
+      <stop offset="100%" stop-color="#1a1730"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" fill="url(#bg3)"/>
+  <g transform="translate(860,60)" opacity="0.18">
+    <rect x="0" y="0" width="260" height="160" rx="14" fill="#b794f6"/>
+    <rect x="20" y="20" width="220" height="120" rx="6" fill="#1a1730"/>
+    <rect x="80" y="170" width="100" height="14" rx="6" fill="#b794f6"/>
+  </g>
+  <text x="80" y="110" font-family="Arial, sans-serif" font-size="50" font-weight="800" fill="#ffffff">Equipamento Recondicionado</text>
+  <text x="80" y="160" font-family="Arial, sans-serif" font-size="26" fill="#cdb6f2">Portáteis, desktops e monitores testados — com garantia</text>
+  <rect x="80" y="200" width="240" height="56" rx="28" fill="#b794f6"/>
+  <text x="200" y="236" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#1a1730" text-anchor="middle">Ver Escritório</text>
+</svg>

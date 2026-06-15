@@ -129,8 +129,11 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       // Filtros técnicos (specs) — aplicados no servidor sobre o JSONB
       // "especificacoes", para que a contagem/paginação considere TODOS os
       // produtos correspondentes, não só os da página actual.
+      // Usa .filter() com o operador "->>" do PostgREST explicitamente —
+      // .eq("col->>key", v) pode não ser codificado correctamente em
+      // todas as versões do supabase-js.
       for (const [key, value] of Object.entries(techFilters)) {
-        q = q.eq(`especificacoes->>${key}`, value);
+        q = q.filter(`especificacoes->>${key}`, "eq", value);
       }
 
       if (sortBy === "featured") q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
@@ -449,6 +452,11 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <p className="text-sm text-muted-foreground mb-4">
             {productsQuery.isLoading ? "A carregar..." : `${total} produto${total !== 1 ? "s" : ""} — Página ${page} de ${totalPages || 1}`}
           </p>
+          {productsQuery.isError && (
+            <p className="text-sm text-destructive mb-4">
+              Erro ao filtrar produtos: {(productsQuery.error as any)?.message || String(productsQuery.error)}
+            </p>
+          )}
 
           {/* Grid */}
           {productsQuery.isLoading ? (

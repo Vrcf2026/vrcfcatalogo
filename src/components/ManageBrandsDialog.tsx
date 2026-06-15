@@ -14,15 +14,14 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X } from "lucide-react";
+import { Tag, Plus, Trash2, Loader2, Link2, ChevronDown, ImagePlus, X, Star } from "lucide-react";
 
 interface Brand {
   id: string;
   name: string;
   logo_url: string | null;
   mundo?: string;
-  visivel?: boolean;
+  show_in_strip?: boolean;
 }
 
 interface ManageBrandsDialogProps {
@@ -45,16 +44,9 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [mundo, setMundo] = useState("todos");
-  const [search, setSearch] = useState("");
-  const [mundoFilter, setMundoFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
   const queryClient = useQueryClient();
-
-  const filteredBrands = brands.filter((b) => {
-    if (mundoFilter !== "all" && (b.mundo ?? "todos") !== mundoFilter) return false;
-    return b.name.toLowerCase().includes(search.toLowerCase());
-  });
 
   const { data: families = [] } = useQuery({
     queryKey: ["families"],
@@ -115,13 +107,14 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
     }
   };
 
-  const handleToggleVisible = async (id: string, v: boolean) => {
+  const handleToggleStrip = async (id: string, value: boolean) => {
     try {
-      const { error } = await supabase.from("brands").update({ visivel: v } as any).eq("id", id);
+      const { error } = await supabase.from("brands").update({ show_in_strip: value }).eq("id", id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["brands-strip"] });
     } catch (e: any) {
-      toast.error(e.message || "Erro");
+      toast.error(e.message || "Erro ao atualizar marca");
     }
   };
 
@@ -214,6 +207,12 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
           <DialogTitle className="font-heading text-xl">Gerir Marcas</DialogTitle>
         </DialogHeader>
 
+        <p className="text-xs text-muted-foreground -mt-1">
+          <Star className="inline h-3 w-3 mr-1 fill-primary text-primary" />
+          Marca selecionada para aparecer na faixa "Marcas que trabalhamos" do catálogo.
+          Clica na estrela para adicionar/remover.
+        </p>
+
         <div className="space-y-3 border-b border-border pb-4">
           <div className="space-y-1">
             <Label>Nome da Marca</Label>
@@ -237,30 +236,11 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
           </Button>
         </div>
 
-        <div className="pt-2 flex gap-2">
-          <Input
-            placeholder="Pesquisar marca..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8 flex-1"
-          />
-          <Select value={mundoFilter} onValueChange={setMundoFilter}>
-            <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os mundos</SelectItem>
-              <SelectItem value="seguranca">Segurança</SelectItem>
-              <SelectItem value="escritorio">Escritório</SelectItem>
-              <SelectItem value="economato">Economato</SelectItem>
-              <SelectItem value="todos">Genérico</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          {filteredBrands.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca encontrada.</p>
+        <div className="space-y-2 pt-2">
+          {brands.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma marca criada ainda.</p>
           )}
-          {filteredBrands.map((b) => {
+          {brands.map((b) => {
             const linked = familiesByBrand[b.id] || new Set<string>();
             return (
               <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2">
@@ -297,6 +277,14 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
                     <SelectItem value="todos">Todos</SelectItem>
                   </SelectContent>
                 </Select>
+
+                <Button
+                  variant="ghost" size="icon" className="h-7 w-7 shrink-0"
+                  title={b.show_in_strip ? "A aparecer na faixa de marcas — clica para remover" : "Não aparece na faixa de marcas — clica para mostrar"}
+                  onClick={() => handleToggleStrip(b.id, !b.show_in_strip)}
+                >
+                  <Star className={`h-3.5 w-3.5 ${b.show_in_strip ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                </Button>
 
                 {b.logo_url && (
                   <Button
@@ -343,10 +331,6 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
                     </ScrollArea>
                   </PopoverContent>
                 </Popover>
-
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <Switch checked={b.visivel ?? true} onCheckedChange={(v) => handleToggleVisible(b.id, v)} />
-                </div>
 
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDelete(b.id)}>
                   <Trash2 className="h-3 w-3 text-destructive" />
