@@ -123,6 +123,41 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       });
       if (fnError) throw fnError;
 
+      // If authenticated, also save quote to DB for history
+      if (user) {
+        try {
+          const subtotal = items.reduce((s, i) => s + ((i.price ?? 0) * i.quantity), 0);
+          const { data: quote, error: qErr } = await supabase
+            .from("quotes")
+            .insert({
+              user_id: user.id,
+              status: "sent",
+              subtotal,
+              total: subtotal,
+              notes: notes.trim() || null,
+              customer_name: name.trim(),
+              customer_email: email.trim(),
+              customer_phone: phone.trim(),
+            })
+            .select("id")
+            .single();
+          if (!qErr && quote) {
+            const rows = items.map((i) => ({
+              quote_id: quote.id,
+              product_id: i.id,
+              product_name_snapshot: i.name,
+              product_image_snapshot: i.imageUrl,
+              unit_price: i.price ?? 0,
+              quantity: i.quantity,
+              line_total: (i.price ?? 0) * i.quantity,
+            }));
+            if (rows.length) await supabase.from("quote_items").insert(rows);
+          }
+        } catch (e) {
+          console.warn("Could not save quote history", e);
+        }
+      }
+
       setSuccess(true);
       // Track quote events for analytics
       items.forEach((item) => trackEvent(item.id, "quote"));
