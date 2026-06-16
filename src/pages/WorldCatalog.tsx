@@ -310,7 +310,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const clearAllFilters = () => {
     setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter("all");
     setTechFilters({}); setSearch(""); setSearchInput(""); setPage(1);
-    searchParams.delete("categoria"); searchParams.delete("marca");
+    searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
   };
 
