@@ -13,6 +13,7 @@ import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ProductCard } from "@/components/ProductCard";
 import { WelcomeBanner } from "@/components/WelcomeBanner";
+import { UserMenuButton } from "@/components/UserMenuButton";
 import { useCart } from "@/contexts/CartContext";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
