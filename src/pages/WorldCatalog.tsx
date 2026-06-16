@@ -66,14 +66,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Sincronizar brandFilter quando o parâmetro "marca" da URL muda (ex: ao
-  // clicar numa marca em BrandsStrip, que navega dentro da mesma página).
+  // Sincronizar filtros vindos da URL (categoria, familia, tipo, marca)
   useEffect(() => {
     const marca = searchParams.get("marca") ?? "all";
-    if (marca !== brandFilter) {
-      setBrandFilter(marca);
-      setPage(1);
-    }
+    const categoria = searchParams.get("categoria") ?? "all";
+    const familia = searchParams.get("familia") ?? "all";
+    const tipo = searchParams.get("tipo") ?? "all";
+    let changed = false;
+    if (marca !== brandFilter) { setBrandFilter(marca); changed = true; }
+    if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
+    if (familia !== familyFilter) { setFamilyFilter(familia); changed = true; }
+    if (tipo !== typeFilter) { setTypeFilter(tipo); changed = true; }
+    if (changed) setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -292,12 +296,21 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const setFamily = (id: string) => {
     setFamilyFilter(id); setTypeFilter("all"); setPage(1);
+    if (id === "all") searchParams.delete("familia"); else searchParams.set("familia", id);
+    searchParams.delete("tipo");
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const setType = (id: string) => {
+    setTypeFilter(id); setPage(1);
+    if (id === "all") searchParams.delete("tipo"); else searchParams.set("tipo", id);
+    setSearchParams(searchParams, { replace: true });
   };
 
   const clearAllFilters = () => {
     setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter("all");
     setTechFilters({}); setSearch(""); setSearchInput(""); setPage(1);
-    searchParams.delete("categoria"); searchParams.delete("marca");
+    searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -323,7 +336,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {visibleTypes.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</p>
-          <Select value={typeFilter} onValueChange={v => { setTypeFilter(v); setPage(1); }}>
+          <Select value={typeFilter} onValueChange={v => setType(v)}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>

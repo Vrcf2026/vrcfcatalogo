@@ -139,11 +139,32 @@ const Produto = () => {
       </header>
 
       {/* Breadcrumb */}
-      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-        <Link to="/" className="hover:text-foreground">Início</Link>
+      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap" aria-label="Breadcrumb">
+        <Link to="/" className="hover:text-foreground transition-colors">Início</Link>
         <span>/</span>
-        <Link to={worldPath} className="hover:text-foreground">{worldLabel}</Link>
-        {product.category && <><span>/</span><span>{product.category}</span></>}
+        <Link to={worldPath} className="hover:text-foreground transition-colors">{worldLabel}</Link>
+        {product.category && (
+          <>
+            <span>/</span>
+            <Link
+              to={`${worldPath}?categoria=${encodeURIComponent(product.category)}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {product.category}
+            </Link>
+          </>
+        )}
+        {product.family && (
+          <>
+            <span>/</span>
+            <Link
+              to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}${product.family_id ? `familia=${product.family_id}` : ""}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {product.family}
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Produto */}
@@ -187,10 +208,36 @@ const Produto = () => {
 
         {/* Info */}
         <div className="space-y-5">
-          {/* Badges */}
+          {/* Badges (clicáveis) */}
           <div className="flex flex-wrap gap-2">
-            {product.category && <Badge variant="secondary" className="text-xs">{product.category}</Badge>}
-            {product.brand && <Badge variant="outline" className="text-xs">{product.brand}</Badge>}
+            {product.category && (
+              <Link to={`${worldPath}?categoria=${encodeURIComponent(product.category)}`}>
+                <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors" title={`Ver tudo em ${product.category}`}>
+                  {product.category}
+                </Badge>
+              </Link>
+            )}
+            {product.family && product.family_id && (
+              <Link to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}familia=${product.family_id}`}>
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent transition-colors" title={`Ver tudo em ${product.family}`}>
+                  {product.family}
+                </Badge>
+              </Link>
+            )}
+            {product.type && product.type_id && product.family_id && (
+              <Link to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}familia=${product.family_id}&tipo=${product.type_id}`}>
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent transition-colors" title={`Ver tudo em ${product.type}`}>
+                  {product.type}
+                </Badge>
+              </Link>
+            )}
+            {product.brand && (
+              <Link to={`${worldPath}?marca=${product.brand_id ?? encodeURIComponent(product.brand)}`}>
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent transition-colors" title={`Ver tudo da marca ${product.brand}`}>
+                  {product.brand}
+                </Badge>
+              </Link>
+            )}
             {product.featured && <Badge className="bg-primary text-primary-foreground text-xs gap-1"><Star className="h-3 w-3 fill-current" /> Destaque</Badge>}
           </div>
 
