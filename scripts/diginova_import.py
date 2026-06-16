@@ -26,7 +26,6 @@ ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 URL_CSV_PRESTA  = "https://www.diginova.es/csv_presta.php?c=14489&u=spacedata25&p=C16BA86B32F5E58EB92DBE7D2B2F421F"
 URL_CSV_SIMPLES = "https://www.diginova.es/csv.php?c=14489&u=spacedata25&p=C16BA86B32F5E58EB92DBE7D2B2F421F"
 
-IVA_ES             = 1.21
 DESCONTO_DIGINOVA  = 0.0
 MARGEM             = 0.15
 
@@ -563,21 +562,21 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
 # ─────────────────────────────────────────────
 def calcular_precos(precio_es: str, familia: str) -> dict:
     try:
-        pvp_es = float(precio_es)
+        custo = float(precio_es)   # PRECIO já é sem IVA (preço de custo)
     except (ValueError, TypeError):
         return None
 
-    compra_sem_iva = round(pvp_es / IVA_ES, 2)
-    compra_com_iva = round(pvp_es, 2)
-    custo = round(compra_sem_iva * (1 - DESCONTO_DIGINOVA), 2)
+    if custo <= 0:
+        return None
+
     margem = custo * MARGEM
     grupo = FAMILIA_GRUPO.get(familia.strip(), "componentes")
     margem = max(margem, MARGEM_MINIMA[grupo])
     preco_venda = round(custo + margem, 2)
 
     return {
-        "purchase_price":     compra_sem_iva,
-        "purchase_price_vat": compra_com_iva,
+        "purchase_price":     round(custo, 2),
+        "purchase_price_vat": round(custo * 1.23, 2),  # IVA PT (informativo)
         "price":              preco_venda,
     }
 
