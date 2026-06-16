@@ -66,14 +66,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Sincronizar brandFilter quando o parâmetro "marca" da URL muda (ex: ao
-  // clicar numa marca em BrandsStrip, que navega dentro da mesma página).
+  // Sincronizar filtros vindos da URL (categoria, familia, tipo, marca)
   useEffect(() => {
     const marca = searchParams.get("marca") ?? "all";
-    if (marca !== brandFilter) {
-      setBrandFilter(marca);
-      setPage(1);
-    }
+    const categoria = searchParams.get("categoria") ?? "all";
+    const familia = searchParams.get("familia") ?? "all";
+    const tipo = searchParams.get("tipo") ?? "all";
+    let changed = false;
+    if (marca !== brandFilter) { setBrandFilter(marca); changed = true; }
+    if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
+    if (familia !== familyFilter) { setFamilyFilter(familia); changed = true; }
+    if (tipo !== typeFilter) { setTypeFilter(tipo); changed = true; }
+    if (changed) setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
