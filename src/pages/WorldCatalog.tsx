@@ -22,6 +22,8 @@ import { useCart } from "@/contexts/CartContext";
 import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
+import { CategoryTile } from "@/components/catalog/CategoryTile";
+import { CatalogFilterPanel } from "@/components/catalog/CatalogFilterPanel";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
@@ -317,89 +319,32 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const Icon = mundo === "seguranca" ? ShieldCheck : Monitor;
 
-  // Painel de filtros (partilhado entre sidebar e sheet mobile)
-  const FilterPanel = () => (
-    <div className="space-y-5">
-      {/* Filtros base */}
-      {visibleFamilies.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Família</p>
-          <Select value={familyFilter} onValueChange={v => setFamily(v)}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as famílias</SelectItem>
-              {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+  const onBrandChange = (v: string) => {
+    setBrandFilter(v); setPage(1);
+    if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
+    setSearchParams(searchParams, { replace: true });
+  };
 
-      {visibleTypes.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</p>
-          <Select value={typeFilter} onValueChange={v => setType(v)}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os tipos</SelectItem>
-              {visibleTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-      <div className="space-y-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Marca</p>
-        <Select value={brandFilter} onValueChange={v => {
-          setBrandFilter(v); setPage(1);
-          if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
-          setSearchParams(searchParams, { replace: true });
-        }}>
-          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as marcas</SelectItem>
-            {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Filtros técnicos */}
-      {techSpecOptions.length > 0 && (
-        <div className="space-y-4 pt-2 border-t border-border">
-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Especificações</p>
-          {techSpecOptions.map(group => (
-            <div key={group.key} className="space-y-1.5">
-              <p className="text-xs font-medium text-muted-foreground capitalize">{group.label}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {group.values.map(({ value, count }) => {
-                  const active = techFilters[group.key] === value;
-                  return (
-                    <button key={value} onClick={() => {
-                      setTechFilters(prev => {
-                        if (active) { const n = { ...prev }; delete n[group.key]; return n; }
-                        return { ...prev, [group.key]: value };
-                      });
-                      setPage(1);
-                    }}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${active
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-card border-border hover:border-primary/50 text-foreground"
-                      }`}>
-                      {value} <span className="opacity-50 text-[10px]">({count})</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeFiltersCount > 0 && (
-        <Button variant="ghost" size="sm" className="w-full gap-1.5 text-muted-foreground" onClick={clearAllFilters}>
-          <X className="h-3.5 w-3.5" /> Limpar todos os filtros
-        </Button>
-      )}
-    </div>
+  const renderFilterPanel = () => (
+    <CatalogFilterPanel
+      visibleFamilies={visibleFamilies}
+      visibleTypes={visibleTypes}
+      brands={brands}
+      familyFilter={familyFilter}
+      typeFilter={typeFilter}
+      brandFilter={brandFilter}
+      techFilters={techFilters}
+      techSpecOptions={techSpecOptions}
+      activeFiltersCount={activeFiltersCount}
+      onFamilyChange={setFamily}
+      onTypeChange={setType}
+      onBrandChange={onBrandChange}
+      onTechFiltersChange={setTechFilters}
+      onPageReset={() => setPage(1)}
+      onClearAll={clearAllFilters}
+    />
   );
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -521,7 +466,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
               )}
             </div>
-            <FilterPanel />
+            {renderFilterPanel()}
           </div>
         </aside>
 
@@ -549,7 +494,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 <SheetHeader className="pb-4">
                   <SheetTitle>Filtros</SheetTitle>
                 </SheetHeader>
-                <FilterPanel />
+                {renderFilterPanel()}
               </SheetContent>
             </Sheet>
 
@@ -694,21 +639,5 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   );
 };
 
-function CategoryTile({ active, onClick, icon: Icon, color, bg, label }: {
-  active: boolean; onClick: () => void; icon: React.ElementType; color: string; bg: string; label: string;
-}) {
-  return (
-    <button onClick={onClick}
-      className={`shrink-0 w-[80px] sm:w-[90px] h-[80px] sm:h-[90px] rounded-2xl border transition-all flex flex-col items-center justify-center gap-1.5 p-2 ${active
-        ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-        : "border-border hover:border-primary/40 bg-card"
-      }`}>
-      <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${bg}`}>
-        <Icon className={`h-4.5 w-4.5 ${color}`} />
-      </div>
-      <span className="text-[10px] sm:text-[11px] font-semibold text-foreground text-center leading-tight line-clamp-2">{label}</span>
-    </button>
-  );
-}
 
 export default WorldCatalog;
