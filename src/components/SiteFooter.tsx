@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, Star } from "lucide-react";
 import { SuggestionDialog } from "@/components/SuggestionDialog";
 import { openCookiePreferences } from "@/components/CookieConsentBanner";
 import vrcfShield from "@/assets/vrcf-shield.png";
