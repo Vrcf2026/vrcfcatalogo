@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/ProductCard";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { CartDrawer } from "@/components/CartDrawer";
+import { UserMenuButton } from "@/components/UserMenuButton";
 import { useCart } from "@/contexts/CartContext";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
