@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import {
   Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft,
-  Search, LayoutGrid, ShieldCheck, Monitor, SlidersHorizontal, X,
+  Search, LayoutGrid, ShieldCheck, Monitor, SlidersHorizontal, X, ShoppingBag, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
