@@ -26,6 +26,9 @@ export function SiteFooter() {
                 <p className="text-xs text-muted-foreground">NIF 515237205 · Montijo</p>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground text-center sm:text-left max-w-md">
+              Empresa do Montijo com mais de 10 anos de experiência. Atendimento personalizado, instalação disponível e suporte contínuo.
+            </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-sm">
               <a href="tel:+351911564243" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
                 <Phone className="h-3.5 w-3.5" /> +351 911 564 243
