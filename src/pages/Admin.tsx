@@ -579,7 +579,7 @@ const Admin = () => {
                 >
                   <Download className="h-3.5 w-3.5" /> Exportar
                 </Button>
-                <GenerateDescriptionsDialog products={paginated.filter((p: any) => !p.description)} />
+                <GenerateDescriptionsDialog products={paginated.filter((p: any) => !p.description) as any} />
                 <span>Página {page} de {totalPages || 1}</span>
               </div>
             </div>
