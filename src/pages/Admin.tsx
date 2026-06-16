@@ -10,6 +10,7 @@ import { EditProductSheet } from "@/components/EditProductSheet";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { BannersManager } from "@/components/BannersManager";
 import { ShippingConfig } from "@/components/ShippingConfig";
+import { UsersManager } from "@/components/UsersManager";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useMemo, useEffect } from "react";
-import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download, Shuffle } from "lucide-react";
+import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download, Shuffle, Users } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -474,6 +475,9 @@ const Admin = () => {
             <TabsTrigger value="portes" className="gap-1.5">
               <Truck className="h-4 w-4" /> Portes
             </TabsTrigger>
+            <TabsTrigger value="utilizadores" className="gap-1.5">
+              <Users className="h-4 w-4" /> Utilizadores
+            </TabsTrigger>
           </TabsList>
 
           {/* ── PRODUTOS ── */}
@@ -713,6 +717,11 @@ const Admin = () => {
           {/* ── PORTES ── */}
           <TabsContent value="portes" className="mt-4">
             <ShippingConfig />
+          </TabsContent>
+
+          {/* ── UTILIZADORES ── */}
+          <TabsContent value="utilizadores" className="mt-4">
+            <UsersManager />
           </TabsContent>
         </Tabs>
       </div>
