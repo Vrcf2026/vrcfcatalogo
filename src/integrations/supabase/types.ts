@@ -997,6 +997,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      f_unaccent: { Args: { "": string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1021,8 +1022,28 @@ export type Database = {
           read_ct: number
         }[]
       }
+      search_products: {
+        Args: {
+          p_brand?: string
+          p_brand_id?: string
+          p_category?: string
+          p_family_id?: string
+          p_limit?: number
+          p_mundo?: string
+          p_offset?: number
+          p_order_asc?: boolean
+          p_order_by?: string
+          p_query: string
+          p_type_id?: string
+        }
+        Returns: {
+          row_data: Json
+          total_count: number
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
       app_role: "super_admin" | "admin"
