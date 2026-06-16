@@ -150,6 +150,7 @@ const Index = () => {
             />
           </form>
           <DarkModeToggle />
+          <UserMenuButton />
           <button onClick={() => setIsOpen(true)} className="relative p-2 rounded-xl hover:bg-muted transition-colors">
             <ShoppingCart className="h-5 w-5" />
             {totalItems > 0 && (
