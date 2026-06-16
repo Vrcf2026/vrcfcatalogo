@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import {
   Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft,
-  Search, LayoutGrid, ShieldCheck, Monitor, SlidersHorizontal, X,
+  Search, LayoutGrid, ShieldCheck, Monitor, SlidersHorizontal, X, ShoppingBag, Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -317,7 +317,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     setSearchParams(searchParams, { replace: true });
   };
 
-  const Icon = mundo === "seguranca" ? ShieldCheck : Monitor;
+  const Icon = mundo === "seguranca" ? ShieldCheck : mundo === "economato" ? ShoppingBag : Monitor;
 
   const onBrandChange = (v: string) => {
     setBrandFilter(v); setPage(1);
@@ -380,6 +380,19 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         </div>
       </header>
 
+      {/* Hero compacto */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/40 border-b border-border py-4 px-4">
+        <div aria-hidden className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+        <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-1.5">
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${mundo === "seguranca" ? "bg-primary/10 border-primary/20 text-primary" : mundo === "economato" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-blue-500/10 border-blue-500/20 text-blue-500"}`}>
+            <Icon className="h-3 w-3" /> {mundo === "seguranca" ? "Segurança & Redes" : mundo === "economato" ? "Economato" : "Escritório & IT"}
+          </div>
+          <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm max-w-xl">{subtitle}</p>
+        </div>
+      </section>
+
       {/* Banners deste mundo (ou transversais, mundo="todos") */}
       {banners.length > 0 && (
         <div className="relative overflow-hidden bg-black" style={{ maxHeight: 240 }}>
@@ -411,18 +424,6 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           )}
         </div>
       )}
-
-      {/* Hero */}
-      <section className={`relative overflow-hidden border-b border-border py-8 sm:py-10`}>
-        <div aria-hidden className={`absolute -top-20 left-1/2 -translate-x-1/2 h-[280px] w-[600px] rounded-full blur-3xl pointer-events-none ${mundo === "seguranca" ? "bg-primary/15" : "bg-blue-500/15"}`} />
-        <div className="relative container mx-auto px-4 text-center">
-          <Badge className={`gap-1.5 px-3 py-1 mb-3 ${mundo === "seguranca" ? "bg-primary text-primary-foreground" : "bg-blue-500 text-white"}`}>
-            <Icon className="h-3.5 w-3.5" /> {mundo === "seguranca" ? "Segurança & Redes" : "Escritório & IT"}
-          </Badge>
-          <h1 className="font-heading text-3xl sm:text-5xl font-bold tracking-tight">{title}</h1>
-          <p className="mt-2 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">{subtitle}</p>
-        </div>
-      </section>
 
       {/* Categories strip */}
       {categories.length > 0 && (
