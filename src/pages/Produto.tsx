@@ -131,6 +131,7 @@ const Produto = () => {
           </div>
           <div className="flex items-center gap-2">
             <DarkModeToggle />
+            <UserMenuButton />
             <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9 relative">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline text-sm">Orçamento</span>
