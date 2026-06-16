@@ -336,7 +336,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {visibleTypes.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</p>
-          <Select value={typeFilter} onValueChange={v => { setTypeFilter(v); setPage(1); }}>
+          <Select value={typeFilter} onValueChange={v => setType(v)}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os tipos</SelectItem>
