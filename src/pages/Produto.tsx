@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
+import { UserMenuButton } from "@/components/UserMenuButton";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
@@ -130,6 +131,7 @@ const Produto = () => {
           </div>
           <div className="flex items-center gap-2">
             <DarkModeToggle />
+            <UserMenuButton />
             <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9 relative">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline text-sm">Orçamento</span>

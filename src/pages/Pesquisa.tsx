@@ -10,6 +10,7 @@ import { ProductCard } from "@/components/ProductCard";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { CartDrawer } from "@/components/CartDrawer";
+import { UserMenuButton } from "@/components/UserMenuButton";
 import { useCart } from "@/contexts/CartContext";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -97,6 +98,7 @@ const Pesquisa = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
+            <UserMenuButton />
             <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline">Orçamento</span>
