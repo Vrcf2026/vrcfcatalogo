@@ -145,7 +145,7 @@ const Index = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Pesquisar câmaras, portáteis, switches..."
+              placeholder="Pesquisar produto, marca ou SKU…"
               className="pl-9 h-9 text-sm bg-muted/60 border-transparent focus:bg-card focus:border-border rounded-xl"
             />
           </form>
@@ -162,29 +162,21 @@ const Index = () => {
         </div>
       </header>
 
-      {/* ── HERO / TÍTULO + PESQUISA (sempre visível) ── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/50 border-b border-border py-8 px-4">
-        <div aria-hidden className="absolute inset-0 opacity-[0.035]"
+      {/* ── HERO COMPACTO (pesquisa já está no header) ── */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/40 border-b border-border py-4 px-4">
+        <div aria-hidden className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-        <div className="relative max-w-xl mx-auto text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-4">
+        <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-1.5">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold">
             <Zap className="h-3 w-3" /> Catálogo Online VRCF · Montijo
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight mb-2">
+          <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
             Tecnologia & Segurança
           </h1>
-          <p className="text-muted-foreground text-sm mb-5">Câmaras, alarmes, redes e IT recondicionado. Peça orçamento online.</p>
-          <form onSubmit={handleSearch} className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="O que procura?"
-              className="pl-11 pr-28 h-11 rounded-2xl bg-card border-border shadow-sm text-sm" />
-            <Button type="submit" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 h-7 px-3 rounded-xl text-xs">
-              Pesquisar
-            </Button>
-          </form>
+          <p className="text-muted-foreground text-xs sm:text-sm">Câmaras, alarmes, redes e IT recondicionado. Peça orçamento online.</p>
         </div>
       </section>
+
 
       {/* ── BANNERS (adicional, abaixo do título) ── */}
       {banners.data && banners.data.length > 0 && (
@@ -343,28 +335,27 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ── */}
-      <section className="bg-zinc-900 dark:bg-zinc-950 text-white py-10 px-4">
-        <div className="max-w-screen-xl mx-auto">
-          <h3 className="font-heading text-xl font-bold text-center mb-1">Como funciona</h3>
-          <p className="text-center text-zinc-400 text-xs mb-6">Orçamento sem compromisso em 3 passos.</p>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { n: "1", icon: Search, t: "Explore", d: "Pesquise ou navegue por categoria ou marca." },
-              { n: "2", icon: ShoppingCart, t: "Seleccione", d: "Adicione produtos ao pedido de orçamento." },
-              { n: "3", icon: Send, t: "Receba", d: "Enviamos proposta com preços actualizados." },
-            ].map((s, i) => (
-              <div key={i} className="flex flex-col items-center text-center gap-2 p-3 rounded-2xl border border-white/10 bg-white/[0.03]">
-                <div className="h-9 w-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-                  <s.icon className="h-4 w-4 text-primary" />
-                </div>
-                <p className="text-xs font-bold">{s.t}</p>
-                <p className="text-[10px] text-zinc-400 leading-relaxed hidden sm:block">{s.d}</p>
+      {/* ── HOW IT WORKS (linha compacta) ── */}
+      <section className="border-t border-border bg-muted/30 py-4 px-4">
+        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs">
+          <span className="font-semibold text-foreground">Como funciona:</span>
+          {[
+            { n: "1", icon: Search, t: "Explore" },
+            { n: "2", icon: ShoppingCart, t: "Selecciona" },
+            { n: "3", icon: Send, t: "Recebe orçamento" },
+          ].map((s, i, arr) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">{s.n}</span>
+                <s.icon className="h-3.5 w-3.5 text-primary" />
+                <span className="font-medium text-foreground">{s.t}</span>
               </div>
-            ))}
-          </div>
+              {i < arr.length - 1 && <span className="hidden sm:inline text-border">→</span>}
+            </div>
+          ))}
         </div>
       </section>
+
 
       {/* ── FOOTER ── */}
       <SiteFooter />
