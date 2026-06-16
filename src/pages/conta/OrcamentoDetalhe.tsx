@@ -1,18 +1,21 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Repeat2, Loader2 } from "lucide-react";
+import { ArrowLeft, Repeat2, Loader2, Download, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { generateQuotePdf } from "@/lib/quotePdf";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", sent: "Enviado", in_review: "Em análise",
   accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
 };
+
 
 export default function OrcamentoDetalhe() {
   const { id } = useParams<{ id: string }>();
