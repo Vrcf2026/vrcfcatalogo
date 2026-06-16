@@ -77,6 +77,7 @@ export default function GestaoRMA() {
   const handleSave = async () => {
     if (!editing) return;
     setSaving(true);
+    const previousStatus = editing.status;
     const { error } = await supabase.from("rma_requests").update({
       status: editStatus as any,
       resolution_notes: editNotes.trim() || null,
@@ -84,10 +85,30 @@ export default function GestaoRMA() {
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("RMA atualizado.");
+
+    // Notifica o cliente apenas em estados-chave (preferência do utilizador).
+    // Fire-and-forget: não bloqueia o fluxo se o email falhar.
+    if (editStatus !== previousStatus) {
+      const KEY = ["approved", "in_repair", "shipped_back", "completed", "rejected"];
+      if (KEY.includes(editStatus)) {
+        supabase.functions
+          .invoke("send-rma-update", { body: { rmaId: editing.id, newStatus: editStatus } })
+          .then(({ error: emailErr }) => {
+            if (emailErr) {
+              console.warn("[RMA] email notification failed:", emailErr);
+              toast.warning("RMA atualizado, mas falhou o envio do email ao cliente.");
+            } else {
+              toast.info("Cliente notificado por email.");
+            }
+          });
+      }
+    }
+
     setEditing(null);
     qc.invalidateQueries({ queryKey: ["gestao-rma"] });
     qc.invalidateQueries({ queryKey: ["gestao-stats"] });
   };
+
 
   return (
     <div className="space-y-4">
