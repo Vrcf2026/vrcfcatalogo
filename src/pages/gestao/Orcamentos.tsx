@@ -45,7 +45,7 @@ function OrcamentosList() {
         .from("quotes")
         .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,customer_profiles(full_name,company,phone,tax_id)")
         .order("created_at", { ascending: false });
-      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -174,7 +174,7 @@ function OrcamentoDetalhe() {
     if (!id) return;
     setSaving(true);
     const { error } = await supabase.from("quotes").update({
-      status,
+      status: status as any,
       notes: notes.trim() || null,
       total: total ? parseFloat(total.replace(",", ".")) : null,
     }).eq("id", id);

@@ -49,7 +49,7 @@ export default function GestaoRMA() {
         .from("rma_requests")
         .select("*,customer_profiles(full_name,company,phone)")
         .order("created_at", { ascending: false });
-      if (statusFilter !== "all") q = q.eq("status", statusFilter);
+      if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -78,7 +78,7 @@ export default function GestaoRMA() {
     if (!editing) return;
     setSaving(true);
     const { error } = await supabase.from("rma_requests").update({
-      status: editStatus,
+      status: editStatus as any,
       resolution_notes: editNotes.trim() || null,
     }).eq("id", editing.id);
     setSaving(false);

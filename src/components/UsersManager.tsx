@@ -78,7 +78,7 @@ export function UsersManager() {
       .from("user_roles")
       .delete()
       .eq("user_id", userId)
-      .eq("role", role);
+      .eq("role", role as "admin" | "gestor" | "super_admin");
     if (error) { toast.error(error.message); return; }
     toast.success("Role removido.");
     qc.invalidateQueries({ queryKey: ["admin-users"] });
