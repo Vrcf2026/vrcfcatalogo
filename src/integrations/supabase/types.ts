@@ -813,7 +813,7 @@ export type Database = {
           subtotal: number
           total: number
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           admin_notes?: string | null
@@ -831,7 +831,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           admin_notes?: string | null
@@ -849,7 +849,7 @@ export type Database = {
           subtotal?: number
           total?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -998,6 +998,75 @@ export type Database = {
         Returns: number
       }
       f_unaccent: { Args: { "": string }; Returns: string }
+      get_analytics_by_brand: {
+        Args: { p_event_type?: string; p_limit?: number; p_since?: string }
+        Returns: {
+          brand: string
+          count: number
+        }[]
+      }
+      get_analytics_by_category: {
+        Args: { p_event_type?: string; p_limit?: number; p_since?: string }
+        Returns: {
+          category: string
+          count: number
+          mundo: string
+        }[]
+      }
+      get_analytics_by_mundo: {
+        Args: { p_since?: string }
+        Returns: {
+          clicks: number
+          mundo: string
+          quotes: number
+        }[]
+      }
+      get_out_of_stock_clicked: {
+        Args: { p_limit?: number; p_since?: string }
+        Returns: {
+          brand: string
+          category: string
+          count: number
+          mundo: string
+          name: string
+          product_id: string
+        }[]
+      }
+      get_quotes_over_time: {
+        Args: { p_weeks?: number }
+        Returns: {
+          accepted: number
+          pending: number
+          total: number
+          week: string
+        }[]
+      }
+      get_top_products_with_context: {
+        Args: { p_event_type?: string; p_limit?: number; p_since?: string }
+        Returns: {
+          brand: string
+          category: string
+          count: number
+          image_url: string
+          mundo: string
+          name: string
+          product_id: string
+          stock_status: string
+        }[]
+      }
+      get_users_with_roles: {
+        Args: never
+        Returns: {
+          confirmed: boolean
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          last_sign_in: string
+          roles: string[]
+        }[]
+      }
+      has_gestao_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1046,7 +1115,7 @@ export type Database = {
       unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
-      app_role: "super_admin" | "admin"
+      app_role: "super_admin" | "admin" | "gestor"
       quote_status:
         | "pending"
         | "sent"
@@ -1191,7 +1260,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin"],
+      app_role: ["super_admin", "admin", "gestor"],
       quote_status: [
         "pending",
         "sent",
