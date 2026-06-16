@@ -26,7 +26,7 @@ export function SiteFooter() {
                 <p className="text-xs text-muted-foreground">NIF 515237205 · Montijo</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground text-center sm:text-left max-w-md">
+            <p className="flex-1 text-xs text-foreground font-medium text-center max-w-md mx-auto">
               Empresa do Montijo com mais de 10 anos de experiência. Atendimento personalizado, instalação disponível e suporte contínuo.
             </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-sm">
