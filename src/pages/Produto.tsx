@@ -139,11 +139,32 @@ const Produto = () => {
       </header>
 
       {/* Breadcrumb */}
-      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-        <Link to="/" className="hover:text-foreground">Início</Link>
+      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap" aria-label="Breadcrumb">
+        <Link to="/" className="hover:text-foreground transition-colors">Início</Link>
         <span>/</span>
-        <Link to={worldPath} className="hover:text-foreground">{worldLabel}</Link>
-        {product.category && <><span>/</span><span>{product.category}</span></>}
+        <Link to={worldPath} className="hover:text-foreground transition-colors">{worldLabel}</Link>
+        {product.category && (
+          <>
+            <span>/</span>
+            <Link
+              to={`${worldPath}?categoria=${encodeURIComponent(product.category)}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {product.category}
+            </Link>
+          </>
+        )}
+        {product.family && (
+          <>
+            <span>/</span>
+            <Link
+              to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}${product.family_id ? `familia=${product.family_id}` : ""}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {product.family}
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Produto */}
