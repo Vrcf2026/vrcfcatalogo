@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
+import { UserMenuButton } from "@/components/UserMenuButton";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
