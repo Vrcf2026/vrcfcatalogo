@@ -317,7 +317,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     setSearchParams(searchParams, { replace: true });
   };
 
-  const Icon = mundo === "seguranca" ? ShieldCheck : Monitor;
+  const Icon = mundo === "seguranca" ? ShieldCheck : mundo === "economato" ? ShoppingBag : Monitor;
 
   const onBrandChange = (v: string) => {
     setBrandFilter(v); setPage(1);
