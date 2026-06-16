@@ -9,6 +9,7 @@ import { AdminDashboard } from "@/components/AdminDashboard";
 import { EditProductSheet } from "@/components/EditProductSheet";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { BannersManager } from "@/components/BannersManager";
+import { GenerateDescriptionsDialog } from "@/components/GenerateDescriptionsDialog";
 import { ShippingConfig } from "@/components/ShippingConfig";
 import { UsersManager } from "@/components/UsersManager";
 import { Input } from "@/components/ui/input";
@@ -578,6 +579,7 @@ const Admin = () => {
                 >
                   <Download className="h-3.5 w-3.5" /> Exportar
                 </Button>
+                <GenerateDescriptionsDialog products={paginated.filter((p: any) => !p.description)} />
                 <span>Página {page} de {totalPages || 1}</span>
               </div>
             </div>

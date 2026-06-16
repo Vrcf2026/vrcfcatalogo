@@ -1,0 +1,856 @@
+diff -ruN patch-final-base/src/components/CheckoutDialog.tsx patch-final-mod/src/components/CheckoutDialog.tsx
+--- patch-final-base/src/components/CheckoutDialog.tsx	2026-06-16 13:12:01.165468078 +0000
++++ patch-final-mod/src/components/CheckoutDialog.tsx	2026-06-16 13:12:01.213363837 +0000
+@@ -123,39 +123,39 @@
+       });
+       if (fnError) throw fnError;
+ 
+-      // If authenticated, also save quote to DB for history
+-      if (user) {
+-        try {
+-          const subtotal = items.reduce((s, i) => s + ((i.price ?? 0) * i.quantity), 0);
+-          const { data: quote, error: qErr } = await supabase
+-            .from("quotes")
+-            .insert({
+-              user_id: user.id,
+-              status: "sent",
+-              subtotal,
+-              total: subtotal,
+-              notes: notes.trim() || null,
+-              customer_name: name.trim(),
+-              customer_email: email.trim(),
+-              customer_phone: phone.trim(),
+-            })
+-            .select("id")
+-            .single();
+-          if (!qErr && quote) {
+-            const rows = items.map((i) => ({
+-              quote_id: quote.id,
+-              product_id: i.id,
+-              product_name_snapshot: i.name,
+-              product_image_snapshot: i.imageUrl,
+-              unit_price: i.price ?? 0,
+-              quantity: i.quantity,
+-              line_total: (i.price ?? 0) * i.quantity,
+-            }));
+-            if (rows.length) await supabase.from("quote_items").insert(rows);
+-          }
+-        } catch (e) {
+-          console.warn("Could not save quote history", e);
++      // Gravar orçamento na BD — tanto para utilizadores autenticados
++      // (ligado ao user_id) como anónimos (só com dados de contacto).
++      // Isto garante que TODOS os orçamentos aparecem na área de Gestão.
++      try {
++        const subtotal = items.reduce((s, i) => s + ((i.price ?? 0) * i.quantity), 0);
++        const { data: quote, error: qErr } = await supabase
++          .from("quotes")
++          .insert({
++            ...(user ? { user_id: user.id } : {}),
++            status: "sent",
++            subtotal,
++            total: subtotal,
++            notes: notes.trim() || null,
++            customer_name: name.trim(),
++            customer_email: email.trim(),
++            customer_phone: phone.trim(),
++          })
++          .select("id")
++          .single();
++        if (!qErr && quote) {
++          const rows = items.map((i) => ({
++            quote_id: quote.id,
++            product_id: i.id,
++            product_name_snapshot: i.name,
++            product_image_snapshot: i.imageUrl,
++            unit_price: i.price ?? 0,
++            quantity: i.quantity,
++            line_total: (i.price ?? 0) * i.quantity,
++          }));
++          if (rows.length) await supabase.from("quote_items").insert(rows);
+         }
++      } catch (e) {
++        console.warn("Could not save quote history", e);
+       }
+ 
+       setSuccess(true);
+diff -ruN patch-final-base/src/pages/Admin.tsx patch-final-mod/src/pages/Admin.tsx
+--- patch-final-base/src/pages/Admin.tsx	2026-06-16 13:12:01.174010585 +0000
++++ patch-final-mod/src/pages/Admin.tsx	2026-06-16 13:12:01.221312003 +0000
+@@ -9,6 +9,7 @@
+ import { EditProductSheet } from "@/components/EditProductSheet";
+ import { AddProductDialog } from "@/components/AddProductDialog";
+ import { BannersManager } from "@/components/BannersManager";
++import { GenerateDescriptionsDialog } from "@/components/GenerateDescriptionsDialog";
+ import { ShippingConfig } from "@/components/ShippingConfig";
+ import { UsersManager } from "@/components/UsersManager";
+ import { Input } from "@/components/ui/input";
+@@ -578,6 +579,7 @@
+                 >
+                   <Download className="h-3.5 w-3.5" /> Exportar
+                 </Button>
++                <GenerateDescriptionsDialog products={paginated.filter((p: any) => !p.description)} />
+                 <span>Página {page} de {totalPages || 1}</span>
+               </div>
+             </div>
+diff -ruN patch-final-base/src/pages/conta/OrcamentoDetalhe.tsx patch-final-mod/src/pages/conta/OrcamentoDetalhe.tsx
+--- patch-final-base/src/pages/conta/OrcamentoDetalhe.tsx	2026-06-16 13:12:01.175983064 +0000
++++ patch-final-mod/src/pages/conta/OrcamentoDetalhe.tsx	2026-06-16 13:12:01.218598249 +0000
+@@ -25,7 +25,7 @@
+     enabled: !!id && !!user,
+     queryFn: async () => {
+       const [q, items] = await Promise.all([
+-        supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
++        supabase.from("quotes").select("*").eq("id", id!).eq("user_id", user!.id).maybeSingle(),
+         supabase.from("quote_items").select("*").eq("quote_id", id!),
+       ]);
+       if (q.error) throw q.error;
+diff -ruN patch-final-base/src/pages/gestao/Orcamentos.tsx patch-final-mod/src/pages/gestao/Orcamentos.tsx
+--- patch-final-base/src/pages/gestao/Orcamentos.tsx	2026-06-16 13:12:01.176364404 +0000
++++ patch-final-mod/src/pages/gestao/Orcamentos.tsx	2026-06-16 13:12:01.216116763 +0000
+@@ -43,7 +43,7 @@
+     queryFn: async () => {
+       let q = supabase
+         .from("quotes")
+-        .select("id,quote_number,status,total,created_at,notes,customer_profiles(full_name,company,phone,tax_id)")
++        .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,customer_profiles(full_name,company,phone,tax_id)")
+         .order("created_at", { ascending: false });
+       if (statusFilter !== "all") q = q.eq("status", statusFilter);
+       const { data, error } = await q;
+@@ -59,7 +59,9 @@
+     return (
+       q.quote_number?.toLowerCase().includes(s) ||
+       q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
+-      q.customer_profiles?.company?.toLowerCase().includes(s)
++      q.customer_profiles?.company?.toLowerCase().includes(s) ||
++      q.customer_name?.toLowerCase().includes(s) ||
++      q.customer_email?.toLowerCase().includes(s)
+     );
+   });
+ 
+@@ -112,8 +114,8 @@
+                     </span>
+                   </div>
+                   <p className="text-xs text-muted-foreground mt-0.5">
+-                    {q.customer_profiles?.company || q.customer_profiles?.full_name || "—"}
+-                    {q.customer_profiles?.phone && ` · ${q.customer_profiles.phone}`}
++                    {q.customer_profiles?.company || q.customer_profiles?.full_name || q.customer_name || "—"}
++                    {(q.customer_profiles?.phone || q.customer_phone) && ` · ${q.customer_profiles?.phone || q.customer_phone}`}
+                     {" · "}
+                     {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
+                   </p>
+@@ -207,13 +209,18 @@
+           </CardHeader>
+           <CardContent className="space-y-3">
+             {/* Dados do cliente */}
+-            {profile && (
++            {(profile || quote.customer_name) && (
+               <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
+-                <p className="font-medium">{profile.full_name || "—"}</p>
+-                {profile.company && <p className="text-muted-foreground">{profile.company}</p>}
+-                {profile.tax_id && <p className="text-muted-foreground">NIF: {profile.tax_id}</p>}
+-                {profile.phone && <p className="text-muted-foreground">{profile.phone}</p>}
+-                {profile.address_line1 && (
++                <p className="font-medium">{profile?.full_name || quote.customer_name || "—"}</p>
++                {profile?.company && <p className="text-muted-foreground">{profile.company}</p>}
++                {profile?.tax_id && <p className="text-muted-foreground">NIF: {profile.tax_id}</p>}
++                {(profile?.phone || quote.customer_phone) && (
++                  <p className="text-muted-foreground">{profile?.phone || quote.customer_phone}</p>
++                )}
++                {(quote.customer_email) && (
++                  <p className="text-muted-foreground">{quote.customer_email}</p>
++                )}
++                {profile?.address_line1 && (
+                   <p className="text-muted-foreground">
+                     {profile.address_line1}{profile.city ? `, ${profile.city}` : ""}{profile.postal_code ? ` ${profile.postal_code}` : ""}
+                   </p>
+@@ -293,13 +300,13 @@
+           </Card>
+ 
+           {/* Acções rápidas */}
+-          {profile?.phone && (
++          {(profile?.phone || quote.customer_phone) && (
+             <Card>
+               <CardHeader><CardTitle className="text-base">Acções rápidas</CardTitle></CardHeader>
+               <CardContent className="space-y-2">
+                 <Button variant="outline" size="sm" className="w-full justify-start gap-2" asChild>
+                   <a
+-                    href={`https://wa.me/351${profile.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${profile.full_name ? " " + profile.full_name.split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
++                    href={`https://wa.me/351${(profile?.phone || quote.customer_phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${(profile?.full_name || quote.customer_name) ? " " + (profile?.full_name || quote.customer_name || "").split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
+                     target="_blank" rel="noopener noreferrer"
+                   >
+                     💬 WhatsApp
+diff -ruN patch-final-base/supabase/migrations/20260615090000_add_brands_strip_flags.sql patch-final-mod/supabase/migrations/20260615090000_add_brands_strip_flags.sql
+--- patch-final-base/supabase/migrations/20260615090000_add_brands_strip_flags.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615090000_add_brands_strip_flags.sql	2026-06-16 13:12:01.223794340 +0000
+@@ -0,0 +1,24 @@
++-- Permite seleccionar manualmente quais marcas aparecem:
++--   - show_in_world_strip: na faixa "Marcas que trabalhamos" do respectivo
++--     mundo (Segurança/Escritório/Economato);
++--   - show_on_homepage: na faixa de marcas da página inicial.
++--
++-- Ambas começam a TRUE (pré-seleccionadas) — o utilizador depois desmarca
++-- as que não pretende mostrar, em vez de ter de marcar uma a uma.
++ALTER TABLE public.brands ADD COLUMN IF NOT EXISTS show_in_world_strip boolean NOT NULL DEFAULT true;
++ALTER TABLE public.brands ADD COLUMN IF NOT EXISTS show_on_homepage boolean NOT NULL DEFAULT true;
++
++-- Caso a coluna antiga "show_in_strip" já tenha sido criada numa tentativa
++-- anterior, migra o valor para as duas novas colunas e remove-a.
++DO $$
++BEGIN
++  IF EXISTS (
++    SELECT 1 FROM information_schema.columns
++    WHERE table_schema = 'public' AND table_name = 'brands' AND column_name = 'show_in_strip'
++  ) THEN
++    UPDATE public.brands SET show_in_world_strip = show_in_strip, show_on_homepage = show_in_strip;
++    ALTER TABLE public.brands DROP COLUMN show_in_strip;
++  END IF;
++END $$;
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615100000_add_admin_performance_indexes.sql patch-final-mod/supabase/migrations/20260615100000_add_admin_performance_indexes.sql
+--- patch-final-base/supabase/migrations/20260615100000_add_admin_performance_indexes.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615100000_add_admin_performance_indexes.sql	2026-06-16 13:12:01.416819751 +0000
+@@ -0,0 +1,35 @@
++-- Índices de suporte à refactoração server-side do Admin (paginação,
++-- filtros em cascata, pesquisa e ordenação sobre a tabela "products",
++-- que tem 27000+ linhas). Sem estes índices, cada filtro/contagem/
++-- ordenação faz um seq scan completo à tabela.
++
++-- Filtros directos (.eq) usados em applyProductFilters / dashboard
++CREATE INDEX IF NOT EXISTS idx_products_category      ON public.products(category);
++CREATE INDEX IF NOT EXISTS idx_products_family_id     ON public.products(family_id);
++CREATE INDEX IF NOT EXISTS idx_products_brand_id      ON public.products(brand_id);
++CREATE INDEX IF NOT EXISTS idx_products_stock_status  ON public.products(stock_status);
++
++-- Índice composto: Mundo + Categoria andam quase sempre juntos na cascata
++-- de filtros (Mundo → Categoria → Família → Tipo → Marca).
++CREATE INDEX IF NOT EXISTS idx_products_mundo_category ON public.products(mundo, category);
++
++-- Colunas de ordenação da tabela do Admin (created_at é o default;
++-- price/purchase_price ao clicar nos cabeçalhos "Compra"/"Venda")
++CREATE INDEX IF NOT EXISTS idx_products_created_at    ON public.products(created_at DESC);
++CREATE INDEX IF NOT EXISTS idx_products_price         ON public.products(price);
++CREATE INDEX IF NOT EXISTS idx_products_purchase_price ON public.products(purchase_price);
++
++-- Pesquisa por nome/SKU/descrição (.ilike com '%termo%') — um índice
++-- B-tree normal não ajuda neste tipo de padrão; usa-se pg_trgm + GIN,
++-- que acelera substancialmente LIKE/ILIKE com termos parciais.
++CREATE EXTENSION IF NOT EXISTS pg_trgm;
++
++CREATE INDEX IF NOT EXISTS idx_products_name_trgm ON public.products USING gin (name gin_trgm_ops);
++CREATE INDEX IF NOT EXISTS idx_products_sku_trgm  ON public.products USING gin (sku gin_trgm_ops);
++
++-- Descrição pode ser longa/NULL em muitos produtos; trgm também acelera
++-- ILIKE aqui, mas o índice tende a ser maior — ainda assim vale a pena
++-- dado que a pesquisa por descrição foi adicionada nesta refactoração.
++CREATE INDEX IF NOT EXISTS idx_products_description_trgm ON public.products USING gin (description gin_trgm_ops);
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615110000_force_pgrst_resync_products.sql patch-final-mod/supabase/migrations/20260615110000_force_pgrst_resync_products.sql
+--- patch-final-base/supabase/migrations/20260615110000_force_pgrst_resync_products.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615110000_force_pgrst_resync_products.sql	2026-06-16 13:12:01.464819753 +0000
+@@ -0,0 +1,16 @@
++-- Migration "trivial" para forçar o PostgREST/Lovable a re-sincronizar
++-- com a tabela "products". Um NOTIFY isolado não resolveu um erro de
++-- "permission denied" reportado pelo frontend (apesar de a BD, RLS e
++-- GRANTs estarem confirmadamente correctos via SET ROLE anon).
++--
++-- COMMENT ON TABLE é uma alteração estrutural real (inócua), que em
++-- alguns ambientes Supabase geridos obriga o PostgREST a recarregar a
++-- definição da tabela de forma mais completa do que NOTIFY sozinho.
++
++COMMENT ON TABLE public.products IS 'Catálogo de produtos VRCF (multi-mundo: seguranca, escritorio, economato).';
++
++-- Reafirma explicitamente o GRANT de SELECT às roles públicas, por
++-- garantia (idempotente — não altera nada se já existir).
++GRANT SELECT ON public.products TO anon, authenticated;
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615120000_add_unaccent_search.sql patch-final-mod/supabase/migrations/20260615120000_add_unaccent_search.sql
+--- patch-final-base/supabase/migrations/20260615120000_add_unaccent_search.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615120000_add_unaccent_search.sql	2026-06-16 13:12:01.580819756 +0000
+@@ -0,0 +1,131 @@
++-- Pesquisa insensível a acentos ("camara" encontra "Câmara") e a maiúsculas
++-- (já cobertas por ILIKE). unaccent() remove acentos de forma consistente;
++-- combinado com pg_trgm dá pesquisa parcial eficiente mesmo sem acentos.
++
++CREATE EXTENSION IF NOT EXISTS unaccent;
++
++-- unaccent() não é IMMUTABLE por defeito (depende de configuração de
++-- dicionário), o que impede criar índices funcionais sobre ela
++-- directamente. Cria-se um wrapper IMMUTABLE fixando o dicionário.
++CREATE OR REPLACE FUNCTION public.f_unaccent(text)
++RETURNS text
++LANGUAGE sql
++IMMUTABLE
++PARALLEL SAFE
++STRICT
++AS $$
++  SELECT public.unaccent('public.unaccent', $1)
++$$;
++
++-- Índices funcionais GIN (trgm) sobre as colunas sem acentos — usados
++-- pela função search_products abaixo para ILIKE '%termo%' eficiente,
++-- já sem distinguir acentos.
++CREATE INDEX IF NOT EXISTS idx_products_name_unaccent_trgm
++  ON public.products USING gin (public.f_unaccent(name) gin_trgm_ops);
++CREATE INDEX IF NOT EXISTS idx_products_sku_unaccent_trgm
++  ON public.products USING gin (public.f_unaccent(sku) gin_trgm_ops);
++CREATE INDEX IF NOT EXISTS idx_products_description_unaccent_trgm
++  ON public.products USING gin (public.f_unaccent(description) gin_trgm_ops);
++CREATE INDEX IF NOT EXISTS idx_products_short_description_unaccent_trgm
++  ON public.products USING gin (public.f_unaccent(short_description) gin_trgm_ops);
++
++-- ────────────────────────────────────────────────────────────────────────
++-- search_products: pesquisa "todas as palavras, em qualquer ordem"
++-- (AND entre termos, cada termo pesquisado em name/sku/description/
++-- short_description, tudo sem distinguir acentos/maiúsculas).
++--
++-- Ex: "camara ip" encontra "Câmara IP Bullet 4MP" — encontra produtos que
++-- contêm AMBAS as palavras, em qualquer posição/ordem, não só a frase
++-- exacta "camara ip".
++--
++-- Os parâmetros p_mundo/p_category/p_family_id/p_type_id/p_brand_id/
++-- p_brand reproduzem os filtros usados no frontend (WorldCatalog e
++-- Pesquisa), para reaproveitar esta função em ambos os contextos.
++-- ────────────────────────────────────────────────────────────────────────
++CREATE OR REPLACE FUNCTION public.search_products(
++  p_query text,
++  p_mundo text DEFAULT NULL,
++  p_category text DEFAULT NULL,
++  p_family_id uuid DEFAULT NULL,
++  p_type_id uuid DEFAULT NULL,
++  p_brand_id uuid DEFAULT NULL,
++  p_brand text DEFAULT NULL,
++  p_limit int DEFAULT 24,
++  p_offset int DEFAULT 0,
++  p_order_by text DEFAULT 'created_at',
++  p_order_asc boolean DEFAULT false
++)
++RETURNS TABLE (row_data jsonb, total_count bigint)
++LANGUAGE plpgsql
++STABLE
++AS $$
++DECLARE
++  v_terms text[];
++  v_where text := 'include_in_catalog = true';
++  v_order text;
++BEGIN
++  -- Divide a pesquisa em palavras (cada palavra tem de aparecer, em
++  -- qualquer ordem, em qualquer um dos campos pesquisáveis).
++  v_terms := regexp_split_to_array(trim(p_query), '\s+');
++
++  IF p_mundo IS NOT NULL THEN
++    v_where := v_where || format(' AND mundo = %L', p_mundo);
++  END IF;
++  IF p_category IS NOT NULL THEN
++    v_where := v_where || format(' AND category = %L', p_category);
++  END IF;
++  IF p_family_id IS NOT NULL THEN
++    v_where := v_where || format(' AND family_id = %L', p_family_id);
++  END IF;
++  IF p_type_id IS NOT NULL THEN
++    v_where := v_where || format(' AND type_id = %L', p_type_id);
++  END IF;
++  IF p_brand_id IS NOT NULL AND p_brand IS NOT NULL THEN
++    v_where := v_where || format(' AND (brand_id = %L OR brand = %L)', p_brand_id, p_brand);
++  ELSIF p_brand_id IS NOT NULL THEN
++    v_where := v_where || format(' AND brand_id = %L', p_brand_id);
++  ELSIF p_brand IS NOT NULL THEN
++    v_where := v_where || format(' AND brand = %L', p_brand);
++  END IF;
++
++  IF v_terms IS NOT NULL AND array_length(v_terms, 1) > 0 AND p_query <> '' THEN
++    FOR i IN 1..array_length(v_terms, 1) LOOP
++      v_where := v_where || format(
++        ' AND (public.f_unaccent(name) ILIKE public.f_unaccent(%L)' ||
++        ' OR public.f_unaccent(sku) ILIKE public.f_unaccent(%L)' ||
++        ' OR public.f_unaccent(description) ILIKE public.f_unaccent(%L)' ||
++        ' OR public.f_unaccent(short_description) ILIKE public.f_unaccent(%L))',
++        '%' || v_terms[i] || '%', '%' || v_terms[i] || '%',
++        '%' || v_terms[i] || '%', '%' || v_terms[i] || '%'
++      );
++    END LOOP;
++  END IF;
++
++  -- Ordenação — whitelist de colunas permitidas para evitar SQL injection
++  -- via p_order_by.
++  v_order := CASE p_order_by
++    WHEN 'price' THEN 'price'
++    WHEN 'name' THEN 'name'
++    WHEN 'featured' THEN 'featured'
++    ELSE 'created_at'
++  END || CASE WHEN p_order_asc THEN ' ASC' ELSE ' DESC' END || ' NULLS LAST';
++
++  IF p_order_by = 'featured' THEN
++    v_order := 'featured DESC, created_at DESC';
++  END IF;
++
++  RETURN QUERY EXECUTE format(
++    'SELECT to_jsonb(p) AS row_data, count(*) OVER() AS total_count
++     FROM public.products p
++     WHERE %s
++     ORDER BY %s
++     LIMIT %s OFFSET %s',
++    v_where, v_order, p_limit, p_offset
++  );
++END;
++$$;
++
++-- Acesso público (mesmo nível de leitura que a tabela "products" já tem).
++GRANT EXECUTE ON FUNCTION public.search_products TO anon, authenticated;
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615130000_fix_search_short_terms.sql patch-final-mod/supabase/migrations/20260615130000_fix_search_short_terms.sql
+--- patch-final-base/supabase/migrations/20260615130000_fix_search_short_terms.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615130000_fix_search_short_terms.sql	2026-06-16 13:12:01.624819757 +0000
+@@ -0,0 +1,112 @@
++-- Corrige search_products: termos curtos (≤3 caracteres, ex: "ip", "4k",
++-- "led", "usb", "pt") com ILIKE '%termo%' davam falsos positivos —
++-- "ip" entra em "equ-IP-amento", "partic-IP-ação", "princ-ÍP-io", etc.
++--
++-- Para termos com ≤3 caracteres, usa-se correspondência por PALAVRA
++-- INTEIRA (regex ~* com \m...\M = word boundaries), insensível a
++-- maiúsculas/acentos. Para termos mais longos (4+), mantém-se ILIKE
++-- '%termo%' (permite prefixos/sufixos parciais, ex: "câmar" encontra
++-- "câmara"/"câmaras").
++
++CREATE OR REPLACE FUNCTION public.search_products(
++  p_query text,
++  p_mundo text DEFAULT NULL,
++  p_category text DEFAULT NULL,
++  p_family_id uuid DEFAULT NULL,
++  p_type_id uuid DEFAULT NULL,
++  p_brand_id uuid DEFAULT NULL,
++  p_brand text DEFAULT NULL,
++  p_limit int DEFAULT 24,
++  p_offset int DEFAULT 0,
++  p_order_by text DEFAULT 'created_at',
++  p_order_asc boolean DEFAULT false
++)
++RETURNS TABLE (row_data jsonb, total_count bigint)
++LANGUAGE plpgsql
++STABLE
++AS $$
++DECLARE
++  v_terms text[];
++  v_where text := 'include_in_catalog = true';
++  v_order text;
++  v_term text;
++  v_pattern text;
++BEGIN
++  v_terms := regexp_split_to_array(trim(p_query), '\s+');
++
++  IF p_mundo IS NOT NULL THEN
++    v_where := v_where || format(' AND mundo = %L', p_mundo);
++  END IF;
++  IF p_category IS NOT NULL THEN
++    v_where := v_where || format(' AND category = %L', p_category);
++  END IF;
++  IF p_family_id IS NOT NULL THEN
++    v_where := v_where || format(' AND family_id = %L', p_family_id);
++  END IF;
++  IF p_type_id IS NOT NULL THEN
++    v_where := v_where || format(' AND type_id = %L', p_type_id);
++  END IF;
++  IF p_brand_id IS NOT NULL AND p_brand IS NOT NULL THEN
++    v_where := v_where || format(' AND (brand_id = %L OR brand = %L)', p_brand_id, p_brand);
++  ELSIF p_brand_id IS NOT NULL THEN
++    v_where := v_where || format(' AND brand_id = %L', p_brand_id);
++  ELSIF p_brand IS NOT NULL THEN
++    v_where := v_where || format(' AND brand = %L', p_brand);
++  END IF;
++
++  IF v_terms IS NOT NULL AND array_length(v_terms, 1) > 0 AND p_query <> '' THEN
++    FOR i IN 1..array_length(v_terms, 1) LOOP
++      v_term := v_terms[i];
++
++      IF length(v_term) <= 3 THEN
++        -- Termo curto (ex: "ip", "4k", "led", "pt") — exige palavra
++        -- inteira (word boundary) para evitar falsos positivos dentro de
++        -- outras palavras (ex: "equ-IP-amento").
++        v_pattern := '\m' || v_term || '\M';
++        v_where := v_where || format(
++          ' AND (public.f_unaccent(name) ~* public.f_unaccent(%L)' ||
++          ' OR public.f_unaccent(sku) ~* public.f_unaccent(%L)' ||
++          ' OR public.f_unaccent(description) ~* public.f_unaccent(%L)' ||
++          ' OR public.f_unaccent(short_description) ~* public.f_unaccent(%L))',
++          v_pattern, v_pattern, v_pattern, v_pattern
++        );
++      ELSE
++        -- Termo normal (4+ caracteres) — substring, permite
++        -- prefixos/sufixos parciais (ex: "câmar" encontra "câmaras").
++        v_pattern := '%' || v_term || '%';
++        v_where := v_where || format(
++          ' AND (public.f_unaccent(name) ILIKE public.f_unaccent(%L)' ||
++          ' OR public.f_unaccent(sku) ILIKE public.f_unaccent(%L)' ||
++          ' OR public.f_unaccent(description) ILIKE public.f_unaccent(%L)' ||
++          ' OR public.f_unaccent(short_description) ILIKE public.f_unaccent(%L))',
++          v_pattern, v_pattern, v_pattern, v_pattern
++        );
++      END IF;
++    END LOOP;
++  END IF;
++
++  v_order := CASE p_order_by
++    WHEN 'price' THEN 'price'
++    WHEN 'name' THEN 'name'
++    WHEN 'featured' THEN 'featured'
++    ELSE 'created_at'
++  END || CASE WHEN p_order_asc THEN ' ASC' ELSE ' DESC' END || ' NULLS LAST';
++
++  IF p_order_by = 'featured' THEN
++    v_order := 'featured DESC, created_at DESC';
++  END IF;
++
++  RETURN QUERY EXECUTE format(
++    'SELECT to_jsonb(p) AS row_data, count(*) OVER() AS total_count
++     FROM public.products p
++     WHERE %s
++     ORDER BY %s
++     LIMIT %s OFFSET %s',
++    v_where, v_order, p_limit, p_offset
++  );
++END;
++$$;
++
++GRANT EXECUTE ON FUNCTION public.search_products TO anon, authenticated;
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615140000_cleanup_se_tiveres_specs.sql patch-final-mod/supabase/migrations/20260615140000_cleanup_se_tiveres_specs.sql
+--- patch-final-base/supabase/migrations/20260615140000_cleanup_se_tiveres_specs.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615140000_cleanup_se_tiveres_specs.sql	2026-06-16 13:12:01.631794710 +0000
+@@ -0,0 +1,27 @@
++-- Limpeza de dados: especificações com valor "Se tiveres" (ou que
++-- começam por "Se tiveres") são resíduos de um defeito no processo de
++-- importação/tradução (provavelmente UNI-TREND/Visiotech) — ficou gravado
++-- um excerto de prompt/template em vez do valor real da especificação
++-- (ex: "apagado_automatico": "Se tiveres" em vez de "Sim"/valor real).
++--
++-- "Se tiveres" não é informação útil para o cliente — remove-se a chave
++-- por completo, em vez de mostrar um valor sem sentido na página de
++-- produto. Produtos sem mais nenhuma spec afectada simplesmente perdem
++-- esse campo (o que já é tratado pela UI — campos ausentes não aparecem).
++
++-- Pré-visualização (apenas para registo/auditoria — não altera nada):
++-- SELECT id, name,
++--   (SELECT jsonb_object_agg(key, value) FROM jsonb_each(especificacoes)
++--    WHERE value::text ILIKE '"Se tiveres%') AS specs_removidas
++-- FROM products
++-- WHERE especificacoes::text ILIKE '%Se tiveres%';
++
++UPDATE public.products
++SET especificacoes = (
++  SELECT COALESCE(jsonb_object_agg(key, value), '{}'::jsonb)
++  FROM jsonb_each(especificacoes)
++  WHERE value::text NOT ILIKE '"Se tiveres%'
++)
++WHERE especificacoes::text ILIKE '%Se tiveres%';
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615150000_add_gestor_role.sql patch-final-mod/supabase/migrations/20260615150000_add_gestor_role.sql
+--- patch-final-base/supabase/migrations/20260615150000_add_gestor_role.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615150000_add_gestor_role.sql	2026-06-16 13:12:01.633631927 +0000
+@@ -0,0 +1,74 @@
++-- PASSO 1: Adicionar o valor ao enum numa transação isolada.
++-- O Postgres exige que ADD VALUE seja committed antes de poder ser
++-- referenciado noutras queries da mesma sessão.
++
++ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'gestor';
++
++-- Forçar commit do ADD VALUE antes de prosseguir.
++-- (No SQL Editor do Supabase, cada statement já corre em transação
++-- separada, mas em alguns contextos é necessário o COMMIT explícito.
++-- Se este ficheiro for corrido pelo Lovable como migration, o ADD VALUE
++-- já fica committed automaticamente antes do resto.)
++
++COMMIT;
++
++-- PASSO 2: Criar a função e policies que referenciam 'gestor'.
++
++-- Helper: acesso à área de gestão comercial (gestor, admin, super_admin)
++CREATE OR REPLACE FUNCTION public.has_gestao_access(_user_id UUID)
++RETURNS BOOLEAN
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT EXISTS (
++    SELECT 1 FROM public.user_roles
++    WHERE user_id = _user_id
++      AND role IN ('gestor', 'admin', 'super_admin')
++  )
++$$;
++
++-- ── Policies para gestores em customer_profiles ──
++CREATE POLICY "Gestores view all profiles"
++  ON public.customer_profiles FOR SELECT
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()));
++
++CREATE POLICY "Gestores update all profiles"
++  ON public.customer_profiles FOR UPDATE
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()))
++  WITH CHECK (public.has_gestao_access(auth.uid()));
++
++-- ── Policies para gestores em quotes ──
++CREATE POLICY "Gestores view all quotes"
++  ON public.quotes FOR SELECT
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()));
++
++CREATE POLICY "Gestores update all quotes"
++  ON public.quotes FOR UPDATE
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()))
++  WITH CHECK (public.has_gestao_access(auth.uid()));
++
++-- ── Policies para gestores em quote_items ──
++CREATE POLICY "Gestores view all quote items"
++  ON public.quote_items FOR SELECT
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()));
++
++-- ── Policies para gestores em rma_requests ──
++CREATE POLICY "Gestores view all rma"
++  ON public.rma_requests FOR SELECT
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()));
++
++CREATE POLICY "Gestores update all rma"
++  ON public.rma_requests FOR UPDATE
++  TO authenticated
++  USING (public.has_gestao_access(auth.uid()))
++  WITH CHECK (public.has_gestao_access(auth.uid()));
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615160000_add_get_users_rpc.sql patch-final-mod/supabase/migrations/20260615160000_add_get_users_rpc.sql
+--- patch-final-base/supabase/migrations/20260615160000_add_get_users_rpc.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615160000_add_get_users_rpc.sql	2026-06-16 13:12:01.772819762 +0000
+@@ -0,0 +1,52 @@
++-- Função para listar utilizadores com os seus roles.
++-- Requer SECURITY DEFINER para aceder a auth.users (schema protegido).
++-- Só deve ser chamada por super_admin/admin (validado dentro da função).
++
++CREATE OR REPLACE FUNCTION public.get_users_with_roles()
++RETURNS TABLE (
++  id            UUID,
++  email         TEXT,
++  full_name     TEXT,
++  created_at    TIMESTAMPTZ,
++  last_sign_in  TIMESTAMPTZ,
++  confirmed     BOOLEAN,
++  roles         TEXT[]
++)
++LANGUAGE plpgsql
++SECURITY DEFINER
++SET search_path = public
++AS $$
++BEGIN
++  -- Só super_admin ou admin podem chamar esta função
++  IF NOT (
++    public.has_role(auth.uid(), 'super_admin') OR
++    public.has_role(auth.uid(), 'admin')
++  ) THEN
++    RAISE EXCEPTION 'Acesso negado';
++  END IF;
++
++  RETURN QUERY
++  SELECT
++    u.id,
++    u.email,
++    COALESCE(u.raw_user_meta_data->>'full_name', '') AS full_name,
++    u.created_at,
++    u.last_sign_in_at,
++    (u.email_confirmed_at IS NOT NULL) AS confirmed,
++    COALESCE(
++      ARRAY(
++        SELECT r.role::TEXT
++        FROM public.user_roles r
++        WHERE r.user_id = u.id
++        ORDER BY r.role
++      ),
++      ARRAY[]::TEXT[]
++    ) AS roles
++  FROM auth.users u
++  ORDER BY u.created_at DESC;
++END;
++$$;
++
++GRANT EXECUTE ON FUNCTION public.get_users_with_roles() TO authenticated;
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260615170000_add_analytics_rpcs.sql patch-final-mod/supabase/migrations/20260615170000_add_analytics_rpcs.sql
+--- patch-final-base/supabase/migrations/20260615170000_add_analytics_rpcs.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260615170000_add_analytics_rpcs.sql	2026-06-16 13:12:01.848819764 +0000
+@@ -0,0 +1,147 @@
++-- RPCs para analytics do catálogo e comerciais
++-- Todas com SECURITY DEFINER para eficiência e segurança
++
++-- 1. Analytics por categoria (Admin — catálogo)
++CREATE OR REPLACE FUNCTION public.get_analytics_by_category(
++  p_event_type text DEFAULT 'click',
++  p_since timestamptz DEFAULT NULL,
++  p_limit int DEFAULT 10
++)
++RETURNS TABLE (category text, mundo text, count bigint)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT p.category, p.mundo, count(*) AS count
++  FROM product_analytics a
++  JOIN products p ON p.id = a.product_id
++  WHERE a.event_type = p_event_type
++    AND (p_since IS NULL OR a.created_at >= p_since)
++    AND p.category IS NOT NULL
++  GROUP BY p.category, p.mundo
++  ORDER BY count DESC
++  LIMIT p_limit;
++$$;
++
++-- 2. Analytics por marca (Admin — catálogo)
++CREATE OR REPLACE FUNCTION public.get_analytics_by_brand(
++  p_event_type text DEFAULT 'click',
++  p_since timestamptz DEFAULT NULL,
++  p_limit int DEFAULT 10
++)
++RETURNS TABLE (brand text, count bigint)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT COALESCE(p.brand, 'Sem marca') AS brand, count(*) AS count
++  FROM product_analytics a
++  JOIN products p ON p.id = a.product_id
++  WHERE a.event_type = p_event_type
++    AND (p_since IS NULL OR a.created_at >= p_since)
++  GROUP BY p.brand
++  ORDER BY count DESC
++  LIMIT p_limit;
++$$;
++
++-- 3. Analytics por mundo (Admin — catálogo)
++CREATE OR REPLACE FUNCTION public.get_analytics_by_mundo(
++  p_since timestamptz DEFAULT NULL
++)
++RETURNS TABLE (mundo text, clicks bigint, quotes bigint)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT
++    p.mundo,
++    count(*) FILTER (WHERE a.event_type = 'click') AS clicks,
++    count(*) FILTER (WHERE a.event_type = 'quote') AS quotes
++  FROM product_analytics a
++  JOIN products p ON p.id = a.product_id
++  WHERE (p_since IS NULL OR a.created_at >= p_since)
++  GROUP BY p.mundo
++  ORDER BY clicks DESC;
++$$;
++
++-- 4. Produtos sem stock mais clicados (Admin — oportunidade de negócio)
++CREATE OR REPLACE FUNCTION public.get_out_of_stock_clicked(
++  p_since timestamptz DEFAULT NULL,
++  p_limit int DEFAULT 10
++)
++RETURNS TABLE (product_id uuid, name text, category text, brand text, mundo text, count bigint)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT p.id, p.name, p.category, p.brand, p.mundo, count(*) AS count
++  FROM product_analytics a
++  JOIN products p ON p.id = a.product_id
++  WHERE a.event_type = 'click'
++    AND p.stock_status = 'out'
++    AND (p_since IS NULL OR a.created_at >= p_since)
++  GROUP BY p.id, p.name, p.category, p.brand, p.mundo
++  ORDER BY count DESC
++  LIMIT p_limit;
++$$;
++
++-- 5. Produtos top com contexto (nome + categoria + marca + mundo)
++CREATE OR REPLACE FUNCTION public.get_top_products_with_context(
++  p_event_type text DEFAULT 'click',
++  p_since timestamptz DEFAULT NULL,
++  p_limit int DEFAULT 10
++)
++RETURNS TABLE (
++  product_id uuid, name text, category text,
++  brand text, mundo text, image_url text,
++  stock_status text, count bigint
++)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT p.id, p.name, p.category, p.brand, p.mundo, p.image_url, p.stock_status, count(*) AS count
++  FROM product_analytics a
++  JOIN products p ON p.id = a.product_id
++  WHERE a.event_type = p_event_type
++    AND (p_since IS NULL OR a.created_at >= p_since)
++  GROUP BY p.id, p.name, p.category, p.brand, p.mundo, p.image_url, p.stock_status
++  ORDER BY count DESC
++  LIMIT p_limit;
++$$;
++
++-- 6. Evolução temporal por semana (Gestão — orçamentos)
++CREATE OR REPLACE FUNCTION public.get_quotes_over_time(
++  p_weeks int DEFAULT 12
++)
++RETURNS TABLE (week date, total bigint, accepted bigint, pending bigint)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT
++    date_trunc('week', created_at)::date AS week,
++    count(*) AS total,
++    count(*) FILTER (WHERE status = 'accepted') AS accepted,
++    count(*) FILTER (WHERE status = 'pending') AS pending
++  FROM quotes
++  WHERE created_at >= now() - (p_weeks || ' weeks')::interval
++  GROUP BY week
++  ORDER BY week;
++$$;
++
++-- Permissões (admins e gestores)
++GRANT EXECUTE ON FUNCTION public.get_analytics_by_category TO authenticated;
++GRANT EXECUTE ON FUNCTION public.get_analytics_by_brand TO authenticated;
++GRANT EXECUTE ON FUNCTION public.get_analytics_by_mundo TO authenticated;
++GRANT EXECUTE ON FUNCTION public.get_out_of_stock_clicked TO authenticated;
++GRANT EXECUTE ON FUNCTION public.get_top_products_with_context TO authenticated;
++GRANT EXECUTE ON FUNCTION public.get_quotes_over_time TO authenticated;
++
++NOTIFY pgrst, 'reload schema';
+diff -ruN patch-final-base/supabase/migrations/20260616000000_allow_anonymous_quotes.sql patch-final-mod/supabase/migrations/20260616000000_allow_anonymous_quotes.sql
+--- patch-final-base/supabase/migrations/20260616000000_allow_anonymous_quotes.sql	1970-01-01 00:00:00.000000000 +0000
++++ patch-final-mod/supabase/migrations/20260616000000_allow_anonymous_quotes.sql	2026-06-16 13:12:01.853809404 +0000
+@@ -0,0 +1,17 @@
++-- Permite guardar orçamentos de clientes anónimos (não autenticados).
++-- Anteriormente user_id NOT NULL impedia gravar orçamentos sem sessão.
++-- Com esta alteração, todos os orçamentos ficam na BD independentemente
++-- do cliente ter conta ou não.
++
++ALTER TABLE public.quotes
++  ALTER COLUMN user_id DROP NOT NULL;
++
++-- Policy: clientes anónimos (role anon/public) podem criar orçamentos
++-- mas só lêem os seus (por email — sem autenticação não há user_id).
++-- Gestores e admins já têm policies de SELECT/UPDATE para ver tudo.
++CREATE POLICY "Anyone can create quotes"
++  ON public.quotes FOR INSERT
++  TO public
++  WITH CHECK (true);
++
++NOTIFY pgrst, 'reload schema';

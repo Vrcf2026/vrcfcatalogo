@@ -25,7 +25,7 @@ export default function OrcamentoDetalhe() {
     enabled: !!id && !!user,
     queryFn: async () => {
       const [q, items] = await Promise.all([
-        supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
+        supabase.from("quotes").select("*").eq("id", id!).eq("user_id", user!.id).maybeSingle(),
         supabase.from("quote_items").select("*").eq("quote_id", id!),
       ]);
       if (q.error) throw q.error;

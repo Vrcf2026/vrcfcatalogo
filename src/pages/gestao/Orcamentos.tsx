@@ -43,7 +43,7 @@ function OrcamentosList() {
     queryFn: async () => {
       let q = supabase
         .from("quotes")
-        .select("id,quote_number,status,total,created_at,notes,customer_profiles(full_name,company,phone,tax_id)")
+        .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,customer_profiles(full_name,company,phone,tax_id)")
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       const { data, error } = await q;
@@ -59,7 +59,9 @@ function OrcamentosList() {
     return (
       q.quote_number?.toLowerCase().includes(s) ||
       q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
-      q.customer_profiles?.company?.toLowerCase().includes(s)
+      q.customer_profiles?.company?.toLowerCase().includes(s) ||
+      q.customer_name?.toLowerCase().includes(s) ||
+      q.customer_email?.toLowerCase().includes(s)
     );
   });
 
@@ -112,8 +114,8 @@ function OrcamentosList() {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {q.customer_profiles?.company || q.customer_profiles?.full_name || "—"}
-                    {q.customer_profiles?.phone && ` · ${q.customer_profiles.phone}`}
+                    {q.customer_profiles?.company || q.customer_profiles?.full_name || q.customer_name || "—"}
+                    {(q.customer_profiles?.phone || q.customer_phone) && ` · ${q.customer_profiles?.phone || q.customer_phone}`}
                     {" · "}
                     {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
                   </p>
@@ -207,13 +209,18 @@ function OrcamentoDetalhe() {
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Dados do cliente */}
-            {profile && (
+            {(profile || quote.customer_name) && (
               <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
-                <p className="font-medium">{profile.full_name || "—"}</p>
-                {profile.company && <p className="text-muted-foreground">{profile.company}</p>}
-                {profile.tax_id && <p className="text-muted-foreground">NIF: {profile.tax_id}</p>}
-                {profile.phone && <p className="text-muted-foreground">{profile.phone}</p>}
-                {profile.address_line1 && (
+                <p className="font-medium">{profile?.full_name || quote.customer_name || "—"}</p>
+                {profile?.company && <p className="text-muted-foreground">{profile.company}</p>}
+                {profile?.tax_id && <p className="text-muted-foreground">NIF: {profile.tax_id}</p>}
+                {(profile?.phone || quote.customer_phone) && (
+                  <p className="text-muted-foreground">{profile?.phone || quote.customer_phone}</p>
+                )}
+                {(quote.customer_email) && (
+                  <p className="text-muted-foreground">{quote.customer_email}</p>
+                )}
+                {profile?.address_line1 && (
                   <p className="text-muted-foreground">
                     {profile.address_line1}{profile.city ? `, ${profile.city}` : ""}{profile.postal_code ? ` ${profile.postal_code}` : ""}
                   </p>
@@ -293,13 +300,13 @@ function OrcamentoDetalhe() {
           </Card>
 
           {/* Acções rápidas */}
-          {profile?.phone && (
+          {(profile?.phone || quote.customer_phone) && (
             <Card>
               <CardHeader><CardTitle className="text-base">Acções rápidas</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 <Button variant="outline" size="sm" className="w-full justify-start gap-2" asChild>
                   <a
-                    href={`https://wa.me/351${profile.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${profile.full_name ? " " + profile.full_name.split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
+                    href={`https://wa.me/351${(profile?.phone || quote.customer_phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${(profile?.full_name || quote.customer_name) ? " " + (profile?.full_name || quote.customer_name || "").split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
                     target="_blank" rel="noopener noreferrer"
                   >
                     💬 WhatsApp
