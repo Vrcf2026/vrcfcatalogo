@@ -296,6 +296,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const setFamily = (id: string) => {
     setFamilyFilter(id); setTypeFilter("all"); setPage(1);
+    if (id === "all") searchParams.delete("familia"); else searchParams.set("familia", id);
+    searchParams.delete("tipo");
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const setType = (id: string) => {
+    setTypeFilter(id); setPage(1);
+    if (id === "all") searchParams.delete("tipo"); else searchParams.set("tipo", id);
+    setSearchParams(searchParams, { replace: true });
   };
 
   const clearAllFilters = () => {
