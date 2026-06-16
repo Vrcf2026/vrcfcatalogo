@@ -942,6 +942,44 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_alerts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notified_at: string | null
+          product_id: string
+          status: Database["public"]["Enums"]["stock_alert_status"]
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notified_at?: string | null
+          product_id: string
+          status?: Database["public"]["Enums"]["stock_alert_status"]
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notified_at?: string | null
+          product_id?: string
+          status?: Database["public"]["Enums"]["stock_alert_status"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -1133,6 +1171,7 @@ export type Database = {
         | "shipped_back"
         | "completed"
         | "cancelled"
+      stock_alert_status: "pending" | "notified" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1280,6 +1319,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      stock_alert_status: ["pending", "notified", "cancelled"],
     },
   },
 } as const

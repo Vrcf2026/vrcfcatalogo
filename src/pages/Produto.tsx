@@ -15,6 +15,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { UserMenuButton } from "@/components/UserMenuButton";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
+import { StockAlertButton } from "@/components/StockAlertButton";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
@@ -312,7 +313,11 @@ const Produto = () => {
                 <Truck className="h-3.5 w-3.5" /> Envio especial
               </div>
             )}
+            {product.stock_status === "out" && (
+              <StockAlertButton productId={product.id} productName={product.name} />
+            )}
           </div>
+
 
           {/* Entrega */}
           <div className={`rounded-xl border p-3 space-y-1.5 ${envio_especial ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-muted/30"}`}>

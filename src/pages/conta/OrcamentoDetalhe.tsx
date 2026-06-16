@@ -1,24 +1,29 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/contexts/CartContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Repeat2, Loader2 } from "lucide-react";
+import { ArrowLeft, Repeat2, Loader2, Download, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { generateQuotePdf } from "@/lib/quotePdf";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", sent: "Enviado", in_review: "Em análise",
   accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
 };
 
+
 export default function OrcamentoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const { addItem, clearCart, setIsOpen } = useCart();
   const navigate = useNavigate();
+  const [resending, setResending] = useState(false);
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["quote-detail", id, user?.id],
@@ -79,10 +84,53 @@ export default function OrcamentoDetalhe() {
           </div>
           <div className="flex flex-col items-end gap-2">
             <Badge>{STATUS_LABEL[quote.status] ?? quote.status}</Badge>
-            <Button size="sm" onClick={handleRepeat} className="gap-1">
-              <Repeat2 className="h-4 w-4" />Repetir orçamento
-            </Button>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <Button size="sm" variant="outline" onClick={() => generateQuotePdf(quote, items)} className="gap-1">
+                <Download className="h-4 w-4" />PDF
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={resending}
+                onClick={async () => {
+                  setResending(true);
+                  const { error } = await supabase.functions.invoke("send-quote-request", {
+                    body: {
+                      resend: true,
+                      quoteId: quote.id,
+                      customer: {
+                        name: quote.customer_name,
+                        email: quote.customer_email,
+                        phone: quote.customer_phone,
+                      },
+                      items: items.map((it: any) => ({
+                        name: it.product_name_snapshot,
+                        quantity: it.quantity,
+                        unit_price: it.unit_price,
+                        line_total: it.line_total,
+                      })),
+                      notes: quote.notes,
+                      quoteNumber: quote.quote_number,
+                    },
+                  });
+                  setResending(false);
+                  if (error) {
+                    toast.error("Não foi possível reenviar. Tenta novamente.");
+                    return;
+                  }
+                  toast.success("Orçamento reenviado por email.");
+                }}
+                className="gap-1"
+              >
+                {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Reenviar
+              </Button>
+              <Button size="sm" onClick={handleRepeat} className="gap-1">
+                <Repeat2 className="h-4 w-4" />Repetir
+              </Button>
+            </div>
           </div>
+
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">

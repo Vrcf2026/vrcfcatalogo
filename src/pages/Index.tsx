@@ -192,11 +192,12 @@ const Index = () => {
           {banners.data.map((b: any, i: number) => (
             <div key={b.id} className={`transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0 absolute inset-0"}`}>
               {b.link
-                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} /></Link>
-                : <img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} />
+                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : "auto"} decoding="async" className="w-full object-cover" style={{ maxHeight: 240 }} /></Link>
+                : <img src={b.image_url} alt={b.titulo || ""} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : "auto"} decoding="async" className="w-full object-cover" style={{ maxHeight: 240 }} />
               }
             </div>
           ))}
+
           {banners.data.length > 1 && (
             <>
               <button onClick={() => setBannerIdx(i => (i - 1 + banners.data!.length) % banners.data!.length)}
