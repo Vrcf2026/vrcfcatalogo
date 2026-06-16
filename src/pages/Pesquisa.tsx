@@ -98,6 +98,7 @@ const Pesquisa = () => {
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
+            <UserMenuButton />
             <Button variant="outline" size="sm" className="relative gap-1.5 h-9" onClick={() => setIsOpen(true)}>
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline">Orçamento</span>
