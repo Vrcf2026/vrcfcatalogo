@@ -23,12 +23,14 @@ export function SiteFooter() {
               <img src={vrcfShield} alt="VRCF" className="h-9 w-auto" />
               <div>
                 <p className="font-bold text-sm">VRCF — Informática & Segurança</p>
-                <p className="text-xs text-muted-foreground">NIF 515237205 · Montijo</p>
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  NIF 515237205 · Montijo
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                    Desde 2019
+                  </span>
+                </p>
               </div>
             </div>
-            <p className="flex-1 text-xs text-foreground font-medium text-center max-w-md mx-auto">
-              Empresa do Montijo com mais de 10 anos de experiência. Atendimento personalizado, instalação disponível e suporte contínuo.
-            </p>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-sm">
               <a href="tel:+351911564243" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
                 <Phone className="h-3.5 w-3.5" /> +351 911 564 243
