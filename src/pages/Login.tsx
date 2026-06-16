@@ -16,7 +16,7 @@ const Login = () => {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
-  const { signIn, resetPassword, user, isAdmin, loading: authLoading } = useAuth();
+  const { signIn, resetPassword, user, isAdmin, isGestor, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const redirect = params.get("redirect");
@@ -25,9 +25,10 @@ const Login = () => {
     if (!authLoading && user) {
       if (redirect) navigate(redirect, { replace: true });
       else if (isAdmin) navigate("/admin", { replace: true });
+      else if (isGestor) navigate("/gestao", { replace: true });
       else navigate("/conta", { replace: true });
     }
-  }, [authLoading, user, isAdmin, navigate, redirect]);
+  }, [authLoading, user, isAdmin, isGestor, navigate, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

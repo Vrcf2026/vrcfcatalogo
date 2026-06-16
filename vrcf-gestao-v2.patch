@@ -1,0 +1,1233 @@
+diff -ruN patch2-base/src/App.tsx patch2-mod/src/App.tsx
+--- patch2-base/src/App.tsx	2026-06-16 11:42:00.860965705 +0000
++++ patch2-mod/src/App.tsx	2026-06-16 11:42:07.660089579 +0000
+@@ -27,6 +27,11 @@
+ import ContaDados from "./pages/conta/Dados.tsx";
+ import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
+ import { Loader2 } from "lucide-react";
++import Gestao from "./pages/Gestao.tsx";
++import GestaoDashboard from "./pages/gestao/Dashboard.tsx";
++import GestaoOrcamentos from "./pages/gestao/Orcamentos.tsx";
++import GestaoRMA from "./pages/gestao/RMA.tsx";
++import GestaoClientes from "./pages/gestao/Clientes.tsx";
+ 
+ const queryClient = new QueryClient({
+   defaultOptions: {
+@@ -72,6 +77,12 @@
+                 <Route path="rma" element={<ContaRMA />} />
+                 <Route path="dados" element={<ContaDados />} />
+               </Route>
++              <Route path="/gestao" element={<Gestao />}>
++                <Route index element={<GestaoDashboard />} />
++                <Route path="orcamentos/*" element={<GestaoOrcamentos />} />
++                <Route path="rma" element={<GestaoRMA />} />
++                <Route path="clientes" element={<GestaoClientes />} />
++              </Route>
+               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+               <Route path="*" element={<NotFound />} />
+             </Routes>
+diff -ruN patch2-base/src/components/UserMenuButton.tsx patch2-mod/src/components/UserMenuButton.tsx
+--- patch2-base/src/components/UserMenuButton.tsx	2026-06-16 11:42:00.869601510 +0000
++++ patch2-mod/src/components/UserMenuButton.tsx	2026-06-16 11:42:18.908087420 +0000
+@@ -1,5 +1,5 @@
+ import { Link } from "react-router-dom";
+-import { LogIn, User, LogOut, LayoutDashboard } from "lucide-react";
++import { LogIn, User, LogOut, LayoutDashboard, Briefcase } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import {
+   DropdownMenu,
+@@ -11,7 +11,7 @@
+ import { useAuth } from "@/hooks/useAuth";
+ 
+ export function UserMenuButton() {
+-  const { user, isAdmin, signOut } = useAuth();
++  const { user, isAdmin, isGestor, signOut } = useAuth();
+ 
+   if (!user) {
+     return (
+@@ -46,14 +46,30 @@
+             A Minha Conta
+           </Link>
+         </DropdownMenuItem>
+-        {isAdmin && (
++        {isGestor && !isAdmin && (
+           <DropdownMenuItem asChild>
+-            <Link to="/admin" className="cursor-pointer">
+-              <LayoutDashboard className="mr-2 h-4 w-4" />
+-              Admin
++            <Link to="/gestao" className="cursor-pointer">
++              <Briefcase className="mr-2 h-4 w-4" />
++              Gestão Comercial
+             </Link>
+           </DropdownMenuItem>
+         )}
++        {isAdmin && (
++          <>
++            <DropdownMenuItem asChild>
++              <Link to="/gestao" className="cursor-pointer">
++                <Briefcase className="mr-2 h-4 w-4" />
++                Gestão Comercial
++              </Link>
++            </DropdownMenuItem>
++            <DropdownMenuItem asChild>
++              <Link to="/admin" className="cursor-pointer">
++                <LayoutDashboard className="mr-2 h-4 w-4" />
++                Admin
++              </Link>
++            </DropdownMenuItem>
++          </>
++        )}
+         <DropdownMenuSeparator />
+         <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer text-destructive focus:text-destructive">
+           <LogOut className="mr-2 h-4 w-4" />
+diff -ruN patch2-base/src/hooks/useAuth.tsx patch2-mod/src/hooks/useAuth.tsx
+--- patch2-base/src/hooks/useAuth.tsx	2026-06-16 11:42:00.871836965 +0000
++++ patch2-mod/src/hooks/useAuth.tsx	2026-06-16 11:42:07.652459688 +0000
+@@ -6,6 +6,7 @@
+   user: User | null;
+   session: Session | null;
+   isAdmin: boolean;
++  isGestor: boolean; // acesso à área de gestão comercial (/gestao)
+   loading: boolean;
+   signIn: (email: string, password: string) => Promise<{ error: string | null; isAdmin: boolean }>;
+   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>;
+@@ -19,14 +20,19 @@
+   const [user, setUser] = useState<User | null>(null);
+   const [session, setSession] = useState<Session | null>(null);
+   const [isAdmin, setIsAdmin] = useState(false);
++  const [isGestor, setIsGestor] = useState(false);
+   const [loading, setLoading] = useState(true);
+ 
+-  const checkAdmin = async (userId: string) => {
++  const checkRoles = async (userId: string) => {
+     const { data } = await supabase
+       .from("user_roles")
+       .select("role")
+       .eq("user_id", userId);
+-    return data?.some((r) => r.role === "super_admin" || r.role === "admin") ?? false;
++    const roles = data?.map((r) => r.role) ?? [];
++    return {
++      admin: roles.some((r) => r === "super_admin" || r === "admin"),
++      gestor: roles.some((r) => r === "gestor" || r === "admin" || r === "super_admin"),
++    };
+   };
+ 
+   useEffect(() => {
+@@ -36,12 +42,14 @@
+ 
+       if (!nextSession?.user) {
+         setIsAdmin(false);
++        setIsGestor(false);
+         setLoading(false);
+         return;
+       }
+ 
+-      const admin = await checkAdmin(nextSession.user.id);
+-      setIsAdmin(admin);
++      const roles = await checkRoles(nextSession.user.id);
++      setIsAdmin(roles.admin);
++      setIsGestor(roles.gestor);
+       setLoading(false);
+     };
+ 
+@@ -69,11 +77,12 @@
+     setUser(data.user);
+     setSession(data.session);
+ 
+-    const admin = await checkAdmin(data.user.id);
+-    setIsAdmin(admin);
++    const roles = await checkRoles(data.user.id);
++    setIsAdmin(roles.admin);
++    setIsGestor(roles.gestor);
+     setLoading(false);
+ 
+-    return { error: null, isAdmin: admin };
++    return { error: null, isAdmin: roles.admin };
+   };
+ 
+   const signUp = async (email: string, password: string, fullName?: string) => {
+@@ -99,10 +108,11 @@
+   const signOut = async () => {
+     await supabase.auth.signOut();
+     setIsAdmin(false);
++    setIsGestor(false);
+   };
+ 
+   return (
+-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signUp, resetPassword, signOut }}>
++    <AuthContext.Provider value={{ user, session, isAdmin, isGestor, loading, signIn, signUp, resetPassword, signOut }}>
+       {children}
+     </AuthContext.Provider>
+   );
+diff -ruN patch2-base/src/pages/Gestao.tsx patch2-mod/src/pages/Gestao.tsx
+--- patch2-base/src/pages/Gestao.tsx	1970-01-01 00:00:00.000000000 +0000
++++ patch2-mod/src/pages/Gestao.tsx	2026-06-16 11:42:07.664116819 +0000
+@@ -0,0 +1,93 @@
++import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
++import { Helmet } from "react-helmet-async";
++import { useAuth } from "@/hooks/useAuth";
++import { Button } from "@/components/ui/button";
++import { Loader2, FileText, Wrench, Users, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react";
++import { SiteFooter } from "@/components/SiteFooter";
++import vrcfLogo from "@/assets/vrcf-logo.png";
++import { cn } from "@/lib/utils";
++
++const tabs = [
++  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",      end: true },
++  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"              },
++  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                    },
++  { to: "/gestao/clientes",   icon: Users,            label: "Clientes"                },
++];
++
++export default function Gestao() {
++  const { user, loading, isGestor, signOut } = useAuth();
++  const location = useLocation();
++
++  if (loading) {
++    return (
++      <div className="min-h-screen flex items-center justify-center">
++        <Loader2 className="h-8 w-8 animate-spin text-primary" />
++      </div>
++    );
++  }
++
++  if (!user || !isGestor) {
++    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
++  }
++
++  return (
++    <>
++      <Helmet>
++        <title>Gestão Comercial · VRCF</title>
++        <meta name="robots" content="noindex,nofollow" />
++      </Helmet>
++
++      <div className="min-h-screen bg-background flex flex-col">
++        <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-30">
++          <div className="max-w-screen-xl mx-auto px-4 h-16 flex items-center justify-between">
++            <Link to="/" className="flex items-center gap-2">
++              <img src={vrcfLogo} alt="VRCF" className="h-8 w-auto" />
++              <span className="font-heading font-bold hidden sm:inline text-sm text-muted-foreground">
++                Gestão Comercial
++              </span>
++            </Link>
++            <div className="flex items-center gap-2">
++              <Button variant="ghost" size="sm" asChild>
++                <Link to="/"><ArrowLeft className="h-4 w-4 mr-1" />Catálogo</Link>
++              </Button>
++              <Button variant="ghost" size="sm" onClick={() => signOut()}>
++                <LogOut className="h-4 w-4 mr-1" /> Sair
++              </Button>
++            </div>
++          </div>
++        </header>
++
++        <div className="flex-1 max-w-screen-xl w-full mx-auto px-4 py-6 grid md:grid-cols-[220px_1fr] gap-6">
++          <aside>
++            <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
++              {tabs.map((t) => (
++                <NavLink
++                  key={t.to}
++                  to={t.to}
++                  end={t.end}
++                  className={({ isActive }) =>
++                    cn(
++                      "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap transition-colors",
++                      isActive
++                        ? "bg-primary text-primary-foreground"
++                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
++                    )
++                  }
++                >
++                  <t.icon className="h-4 w-4" />
++                  {t.label}
++                </NavLink>
++              ))}
++            </nav>
++          </aside>
++
++          <main className="min-w-0">
++            <Outlet />
++          </main>
++        </div>
++
++        <SiteFooter />
++      </div>
++    </>
++  );
++}
+diff -ruN patch2-base/src/pages/Login.tsx patch2-mod/src/pages/Login.tsx
+--- patch2-base/src/pages/Login.tsx	2026-06-16 11:42:00.873056008 +0000
++++ patch2-mod/src/pages/Login.tsx	2026-06-16 11:42:07.656238974 +0000
+@@ -16,7 +16,7 @@
+   const [forgotOpen, setForgotOpen] = useState(false);
+   const [forgotEmail, setForgotEmail] = useState("");
+   const [forgotLoading, setForgotLoading] = useState(false);
+-  const { signIn, resetPassword, user, isAdmin, loading: authLoading } = useAuth();
++  const { signIn, resetPassword, user, isAdmin, isGestor, loading: authLoading } = useAuth();
+   const navigate = useNavigate();
+   const [params] = useSearchParams();
+   const redirect = params.get("redirect");
+@@ -25,9 +25,10 @@
+     if (!authLoading && user) {
+       if (redirect) navigate(redirect, { replace: true });
+       else if (isAdmin) navigate("/admin", { replace: true });
++      else if (isGestor) navigate("/gestao", { replace: true });
+       else navigate("/conta", { replace: true });
+     }
+-  }, [authLoading, user, isAdmin, navigate, redirect]);
++  }, [authLoading, user, isAdmin, isGestor, navigate, redirect]);
+ 
+   const handleSubmit = async (e: React.FormEvent) => {
+     e.preventDefault();
+diff -ruN patch2-base/src/pages/gestao/Clientes.tsx patch2-mod/src/pages/gestao/Clientes.tsx
+--- patch2-base/src/pages/gestao/Clientes.tsx	1970-01-01 00:00:00.000000000 +0000
++++ patch2-mod/src/pages/gestao/Clientes.tsx	2026-06-16 11:42:07.676023274 +0000
+@@ -0,0 +1,218 @@
++import { useState } from "react";
++import { useQuery } from "@tanstack/react-query";
++import { supabase } from "@/integrations/supabase/client";
++import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
++import { Button } from "@/components/ui/button";
++import { Input } from "@/components/ui/input";
++import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
++import { Loader2, Users, Search, FileText, Wrench, Mail, Phone } from "lucide-react";
++
++export default function GestaoClientes() {
++  const [search, setSearch] = useState("");
++  const [selected, setSelected] = useState<any | null>(null);
++
++  const { data, isLoading } = useQuery({
++    queryKey: ["gestao-clientes"],
++    queryFn: async () => {
++      const { data, error } = await supabase
++        .from("customer_profiles")
++        .select("*")
++        .order("full_name");
++      if (error) throw error;
++      return data ?? [];
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // Orçamentos + RMAs do cliente seleccionado
++  const { data: clientActivity } = useQuery({
++    queryKey: ["gestao-client-activity", selected?.user_id],
++    enabled: !!selected?.user_id,
++    queryFn: async () => {
++      const [quotes, rmas] = await Promise.all([
++        supabase.from("quotes")
++          .select("id,quote_number,status,total,created_at")
++          .eq("user_id", selected.user_id)
++          .order("created_at", { ascending: false })
++          .limit(10),
++        supabase.from("rma_requests")
++          .select("id,rma_number,status,product_name,created_at")
++          .eq("user_id", selected.user_id)
++          .order("created_at", { ascending: false })
++          .limit(10),
++      ]);
++      return { quotes: quotes.data ?? [], rmas: rmas.data ?? [] };
++    },
++  });
++
++  const filtered = (data ?? []).filter((c: any) => {
++    if (!search.trim()) return true;
++    const s = search.toLowerCase();
++    return (
++      c.full_name?.toLowerCase().includes(s) ||
++      c.company?.toLowerCase().includes(s) ||
++      c.email?.toLowerCase().includes(s) ||
++      c.tax_id?.includes(s) ||
++      c.phone?.includes(s)
++    );
++  });
++
++  const STATUS_LABEL: Record<string, string> = {
++    pending: "Pendente", sent: "Enviado", in_review: "Em análise",
++    accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
++    submitted: "Submetido", approved: "Aprovado", in_repair: "Em reparação",
++    shipped_back: "Devolvido",
++  };
++
++  return (
++    <div className="space-y-4">
++      <h1 className="font-heading text-2xl font-bold">Clientes</h1>
++
++      <div className="relative">
++        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
++        <Input
++          placeholder="Pesquisar por nome, empresa, NIF, email, telefone..."
++          className="pl-9 h-9"
++          value={search}
++          onChange={(e) => setSearch(e.target.value)}
++        />
++      </div>
++
++      {isLoading ? (
++        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
++      ) : filtered.length === 0 ? (
++        <Card>
++          <CardContent className="py-12 text-center text-muted-foreground">
++            <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
++            <p>{search ? "Nenhum cliente encontrado." : "Ainda não há clientes registados."}</p>
++          </CardContent>
++        </Card>
++      ) : (
++        <div className="space-y-2">
++          {filtered.map((c: any) => (
++            <Card key={c.id} className="hover:bg-secondary/20 transition-colors cursor-pointer" onClick={() => setSelected(c)}>
++              <CardContent className="py-3 flex items-center justify-between gap-3">
++                <div className="min-w-0">
++                  <div className="flex items-center gap-2">
++                    <span className="font-medium text-sm">{c.full_name || "—"}</span>
++                    {c.company && <span className="text-xs text-muted-foreground">· {c.company}</span>}
++                  </div>
++                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
++                    {c.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</span>}
++                    {c.tax_id && <span>NIF: {c.tax_id}</span>}
++                    {c.city && <span>{c.city}</span>}
++                  </div>
++                </div>
++                <Button variant="ghost" size="sm">Ver</Button>
++              </CardContent>
++            </Card>
++          ))}
++        </div>
++      )}
++
++      {/* Detalhe do cliente */}
++      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
++        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
++          <DialogHeader>
++            <DialogTitle>{selected?.full_name || "Cliente"}</DialogTitle>
++          </DialogHeader>
++
++          {selected && (
++            <div className="space-y-4">
++              {/* Contacto */}
++              <Card>
++                <CardHeader className="pb-2"><CardTitle className="text-sm">Dados de contacto</CardTitle></CardHeader>
++                <CardContent className="text-sm space-y-1">
++                  {selected.company && <p><span className="text-muted-foreground">Empresa:</span> {selected.company}</p>}
++                  {selected.tax_id && <p><span className="text-muted-foreground">NIF:</span> {selected.tax_id}</p>}
++                  {selected.phone && (
++                    <p className="flex items-center gap-2">
++                      <span className="text-muted-foreground">Tel:</span> {selected.phone}
++                      <a
++                        href={`https://wa.me/351${selected.phone.replace(/\D/g, "")}`}
++                        target="_blank" rel="noopener noreferrer"
++                        className="text-xs text-green-600 hover:underline"
++                      >
++                        WhatsApp
++                      </a>
++                    </p>
++                  )}
++                  {selected.address_line1 && (
++                    <p>
++                      <span className="text-muted-foreground">Morada:</span>{" "}
++                      {selected.address_line1}
++                      {selected.city && `, ${selected.city}`}
++                      {selected.postal_code && ` ${selected.postal_code}`}
++                    </p>
++                  )}
++                  {selected.notes && <p><span className="text-muted-foreground">Notas:</span> {selected.notes}</p>}
++                </CardContent>
++              </Card>
++
++              {/* Orçamentos */}
++              <Card>
++                <CardHeader className="pb-2">
++                  <CardTitle className="text-sm flex items-center gap-2">
++                    <FileText className="h-4 w-4" /> Orçamentos
++                  </CardTitle>
++                </CardHeader>
++                <CardContent>
++                  {!clientActivity ? (
++                    <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
++                  ) : clientActivity.quotes.length === 0 ? (
++                    <p className="text-xs text-muted-foreground">Sem orçamentos.</p>
++                  ) : (
++                    <div className="space-y-1">
++                      {clientActivity.quotes.map((q: any) => (
++                        <div key={q.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
++                          <div>
++                            <span className="font-mono font-medium">{q.quote_number}</span>
++                            <span className="text-xs text-muted-foreground ml-2">
++                              {new Date(q.created_at).toLocaleDateString("pt-PT")}
++                            </span>
++                          </div>
++                          <div className="flex items-center gap-2">
++                            {q.total > 0 && <span className="text-xs font-semibold">{Number(q.total).toFixed(2).replace(".", ",")} €</span>}
++                            <span className="text-xs text-muted-foreground">{STATUS_LABEL[q.status] ?? q.status}</span>
++                          </div>
++                        </div>
++                      ))}
++                    </div>
++                  )}
++                </CardContent>
++              </Card>
++
++              {/* RMAs */}
++              <Card>
++                <CardHeader className="pb-2">
++                  <CardTitle className="text-sm flex items-center gap-2">
++                    <Wrench className="h-4 w-4" /> RMAs
++                  </CardTitle>
++                </CardHeader>
++                <CardContent>
++                  {!clientActivity ? (
++                    <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
++                  ) : clientActivity.rmas.length === 0 ? (
++                    <p className="text-xs text-muted-foreground">Sem pedidos de RMA.</p>
++                  ) : (
++                    <div className="space-y-1">
++                      {clientActivity.rmas.map((r: any) => (
++                        <div key={r.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
++                          <div>
++                            <span className="font-mono font-medium">{r.rma_number}</span>
++                            <span className="text-xs text-muted-foreground ml-2 truncate max-w-[180px] inline-block">{r.product_name}</span>
++                          </div>
++                          <span className="text-xs text-muted-foreground">{STATUS_LABEL[r.status] ?? r.status}</span>
++                        </div>
++                      ))}
++                    </div>
++                  )}
++                </CardContent>
++              </Card>
++            </div>
++          )}
++        </DialogContent>
++      </Dialog>
++    </div>
++  );
++}
+diff -ruN patch2-base/src/pages/gestao/Dashboard.tsx patch2-mod/src/pages/gestao/Dashboard.tsx
+--- patch2-base/src/pages/gestao/Dashboard.tsx	1970-01-01 00:00:00.000000000 +0000
++++ patch2-mod/src/pages/gestao/Dashboard.tsx	2026-06-16 11:42:07.672445489 +0000
+@@ -0,0 +1,161 @@
++import { Link } from "react-router-dom";
++import { useQuery } from "@tanstack/react-query";
++import { supabase } from "@/integrations/supabase/client";
++import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
++import { Button } from "@/components/ui/button";
++import { Badge } from "@/components/ui/badge";
++import { FileText, Wrench, Users, ArrowRight, Clock } from "lucide-react";
++
++export default function GestaoDashboard() {
++  const { data: stats } = useQuery({
++    queryKey: ["gestao-stats"],
++    queryFn: async () => {
++      const [quotes, rmas, clients, pendingQuotes, pendingRmas] = await Promise.all([
++        supabase.from("quotes").select("id", { count: "exact", head: true }),
++        supabase.from("rma_requests").select("id", { count: "exact", head: true }),
++        supabase.from("customer_profiles").select("id", { count: "exact", head: true }),
++        supabase.from("quotes").select("id", { count: "exact", head: true }).eq("status", "pending"),
++        supabase.from("rma_requests").select("id", { count: "exact", head: true }).eq("status", "submitted"),
++      ]);
++      return {
++        quotes: quotes.count ?? 0,
++        rmas: rmas.count ?? 0,
++        clients: clients.count ?? 0,
++        pendingQuotes: pendingQuotes.count ?? 0,
++        pendingRmas: pendingRmas.count ?? 0,
++      };
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // Orçamentos recentes (últimos 5)
++  const { data: recentQuotes } = useQuery({
++    queryKey: ["gestao-recent-quotes"],
++    queryFn: async () => {
++      const { data, error } = await supabase
++        .from("quotes")
++        .select("id,quote_number,status,total,created_at,customer_profiles(full_name,company)")
++        .order("created_at", { ascending: false })
++        .limit(5);
++      if (error) throw error;
++      return data ?? [];
++    },
++    staleTime: 60 * 1000,
++  });
++
++  const STATUS_LABEL: Record<string, string> = {
++    pending: "Pendente", sent: "Enviado", in_review: "Em análise",
++    accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
++  };
++  const STATUS_COLOR: Record<string, string> = {
++    pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
++    sent: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
++    in_review: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
++    accepted: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
++    rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
++    cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
++    completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
++  };
++
++  return (
++    <div className="space-y-6">
++      <div>
++        <h1 className="font-heading text-2xl font-bold">Resumo</h1>
++        <p className="text-muted-foreground text-sm">Visão geral da actividade comercial</p>
++      </div>
++
++      {/* Stats */}
++      <div className="grid sm:grid-cols-3 gap-4">
++        <Card>
++          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
++            <CardTitle className="text-sm font-medium">Orçamentos</CardTitle>
++            <FileText className="h-4 w-4 text-primary" />
++          </CardHeader>
++          <CardContent>
++            <div className="text-2xl font-bold">{stats?.quotes ?? "—"}</div>
++            {(stats?.pendingQuotes ?? 0) > 0 && (
++              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
++                <Clock className="h-3 w-3" /> {stats?.pendingQuotes} pendente{stats?.pendingQuotes !== 1 ? "s" : ""}
++              </p>
++            )}
++            <Button variant="link" size="sm" asChild className="px-0 h-auto mt-1">
++              <Link to="/gestao/orcamentos">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
++            </Button>
++          </CardContent>
++        </Card>
++
++        <Card>
++          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
++            <CardTitle className="text-sm font-medium">RMAs</CardTitle>
++            <Wrench className="h-4 w-4 text-primary" />
++          </CardHeader>
++          <CardContent>
++            <div className="text-2xl font-bold">{stats?.rmas ?? "—"}</div>
++            {(stats?.pendingRmas ?? 0) > 0 && (
++              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
++                <Clock className="h-3 w-3" /> {stats?.pendingRmas} por analisar
++              </p>
++            )}
++            <Button variant="link" size="sm" asChild className="px-0 h-auto mt-1">
++              <Link to="/gestao/rma">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
++            </Button>
++          </CardContent>
++        </Card>
++
++        <Card>
++          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
++            <CardTitle className="text-sm font-medium">Clientes</CardTitle>
++            <Users className="h-4 w-4 text-primary" />
++          </CardHeader>
++          <CardContent>
++            <div className="text-2xl font-bold">{stats?.clients ?? "—"}</div>
++            <Button variant="link" size="sm" asChild className="px-0 h-auto mt-1">
++              <Link to="/gestao/clientes">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
++            </Button>
++          </CardContent>
++        </Card>
++      </div>
++
++      {/* Orçamentos recentes */}
++      {recentQuotes && recentQuotes.length > 0 && (
++        <Card>
++          <CardHeader className="flex flex-row items-center justify-between">
++            <CardTitle className="text-base">Orçamentos Recentes</CardTitle>
++            <Button variant="ghost" size="sm" asChild>
++              <Link to="/gestao/orcamentos">Ver todos</Link>
++            </Button>
++          </CardHeader>
++          <CardContent className="p-0">
++            <div className="divide-y divide-border">
++              {recentQuotes.map((q: any) => (
++                <div key={q.id} className="flex items-center justify-between px-6 py-3 hover:bg-secondary/30 transition-colors">
++                  <div>
++                    <span className="font-mono text-sm font-semibold">{q.quote_number}</span>
++                    <p className="text-xs text-muted-foreground">
++                      {q.customer_profiles?.company || q.customer_profiles?.full_name || "Cliente"}
++                      {" · "}
++                      {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
++                    </p>
++                  </div>
++                  <div className="flex items-center gap-3">
++                    {q.total > 0 && (
++                      <span className="text-sm font-semibold">
++                        {Number(q.total).toFixed(2).replace(".", ",")} €
++                      </span>
++                    )}
++                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status] ?? ""}`}>
++                      {STATUS_LABEL[q.status] ?? q.status}
++                    </span>
++                    <Button variant="ghost" size="sm" asChild>
++                      <Link to={`/gestao/orcamentos/${q.id}`}>Ver</Link>
++                    </Button>
++                  </div>
++                </div>
++              ))}
++            </div>
++          </CardContent>
++        </Card>
++      )}
++    </div>
++  );
++}
+diff -ruN patch2-base/src/pages/gestao/Orcamentos.tsx patch2-mod/src/pages/gestao/Orcamentos.tsx
+--- patch2-base/src/pages/gestao/Orcamentos.tsx	1970-01-01 00:00:00.000000000 +0000
++++ patch2-mod/src/pages/gestao/Orcamentos.tsx	2026-06-16 11:42:07.673633549 +0000
+@@ -0,0 +1,326 @@
++import { useState } from "react";
++import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
++import { useQuery, useQueryClient } from "@tanstack/react-query";
++import { supabase } from "@/integrations/supabase/client";
++import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
++import { Button } from "@/components/ui/button";
++import { Badge } from "@/components/ui/badge";
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
++import { Textarea } from "@/components/ui/textarea";
++import { Label } from "@/components/ui/label";
++import { Input } from "@/components/ui/input";
++import { ArrowLeft, Loader2, FileText, Eye, Search } from "lucide-react";
++import { toast } from "sonner";
++
++const STATUS_OPTIONS = [
++  { value: "pending",   label: "Pendente" },
++  { value: "sent",      label: "Enviado" },
++  { value: "in_review", label: "Em análise" },
++  { value: "accepted",  label: "Aceite" },
++  { value: "rejected",  label: "Rejeitado" },
++  { value: "cancelled", label: "Cancelado" },
++  { value: "completed", label: "Concluído" },
++];
++
++const STATUS_COLOR: Record<string, string> = {
++  pending:   "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
++  sent:      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
++  in_review: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
++  accepted:  "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
++  rejected:  "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
++  cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
++  completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
++};
++
++// ─── Lista de orçamentos ───────────────────────────────────────────────────
++
++function OrcamentosList() {
++  const [statusFilter, setStatusFilter] = useState("all");
++  const [search, setSearch] = useState("");
++
++  const { data, isLoading } = useQuery({
++    queryKey: ["gestao-quotes", statusFilter],
++    queryFn: async () => {
++      let q = supabase
++        .from("quotes")
++        .select("id,quote_number,status,total,created_at,notes,customer_profiles(full_name,company,phone,tax_id)")
++        .order("created_at", { ascending: false });
++      if (statusFilter !== "all") q = q.eq("status", statusFilter);
++      const { data, error } = await q;
++      if (error) throw error;
++      return data ?? [];
++    },
++    staleTime: 30 * 1000,
++  });
++
++  const filtered = (data ?? []).filter((q: any) => {
++    if (!search.trim()) return true;
++    const s = search.toLowerCase();
++    return (
++      q.quote_number?.toLowerCase().includes(s) ||
++      q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
++      q.customer_profiles?.company?.toLowerCase().includes(s)
++    );
++  });
++
++  return (
++    <div className="space-y-4">
++      <h1 className="font-heading text-2xl font-bold">Orçamentos</h1>
++
++      <div className="flex flex-wrap gap-3">
++        <div className="relative flex-1 min-w-[200px]">
++          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
++          <Input
++            placeholder="Pesquisar por nº, cliente, empresa..."
++            className="pl-9 h-9"
++            value={search}
++            onChange={(e) => setSearch(e.target.value)}
++          />
++        </div>
++        <Select value={statusFilter} onValueChange={setStatusFilter}>
++          <SelectTrigger className="w-40 h-9">
++            <SelectValue placeholder="Estado" />
++          </SelectTrigger>
++          <SelectContent>
++            <SelectItem value="all">Todos</SelectItem>
++            {STATUS_OPTIONS.map((s) => (
++              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
++            ))}
++          </SelectContent>
++        </Select>
++      </div>
++
++      {isLoading ? (
++        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
++      ) : filtered.length === 0 ? (
++        <Card>
++          <CardContent className="py-12 text-center text-muted-foreground">
++            <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
++            <p>Nenhum orçamento encontrado.</p>
++          </CardContent>
++        </Card>
++      ) : (
++        <div className="space-y-2">
++          {filtered.map((q: any) => (
++            <Card key={q.id} className="hover:bg-secondary/20 transition-colors">
++              <CardContent className="py-3 flex flex-wrap items-center gap-3 justify-between">
++                <div className="min-w-0">
++                  <div className="flex items-center gap-2 flex-wrap">
++                    <span className="font-mono text-sm font-semibold">{q.quote_number}</span>
++                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status] ?? ""}`}>
++                      {STATUS_OPTIONS.find((s) => s.value === q.status)?.label ?? q.status}
++                    </span>
++                  </div>
++                  <p className="text-xs text-muted-foreground mt-0.5">
++                    {q.customer_profiles?.company || q.customer_profiles?.full_name || "—"}
++                    {q.customer_profiles?.phone && ` · ${q.customer_profiles.phone}`}
++                    {" · "}
++                    {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
++                  </p>
++                </div>
++                <div className="flex items-center gap-3">
++                  {Number(q.total) > 0 && (
++                    <span className="text-sm font-semibold">
++                      {Number(q.total).toFixed(2).replace(".", ",")} €
++                    </span>
++                  )}
++                  <Button variant="outline" size="sm" asChild>
++                    <Link to={`/gestao/orcamentos/${q.id}`}>
++                      <Eye className="h-4 w-4 mr-1" /> Ver
++                    </Link>
++                  </Button>
++                </div>
++              </CardContent>
++            </Card>
++          ))}
++        </div>
++      )}
++    </div>
++  );
++}
++
++// ─── Detalhe / edição de orçamento ────────────────────────────────────────
++
++function OrcamentoDetalhe() {
++  const { id } = useParams<{ id: string }>();
++  const qc = useQueryClient();
++  const navigate = useNavigate();
++  const [saving, setSaving] = useState(false);
++  const [status, setStatus] = useState("");
++  const [notes, setNotes] = useState("");
++  const [total, setTotal] = useState("");
++
++  const { data, isLoading } = useQuery({
++    queryKey: ["gestao-quote", id],
++    queryFn: async () => {
++      const [q, items] = await Promise.all([
++        supabase.from("quotes").select("*,customer_profiles(*)").eq("id", id!).maybeSingle(),
++        supabase.from("quote_items").select("*").eq("quote_id", id!),
++      ]);
++      if (q.error) throw q.error;
++      if (q.data) {
++        setStatus(q.data.status);
++        setNotes(q.data.notes ?? "");
++        setTotal(q.data.total != null ? String(q.data.total) : "");
++      }
++      return { quote: q.data, items: items.data ?? [] };
++    },
++    enabled: !!id,
++  });
++
++  const handleSave = async () => {
++    if (!id) return;
++    setSaving(true);
++    const { error } = await supabase.from("quotes").update({
++      status,
++      notes: notes.trim() || null,
++      total: total ? parseFloat(total.replace(",", ".")) : null,
++    }).eq("id", id);
++    setSaving(false);
++    if (error) { toast.error(error.message); return; }
++    toast.success("Orçamento atualizado.");
++    qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
++    qc.invalidateQueries({ queryKey: ["gestao-stats"] });
++    qc.invalidateQueries({ queryKey: ["gestao-recent-quotes"] });
++  };
++
++  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
++  if (!data?.quote) return <Card><CardContent className="py-12 text-center text-muted-foreground">Orçamento não encontrado.</CardContent></Card>;
++
++  const { quote, items } = data;
++  const profile = (quote as any).customer_profiles;
++
++  return (
++    <div className="space-y-4">
++      <Button variant="ghost" size="sm" onClick={() => navigate("/gestao/orcamentos")}>
++        <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
++      </Button>
++
++      <div className="grid md:grid-cols-[1fr_320px] gap-4">
++        {/* Itens do orçamento */}
++        <Card>
++          <CardHeader>
++            <CardTitle className="font-mono">{quote.quote_number}</CardTitle>
++            <p className="text-xs text-muted-foreground">
++              {new Date(quote.created_at).toLocaleString("pt-PT")}
++            </p>
++          </CardHeader>
++          <CardContent className="space-y-3">
++            {/* Dados do cliente */}
++            {profile && (
++              <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
++                <p className="font-medium">{profile.full_name || "—"}</p>
++                {profile.company && <p className="text-muted-foreground">{profile.company}</p>}
++                {profile.tax_id && <p className="text-muted-foreground">NIF: {profile.tax_id}</p>}
++                {profile.phone && <p className="text-muted-foreground">{profile.phone}</p>}
++                {profile.address_line1 && (
++                  <p className="text-muted-foreground">
++                    {profile.address_line1}{profile.city ? `, ${profile.city}` : ""}{profile.postal_code ? ` ${profile.postal_code}` : ""}
++                  </p>
++                )}
++              </div>
++            )}
++
++            {/* Linhas de produto */}
++            <div className="divide-y divide-border">
++              {items.length === 0 ? (
++                <p className="text-sm text-muted-foreground py-4 text-center">Sem itens registados.</p>
++              ) : items.map((it: any) => (
++                <div key={it.id} className="flex items-center gap-3 py-3">
++                  {it.product_image_snapshot && (
++                    <img src={it.product_image_snapshot} alt="" className="h-12 w-12 object-cover rounded bg-secondary flex-shrink-0" />
++                  )}
++                  <div className="flex-1 min-w-0">
++                    <p className="text-sm font-medium truncate">{it.product_name_snapshot}</p>
++                    <p className="text-xs text-muted-foreground">
++                      Qtd: {it.quantity}
++                      {it.unit_price != null && ` · ${Number(it.unit_price).toFixed(2).replace(".", ",")} €/un`}
++                    </p>
++                  </div>
++                  {it.line_total != null && Number(it.line_total) > 0 && (
++                    <span className="text-sm font-semibold flex-shrink-0">
++                      {Number(it.line_total).toFixed(2).replace(".", ",")} €
++                    </span>
++                  )}
++                </div>
++              ))}
++            </div>
++          </CardContent>
++        </Card>
++
++        {/* Painel de gestão */}
++        <div className="space-y-4">
++          <Card>
++            <CardHeader><CardTitle className="text-base">Gestão</CardTitle></CardHeader>
++            <CardContent className="space-y-3">
++              <div className="space-y-1.5">
++                <Label className="text-xs">Estado</Label>
++                <Select value={status} onValueChange={setStatus}>
++                  <SelectTrigger><SelectValue /></SelectTrigger>
++                  <SelectContent>
++                    {STATUS_OPTIONS.map((s) => (
++                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++
++              <div className="space-y-1.5">
++                <Label className="text-xs">Total (€)</Label>
++                <Input
++                  value={total}
++                  onChange={(e) => setTotal(e.target.value)}
++                  placeholder="0.00"
++                  className="h-9"
++                />
++              </div>
++
++              <div className="space-y-1.5">
++                <Label className="text-xs">Notas internas / resposta ao cliente</Label>
++                <Textarea
++                  value={notes}
++                  onChange={(e) => setNotes(e.target.value)}
++                  rows={5}
++                  placeholder="Observações, condições de pagamento, prazo de entrega..."
++                />
++              </div>
++
++              <Button className="w-full" onClick={handleSave} disabled={saving}>
++                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
++                Guardar alterações
++              </Button>
++            </CardContent>
++          </Card>
++
++          {/* Acções rápidas */}
++          {profile?.phone && (
++            <Card>
++              <CardHeader><CardTitle className="text-base">Acções rápidas</CardTitle></CardHeader>
++              <CardContent className="space-y-2">
++                <Button variant="outline" size="sm" className="w-full justify-start gap-2" asChild>
++                  <a
++                    href={`https://wa.me/351${profile.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${profile.full_name ? " " + profile.full_name.split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
++                    target="_blank" rel="noopener noreferrer"
++                  >
++                    💬 WhatsApp
++                  </a>
++                </Button>
++              </CardContent>
++            </Card>
++          )}
++        </div>
++      </div>
++    </div>
++  );
++}
++
++// ─── Router interno ───────────────────────────────────────────────────────
++
++export default function GestaoOrcamentos() {
++  return (
++    <Routes>
++      <Route index element={<OrcamentosList />} />
++      <Route path=":id" element={<OrcamentoDetalhe />} />
++    </Routes>
++  );
++}
+diff -ruN patch2-base/src/pages/gestao/RMA.tsx patch2-mod/src/pages/gestao/RMA.tsx
+--- patch2-base/src/pages/gestao/RMA.tsx	1970-01-01 00:00:00.000000000 +0000
++++ patch2-mod/src/pages/gestao/RMA.tsx	2026-06-16 11:42:07.674859531 +0000
+@@ -0,0 +1,230 @@
++import { useState } from "react";
++import { useQuery, useQueryClient } from "@tanstack/react-query";
++import { supabase } from "@/integrations/supabase/client";
++import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
++import { Button } from "@/components/ui/button";
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
++import { Textarea } from "@/components/ui/textarea";
++import { Label } from "@/components/ui/label";
++import { Input } from "@/components/ui/input";
++import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
++import { Loader2, Wrench, Search } from "lucide-react";
++import { toast } from "sonner";
++
++const STATUS_OPTIONS = [
++  { value: "submitted",    label: "Submetido" },
++  { value: "in_review",   label: "Em análise" },
++  { value: "approved",    label: "Aprovado" },
++  { value: "rejected",    label: "Rejeitado" },
++  { value: "in_repair",   label: "Em reparação" },
++  { value: "shipped_back",label: "Devolvido" },
++  { value: "completed",   label: "Concluído" },
++  { value: "cancelled",   label: "Cancelado" },
++];
++
++const STATUS_COLOR: Record<string, string> = {
++  submitted:    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
++  in_review:    "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
++  approved:     "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
++  rejected:     "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
++  in_repair:    "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
++  shipped_back: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400",
++  completed:    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
++  cancelled:    "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
++};
++
++export default function GestaoRMA() {
++  const qc = useQueryClient();
++  const [statusFilter, setStatusFilter] = useState("all");
++  const [search, setSearch] = useState("");
++  const [editing, setEditing] = useState<any | null>(null);
++  const [editStatus, setEditStatus] = useState("");
++  const [editNotes, setEditNotes] = useState("");
++  const [saving, setSaving] = useState(false);
++
++  const { data, isLoading } = useQuery({
++    queryKey: ["gestao-rma", statusFilter],
++    queryFn: async () => {
++      let q = supabase
++        .from("rma_requests")
++        .select("*,customer_profiles(full_name,company,phone)")
++        .order("created_at", { ascending: false });
++      if (statusFilter !== "all") q = q.eq("status", statusFilter);
++      const { data, error } = await q;
++      if (error) throw error;
++      return data ?? [];
++    },
++    staleTime: 30 * 1000,
++  });
++
++  const filtered = (data ?? []).filter((r: any) => {
++    if (!search.trim()) return true;
++    const s = search.toLowerCase();
++    return (
++      r.rma_number?.toLowerCase().includes(s) ||
++      r.product_name?.toLowerCase().includes(s) ||
++      r.customer_profiles?.full_name?.toLowerCase().includes(s) ||
++      r.customer_profiles?.company?.toLowerCase().includes(s)
++    );
++  });
++
++  const openEdit = (r: any) => {
++    setEditing(r);
++    setEditStatus(r.status);
++    setEditNotes(r.resolution_notes ?? "");
++  };
++
++  const handleSave = async () => {
++    if (!editing) return;
++    setSaving(true);
++    const { error } = await supabase.from("rma_requests").update({
++      status: editStatus,
++      resolution_notes: editNotes.trim() || null,
++    }).eq("id", editing.id);
++    setSaving(false);
++    if (error) { toast.error(error.message); return; }
++    toast.success("RMA atualizado.");
++    setEditing(null);
++    qc.invalidateQueries({ queryKey: ["gestao-rma"] });
++    qc.invalidateQueries({ queryKey: ["gestao-stats"] });
++  };
++
++  return (
++    <div className="space-y-4">
++      <h1 className="font-heading text-2xl font-bold">Pedidos de RMA</h1>
++
++      <div className="flex flex-wrap gap-3">
++        <div className="relative flex-1 min-w-[200px]">
++          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
++          <Input
++            placeholder="Pesquisar por nº, produto, cliente..."
++            className="pl-9 h-9"
++            value={search}
++            onChange={(e) => setSearch(e.target.value)}
++          />
++        </div>
++        <Select value={statusFilter} onValueChange={setStatusFilter}>
++          <SelectTrigger className="w-40 h-9">
++            <SelectValue placeholder="Estado" />
++          </SelectTrigger>
++          <SelectContent>
++            <SelectItem value="all">Todos</SelectItem>
++            {STATUS_OPTIONS.map((s) => (
++              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
++            ))}
++          </SelectContent>
++        </Select>
++      </div>
++
++      {isLoading ? (
++        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
++      ) : filtered.length === 0 ? (
++        <Card>
++          <CardContent className="py-12 text-center text-muted-foreground">
++            <Wrench className="h-10 w-10 mx-auto mb-3 opacity-40" />
++            <p>Nenhum pedido de RMA encontrado.</p>
++          </CardContent>
++        </Card>
++      ) : (
++        <div className="space-y-2">
++          {filtered.map((r: any) => (
++            <Card key={r.id} className="hover:bg-secondary/20 transition-colors">
++              <CardContent className="py-3 flex flex-wrap items-start gap-3 justify-between">
++                <div className="min-w-0 flex-1">
++                  <div className="flex items-center gap-2 flex-wrap">
++                    <span className="font-mono text-sm font-semibold">{r.rma_number}</span>
++                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[r.status] ?? ""}`}>
++                      {STATUS_OPTIONS.find((s) => s.value === r.status)?.label ?? r.status}
++                    </span>
++                  </div>
++                  <p className="text-sm font-medium mt-0.5 truncate">{r.product_name}</p>
++                  <p className="text-xs text-muted-foreground">
++                    {r.customer_profiles?.company || r.customer_profiles?.full_name || "—"}
++                    {r.customer_profiles?.phone && ` · ${r.customer_profiles.phone}`}
++                    {" · "}
++                    {new Date(r.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
++                  </p>
++                  <p className="text-xs text-muted-foreground mt-0.5">Motivo: {r.reason}</p>
++                  {r.resolution_notes && (
++                    <p className="text-xs text-foreground mt-1 border-l-2 border-primary pl-2">{r.resolution_notes}</p>
++                  )}
++                </div>
++                <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
++                  Gerir
++                </Button>
++              </CardContent>
++            </Card>
++          ))}
++        </div>
++      )}
++
++      {/* Dialog de edição */}
++      <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
++        <DialogContent className="max-w-lg">
++          <DialogHeader>
++            <DialogTitle>{editing?.rma_number}</DialogTitle>
++            <DialogDescription>{editing?.product_name}</DialogDescription>
++          </DialogHeader>
++
++          {editing && (
++            <div className="space-y-4">
++              {/* Info do cliente */}
++              <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-0.5">
++                <p className="font-medium">{editing.customer_profiles?.full_name || "—"}</p>
++                {editing.customer_profiles?.company && <p className="text-muted-foreground">{editing.customer_profiles.company}</p>}
++                {editing.customer_profiles?.phone && <p className="text-muted-foreground">{editing.customer_profiles.phone}</p>}
++              </div>
++
++              {/* Info do pedido */}
++              <div className="text-sm space-y-1 text-muted-foreground">
++                {editing.serial_number && <p>Nº série: <span className="text-foreground font-mono">{editing.serial_number}</span></p>}
++                {editing.invoice_number && <p>Nº fatura: <span className="text-foreground font-mono">{editing.invoice_number}</span></p>}
++                {editing.purchase_date && <p>Data de compra: <span className="text-foreground">{new Date(editing.purchase_date).toLocaleDateString("pt-PT")}</span></p>}
++                <p>Motivo: <span className="text-foreground">{editing.reason}</span></p>
++                {editing.description && <p className="whitespace-pre-wrap pt-1 text-foreground border-t border-border">{editing.description}</p>}
++              </div>
++
++              <div className="space-y-1.5">
++                <Label className="text-xs">Estado</Label>
++                <Select value={editStatus} onValueChange={setEditStatus}>
++                  <SelectTrigger><SelectValue /></SelectTrigger>
++                  <SelectContent>
++                    {STATUS_OPTIONS.map((s) => (
++                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
++                    ))}
++                  </SelectContent>
++                </Select>
++              </div>
++
++              <div className="space-y-1.5">
++                <Label className="text-xs">Notas de resolução / resposta ao cliente</Label>
++                <Textarea
++                  value={editNotes}
++                  onChange={(e) => setEditNotes(e.target.value)}
++                  rows={4}
++                  placeholder="Diagnóstico, resolução, prazo estimado..."
++                />
++              </div>
++
++              {editing.customer_profiles?.phone && (
++                <Button variant="outline" size="sm" className="gap-2 w-full" asChild>
++                  <a
++                    href={`https://wa.me/351${editing.customer_profiles.phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá, sobre o pedido de RMA ${editing.rma_number} (${editing.product_name}):`)}`}
++                    target="_blank" rel="noopener noreferrer"
++                  >
++                    💬 Contactar via WhatsApp
++                  </a>
++                </Button>
++              )}
++
++              <Button className="w-full" onClick={handleSave} disabled={saving}>
++                {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
++                Guardar
++              </Button>
++            </div>
++          )}
++        </DialogContent>
++      </Dialog>
++    </div>
++  );
++}

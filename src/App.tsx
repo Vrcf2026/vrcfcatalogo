@@ -27,6 +27,11 @@ import ContaRMA from "./pages/conta/RMA.tsx";
 import ContaDados from "./pages/conta/Dados.tsx";
 import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
 import { Loader2 } from "lucide-react";
+import Gestao from "./pages/Gestao.tsx";
+import GestaoDashboard from "./pages/gestao/Dashboard.tsx";
+import GestaoOrcamentos from "./pages/gestao/Orcamentos.tsx";
+import GestaoRMA from "./pages/gestao/RMA.tsx";
+import GestaoClientes from "./pages/gestao/Clientes.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,6 +76,12 @@ const App = () => (
                 <Route path="orcamentos/:id" element={<OrcamentoDetalhe />} />
                 <Route path="rma" element={<ContaRMA />} />
                 <Route path="dados" element={<ContaDados />} />
+              </Route>
+              <Route path="/gestao" element={<Gestao />}>
+                <Route index element={<GestaoDashboard />} />
+                <Route path="orcamentos/*" element={<GestaoOrcamentos />} />
+                <Route path="rma" element={<GestaoRMA />} />
+                <Route path="clientes" element={<GestaoClientes />} />
               </Route>
               <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

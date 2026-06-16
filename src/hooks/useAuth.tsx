@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
+  isGestor: boolean; // acesso à área de gestão comercial (/gestao)
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null; isAdmin: boolean }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: string | null }>;
@@ -19,14 +20,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isGestor, setIsGestor] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const checkAdmin = async (userId: string) => {
+  const checkRoles = async (userId: string) => {
     const { data } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
-    return data?.some((r) => r.role === "super_admin" || r.role === "admin") ?? false;
+    const roles = data?.map((r) => r.role) ?? [];
+    return {
+      admin: roles.some((r) => r === "super_admin" || r === "admin"),
+      gestor: roles.some((r) => r === "gestor" || r === "admin" || r === "super_admin"),
+    };
   };
 
   useEffect(() => {
@@ -36,12 +42,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!nextSession?.user) {
         setIsAdmin(false);
+        setIsGestor(false);
         setLoading(false);
         return;
       }
 
-      const admin = await checkAdmin(nextSession.user.id);
-      setIsAdmin(admin);
+      const roles = await checkRoles(nextSession.user.id);
+      setIsAdmin(roles.admin);
+      setIsGestor(roles.gestor);
       setLoading(false);
     };
 
@@ -69,11 +77,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
     setSession(data.session);
 
-    const admin = await checkAdmin(data.user.id);
-    setIsAdmin(admin);
+    const roles = await checkRoles(data.user.id);
+    setIsAdmin(roles.admin);
+    setIsGestor(roles.gestor);
     setLoading(false);
 
-    return { error: null, isAdmin: admin };
+    return { error: null, isAdmin: roles.admin };
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
@@ -99,10 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     await supabase.auth.signOut();
     setIsAdmin(false);
+    setIsGestor(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, loading, signIn, signUp, resetPassword, signOut }}>
+    <AuthContext.Provider value={{ user, session, isAdmin, isGestor, loading, signIn, signUp, resetPassword, signOut }}>
       {children}
     </AuthContext.Provider>
   );
