@@ -54,6 +54,42 @@ const Produto = () => {
     enabled: !!product?.id,
   });
 
+  // Produtos relacionados — mesma família/categoria, excluindo o actual.
+  // Prioriza: (1) mesma família, (2) mesma categoria. Limita a 4.
+  const { data: related = [] } = useQuery({
+    queryKey: ["related-products", product?.id, product?.family_id, product?.category],
+    queryFn: async () => {
+      if (!product) return [];
+      // Tenta primeiro por família
+      if (product.family_id) {
+        const { data } = await supabase
+          .from("products")
+          .select("id,name,slug,price,image_url,stock_status,category,brand")
+          .eq("family_id", product.family_id)
+          .eq("include_in_catalog", true)
+          .neq("id", product.id)
+          .order("featured", { ascending: false })
+          .limit(4);
+        if (data && data.length >= 2) return data;
+      }
+      // Fallback: mesma categoria
+      if (product.category) {
+        const { data } = await supabase
+          .from("products")
+          .select("id,name,slug,price,image_url,stock_status,category,brand")
+          .eq("category", product.category)
+          .eq("mundo", product.mundo)
+          .eq("include_in_catalog", true)
+          .neq("id", product.id)
+          .order("featured", { ascending: false })
+          .limit(4);
+        return data ?? [];
+      }
+      return [];
+    },
+    enabled: !!product?.id,
+  });
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!product) return <Navigate to="/404" replace />;
 
@@ -400,6 +436,45 @@ const Produto = () => {
           <img src={currentImage} alt="" className="max-w-[90vw] max-h-[90vh] object-contain" onClick={e => e.stopPropagation()} />
           <button className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl">&times;</button>
         </div>
+      )}
+
+      {/* Produtos relacionados */}
+      {related.length > 0 && (
+        <section className="container mx-auto px-4 pb-12 max-w-4xl">
+          <h2 className="font-heading text-lg font-bold mb-4">
+            {product.stock_status === "out" ? "Alternativas disponíveis" : "Produtos relacionados"}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {related.map((r: any) => {
+              const rPriceVat = r.price ? r.price * 1.23 : null;
+              return (
+                <Link key={r.id} to={`/produto/${r.slug ?? r.id}`}
+                  className="group rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all overflow-hidden">
+                  <div className="aspect-square bg-muted/30 overflow-hidden">
+                    {r.image_url
+                      ? <img src={r.image_url} alt={r.name} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
+                      : <div className="w-full h-full flex items-center justify-center"><Package2 className="h-8 w-8 text-muted-foreground/30" /></div>
+                    }
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <p className="text-xs font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors">{r.name}</p>
+                    {r.brand && <p className="text-[10px] text-muted-foreground">{r.brand}</p>}
+                    <div className="flex items-center justify-between pt-0.5">
+                      {rPriceVat
+                        ? <span className="text-xs font-bold">{rPriceVat.toFixed(2).replace(".", ",")} €</span>
+                        : <span className="text-[10px] text-muted-foreground italic">Sob consulta</span>
+                      }
+                      {r.stock_status === "out"
+                        ? <span className="text-[10px] text-blue-600">Enc.</span>
+                        : <span className="text-[10px] text-emerald-600">✓ Stock</span>
+                      }
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <SiteFooter />

@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search } from "lucide-react";
+import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ const Pesquisa = () => {
   const [searchInput, setSearchInput] = useState(initialQ);
   const [search, setSearch] = useState(initialQ);
   const [page, setPage] = useState(1);
+  const [mundoFilter, setMundoFilter] = useState("all");
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -36,16 +37,14 @@ const Pesquisa = () => {
   }, [searchInput]);
 
   const productsQuery = useQuery({
-    queryKey: ["global-search", search, page],
+    queryKey: ["global-search", search, mundoFilter, page],
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
 
       if (search.trim()) {
-        // search_products: pesquisa "todas as palavras, em qualquer
-        // ordem" (insensível a acentos/maiúsculas) — "camara ip" encontra
-        // "Câmara IP Bullet 4MP", não só a frase exacta "camara ip".
         const { data, error } = await supabase.rpc("search_products", {
           p_query: search.trim(),
+          p_mundo: mundoFilter !== "all" ? mundoFilter : null,
           p_limit: PAGE_SIZE,
           p_offset: from,
           p_order_by: "featured",
@@ -57,6 +56,7 @@ const Pesquisa = () => {
       }
 
       let q = supabase.from("products").select("*", { count: "exact" }).eq("include_in_catalog", true);
+      if (mundoFilter !== "all") q = q.eq("mundo", mundoFilter);
       q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
       const { data, error, count } = await q.range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
@@ -108,6 +108,31 @@ const Pesquisa = () => {
                 </span>
               )}
             </Button>
+          </div>
+        </div>
+
+        {/* Filtro por mundo */}
+        <div className="border-t border-border/50 px-3 py-2 sm:px-4 flex items-center gap-2">
+          <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <div className="flex gap-1.5 flex-wrap">
+            {[
+              { value: "all", label: "Todos" },
+              { value: "seguranca", label: "Segurança" },
+              { value: "escritorio", label: "Escritório & IT" },
+              { value: "economato", label: "Economato" },
+            ].map((m) => (
+              <button
+                key={m.value}
+                onClick={() => { setMundoFilter(m.value); setPage(1); }}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  mundoFilter === m.value
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
         </div>
       </header>
