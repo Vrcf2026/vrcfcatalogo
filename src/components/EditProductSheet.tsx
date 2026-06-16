@@ -138,7 +138,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
         show_on_homepage: showOnHomepage,
         especificacoes: specs,
         specs_locked: specsLocked,
-        upgrades: upgrades.filter(u => u.tipo || u.descricao),
+        upgrades: upgrades.filter(u => u.tipo || u.descricao) as any,
       }).eq("id", product.id);
       if (error) throw error;
       toast.success("Produto guardado");
