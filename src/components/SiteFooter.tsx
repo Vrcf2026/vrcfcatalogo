@@ -25,7 +25,8 @@ export function SiteFooter() {
                 <p className="font-bold text-sm">VRCF — Informática & Segurança</p>
                 <p className="text-xs text-muted-foreground flex items-center gap-2">
                   NIF 515237205 · Montijo
-                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
+                    <Star className="h-3 w-3 fill-primary text-primary" />
                     Desde 2019
                   </span>
                 </p>
