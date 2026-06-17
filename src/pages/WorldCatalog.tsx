@@ -142,6 +142,23 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Facetas — lista leve de produtos do mundo (apenas chaves de filtro)
+  // para calcular dinamicamente que famílias, tipos e marcas têm produtos
+  // dentro do contexto actual (categoria → família → tipo).
+  const { data: facets = [] } = useQuery({
+    queryKey: ["facets", mundo],
+    queryFn: async () => {
+      const { data } = await supabase.from("products")
+        .select("category,family_id,type_id,brand_id,brand")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .limit(5000);
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+
   // Products query
   const productsQuery = useQuery({
     queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
