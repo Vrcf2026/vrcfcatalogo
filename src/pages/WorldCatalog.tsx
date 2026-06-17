@@ -300,8 +300,55 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+
+  // Facetas filtradas pelo contexto actual — para cada eixo (família/tipo/marca)
+  // calculamos as opções considerando os OUTROS filtros activos.
+  const facetsByCategory = useMemo(
+    () => (categoryFilter === "all" ? facets : facets.filter((p: any) => p.category === categoryFilter)),
+    [facets, categoryFilter]
+  );
+
+  const availableFamilyIds = useMemo(() => {
+    const set = new Set<string>();
+    facetsByCategory.forEach((p: any) => {
+      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
+      if (p.family_id) set.add(p.family_id);
+    });
+    return set;
+  }, [facetsByCategory, brandFilter]);
+
+  const availableTypeIds = useMemo(() => {
+    const set = new Set<string>();
+    facetsByCategory.forEach((p: any) => {
+      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
+      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
+      if (p.type_id) set.add(p.type_id);
+    });
+    return set;
+  }, [facetsByCategory, familyFilter, brandFilter]);
+
+  const availableBrand = useMemo(() => {
+    const ids = new Set<string>();
+    const names = new Set<string>();
+    facetsByCategory.forEach((p: any) => {
+      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
+      if (typeFilter !== "all" && p.type_id !== typeFilter) return;
+      if (p.brand_id) ids.add(p.brand_id);
+      if (p.brand) names.add(p.brand);
+    });
+    return { ids, names };
+  }, [facetsByCategory, familyFilter, typeFilter]);
+
+  const visibleFamilies = families.filter((f: any) =>
+    (categoryFilter === "all" || f.category === categoryFilter) && availableFamilyIds.has(f.id)
+  );
+  const visibleTypes = types.filter((t: any) =>
+    familyFilter !== "all" && t.family_id === familyFilter && availableTypeIds.has(t.id)
+  );
+  const visibleBrands = brands.filter((b: any) =>
+    availableBrand.ids.has(b.id) || availableBrand.names.has(b.name)
+  );
+
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
     categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
