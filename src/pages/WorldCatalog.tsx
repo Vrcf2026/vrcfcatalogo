@@ -142,6 +142,23 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Facetas — lista leve de produtos do mundo (apenas chaves de filtro)
+  // para calcular dinamicamente que famílias, tipos e marcas têm produtos
+  // dentro do contexto actual (categoria → família → tipo).
+  const { data: facets = [] } = useQuery({
+    queryKey: ["facets", mundo],
+    queryFn: async () => {
+      const { data } = await supabase.from("products")
+        .select("category,family_id,type_id,brand_id,brand")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .limit(5000);
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+
   // Products query
   const productsQuery = useQuery({
     queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
@@ -283,8 +300,55 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+
+  // Facetas filtradas pelo contexto actual — para cada eixo (família/tipo/marca)
+  // calculamos as opções considerando os OUTROS filtros activos.
+  const facetsByCategory = useMemo(
+    () => (categoryFilter === "all" ? facets : facets.filter((p: any) => p.category === categoryFilter)),
+    [facets, categoryFilter]
+  );
+
+  const availableFamilyIds = useMemo(() => {
+    const set = new Set<string>();
+    facetsByCategory.forEach((p: any) => {
+      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
+      if (p.family_id) set.add(p.family_id);
+    });
+    return set;
+  }, [facetsByCategory, brandFilter]);
+
+  const availableTypeIds = useMemo(() => {
+    const set = new Set<string>();
+    facetsByCategory.forEach((p: any) => {
+      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
+      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
+      if (p.type_id) set.add(p.type_id);
+    });
+    return set;
+  }, [facetsByCategory, familyFilter, brandFilter]);
+
+  const availableBrand = useMemo(() => {
+    const ids = new Set<string>();
+    const names = new Set<string>();
+    facetsByCategory.forEach((p: any) => {
+      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
+      if (typeFilter !== "all" && p.type_id !== typeFilter) return;
+      if (p.brand_id) ids.add(p.brand_id);
+      if (p.brand) names.add(p.brand);
+    });
+    return { ids, names };
+  }, [facetsByCategory, familyFilter, typeFilter]);
+
+  const visibleFamilies = families.filter((f: any) =>
+    (categoryFilter === "all" || f.category === categoryFilter) && availableFamilyIds.has(f.id)
+  );
+  const visibleTypes = types.filter((t: any) =>
+    familyFilter !== "all" && t.family_id === familyFilter && availableTypeIds.has(t.id)
+  );
+  const visibleBrands = brands.filter((b: any) =>
+    availableBrand.ids.has(b.id) || availableBrand.names.has(b.name)
+  );
+
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
     categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
@@ -329,7 +393,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     <CatalogFilterPanel
       visibleFamilies={visibleFamilies}
       visibleTypes={visibleTypes}
-      brands={brands}
+      brands={visibleBrands}
       familyFilter={familyFilter}
       typeFilter={typeFilter}
       brandFilter={brandFilter}
@@ -458,18 +522,21 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {/* Main content */}
       <div className="container mx-auto px-4 pb-14 flex gap-6">
 
-        {/* Sidebar filtros — desktop */}
-        <aside className="hidden lg:block w-64 shrink-0 pt-4">
-          <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold">Filtrar</h2>
-              {activeFiltersCount > 0 && (
-                <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
-              )}
+        {/* Sidebar filtros — desktop (só após escolher categoria) */}
+        {categoryFilter !== "all" && (
+          <aside className="hidden lg:block w-64 shrink-0 pt-4">
+            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold">Filtrar</h2>
+                {activeFiltersCount > 0 && (
+                  <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
+                )}
+              </div>
+              {renderFilterPanel()}
             </div>
-            {renderFilterPanel()}
-          </div>
-        </aside>
+          </aside>
+        )}
+
 
         <div className="flex-1 min-w-0 pt-4">
           {/* Toolbar */}
@@ -481,23 +548,26 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 className="pl-9 h-9 text-sm bg-muted/60 border-transparent rounded-xl" />
             </div>
 
-            {/* Filtros mobile */}
-            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
-                  <SlidersHorizontal className="h-4 w-4" /> Filtros
-                  {activeFiltersCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] overflow-y-auto">
-                <SheetHeader className="pb-4">
-                  <SheetTitle>Filtros</SheetTitle>
-                </SheetHeader>
-                {renderFilterPanel()}
-              </SheetContent>
-            </Sheet>
+            {/* Filtros mobile — só após escolher categoria */}
+            {categoryFilter !== "all" && (
+              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+                    <SlidersHorizontal className="h-4 w-4" /> Filtros
+                    {activeFiltersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] overflow-y-auto">
+                  <SheetHeader className="pb-4">
+                    <SheetTitle>Filtros</SheetTitle>
+                  </SheetHeader>
+                  {renderFilterPanel()}
+                </SheetContent>
+              </Sheet>
+            )}
+
 
             <Select value={sortBy} onValueChange={v => { setSortBy(v); setPage(1); }}>
               <SelectTrigger className="w-[160px] h-9 text-sm"><SelectValue /></SelectTrigger>
