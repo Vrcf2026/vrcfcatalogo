@@ -522,18 +522,21 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {/* Main content */}
       <div className="container mx-auto px-4 pb-14 flex gap-6">
 
-        {/* Sidebar filtros — desktop */}
-        <aside className="hidden lg:block w-64 shrink-0 pt-4">
-          <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold">Filtrar</h2>
-              {activeFiltersCount > 0 && (
-                <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
-              )}
+        {/* Sidebar filtros — desktop (só após escolher categoria) */}
+        {categoryFilter !== "all" && (
+          <aside className="hidden lg:block w-64 shrink-0 pt-4">
+            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold">Filtrar</h2>
+                {activeFiltersCount > 0 && (
+                  <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
+                )}
+              </div>
+              {renderFilterPanel()}
             </div>
-            {renderFilterPanel()}
-          </div>
-        </aside>
+          </aside>
+        )}
+
 
         <div className="flex-1 min-w-0 pt-4">
           {/* Toolbar */}
