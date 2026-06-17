@@ -30,6 +30,7 @@ interface EditProductSheetProps {
 export function EditProductSheet({ open, onOpenChange, product, families, types = [], categories, brands, onPrev, onNext, hasPrev, hasNext }: EditProductSheetProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
   const [category, setCategory] = useState("");
   const [familyId, setFamilyId] = useState("none");
   const [typeId, setTypeId] = useState("none");
@@ -80,10 +81,22 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
     ? ((parseFloat(price) - parseFloat(purchasePrice)) / parseFloat(purchasePrice) * 100).toFixed(1)
     : null;
 
+  const priceWithVat = price ? (parseFloat(price) * 1.23).toFixed(2) : null;
+
+  const handlePurchasePriceChange = (val: string) => {
+    setPurchasePrice(val);
+    if (val && !isNaN(parseFloat(val))) {
+      setPurchasePriceVat((parseFloat(val) * 1.23).toFixed(2));
+    } else {
+      setPurchasePriceVat("");
+    }
+  };
+
   useEffect(() => {
     if (!open || !product) return;
     setName(product.name || "");
     setDescription(product.description || "");
+    setShortDescription(product.short_description || "");
     setCategory(product.category || "");
     setFamilyId(product.family_id || "none");
     setTypeId(product.type_id || "none");
@@ -119,6 +132,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
       const { error } = await supabase.from("products").update({
         name: name.trim(),
         description: description.trim() || null,
+        short_description: shortDescription.trim() || null,
         category: category || null,
         family_id: familyId === "none" ? null : familyId,
         type_id: typeId === "none" ? null : typeId,
@@ -249,6 +263,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
             <EditProductGeneral
               name={name} setName={setName}
               description={description} setDescription={setDescription}
+              shortDescription={shortDescription} setShortDescription={setShortDescription}
               imageUrl={imageUrl} setImageUrl={setImageUrl}
               mundo={mundo} setMundo={setMundo}
               stockStatus={stockStatus} setStockStatus={setStockStatus}
@@ -271,9 +286,10 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
 
           <TabsContent value="precos">
             <EditProductPricing
-              purchasePrice={purchasePrice} setPurchasePrice={setPurchasePrice}
+              purchasePrice={purchasePrice} setPurchasePrice={handlePurchasePriceChange}
               purchasePriceVat={purchasePriceVat} setPurchasePriceVat={setPurchasePriceVat}
               price={price} setPrice={setPrice}
+              priceWithVat={priceWithVat}
               weight={weight} setWeight={setWeight}
               margem={margem}
               fornecedor={product?.fornecedor}

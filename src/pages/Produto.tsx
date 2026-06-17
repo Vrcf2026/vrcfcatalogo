@@ -14,6 +14,7 @@ import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { UserMenuButton } from "@/components/UserMenuButton";
+import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { StockAlertButton } from "@/components/StockAlertButton";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -161,12 +162,13 @@ const Produto = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4">
+          <div className="flex items-center gap-2 shrink-0">
             <Link to={worldPath} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
             <Link to="/"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
           </div>
-          <div className="flex items-center gap-2">
+          <GlobalSearchBar />
+          <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
             <UserMenuButton />
             <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9 relative">

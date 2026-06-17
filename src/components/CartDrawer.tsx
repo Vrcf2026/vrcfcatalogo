@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { Minus, Plus, Trash2, ShoppingCart, Send, XCircle, Truck, Clock, Info, Package } from "lucide-react";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { CheckoutDialog } from "./CheckoutDialog";
 
 // Tabela DHL Portugal Continental (s/IVA) — custo real cobrado pela DHL
@@ -13,20 +15,15 @@ const DHL_TABELA: [number, number][] = [
   [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
 ];
 
-// Margem aplicada sobre o custo real DHL (gestão administrativa de portes)
 const MARGEM_PORTES = 0.15;
 
 function calcularPorteDHL(pesoKg: number): number | null {
-  let custoBase: number | null;
-  if (pesoKg <= 0) {
-    custoBase = DHL_TABELA[0][1];
-  } else {
-    custoBase = null;
-    for (const [limite, preco] of DHL_TABELA) {
-      if (pesoKg <= limite) { custoBase = preco; break; }
-    }
+  let custoBase: number | null = null;
+  for (const [limite, preco] of DHL_TABELA) {
+    if (pesoKg <= limite) { custoBase = preco; break; }
   }
-  if (custoBase === null) return null; // >250kg
+  if (pesoKg <= 0) custoBase = DHL_TABELA[0][1];
+  if (custoBase === null) return null;
   return Math.round(custoBase * (1 + MARGEM_PORTES) * 100) / 100;
 }
 
@@ -34,21 +31,86 @@ export function CartDrawer() {
   const { items, isOpen, setIsOpen, updateQuantity, removeItem, clearCart } = useCart();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
 
+  // Configuração de portes da BD (Visiotech, Diginova, etc.)
+  const { data: shippingConfigs = [] } = useQuery({
+    queryKey: ["shipping_config"],
+    queryFn: async () => {
+      const { data } = await supabase.from("shipping_config").select("*").eq("ativo", true);
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const totalValueSemVat = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
   const totalValueComVat = totalValueSemVat * 1.23;
 
-  // Peso total (informativo, todos os fornecedores) vs peso só dos
-  // produtos ALL.TO (usado no cálculo de portes DHL — os outros
-  // fornecedores têm portes "calculados no orçamento", não DHL).
-  const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
-  const pesoAllto = items.reduce((sum, i) =>
-    (i as any).fornecedor === "allto" ? sum + ((i as any).weight ?? 0) * i.quantity : sum, 0);
-  const temPesoAllto = pesoAllto > 0;
-  const temOutrosFornecedores = items.some(i => (i as any).fornecedor !== "allto");
+  // Agrupar itens por fornecedor
+  const itensPorFornecedor = items.reduce((acc: Record<string, typeof items>, item) => {
+    const f = (item as any).fornecedor || "manual";
+    if (!acc[f]) acc[f] = [];
+    acc[f].push(item);
+    return acc;
+  }, {});
+
+  // Calcular portes por fornecedor
+  const portesPorFornecedor: Array<{
+    fornecedor: string;
+    portesSemIva: number;
+    portesComIva: number;
+    descricao: string;
+    isDHL?: boolean;
+  }> = [];
+
   const temEnvioEspecial = items.some(i => (i as any).envio_especial);
 
-  const porteDHL = temPesoAllto ? calcularPorteDHL(pesoAllto) : null;
-  const porteDHLComIva = porteDHL ? porteDHL * 1.23 : null;
+  for (const [fornecedor, itensF] of Object.entries(itensPorFornecedor)) {
+    if (fornecedor === "allto") {
+      // ALL.TO: cálculo por peso via tabela DHL
+      const pesoAllto = itensF.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
+      if (pesoAllto > 0) {
+        const porte = calcularPorteDHL(pesoAllto);
+        if (porte !== null) {
+          portesPorFornecedor.push({
+            fornecedor: "allto",
+            portesSemIva: porte,
+            portesComIva: porte * 1.23,
+            descricao: `${pesoAllto.toFixed(2)}kg · DHL`,
+            isDHL: true,
+          });
+        } else {
+          portesPorFornecedor.push({
+            fornecedor: "allto",
+            portesSemIva: 0,
+            portesComIva: 0,
+            descricao: "Peso >250kg — calculado no orçamento",
+          });
+        }
+      }
+    } else {
+      // Outros fornecedores: configuração da BD (preco_primeira_unidade + adicional)
+      const config = shippingConfigs.find((c: any) => c.fornecedor === fornecedor);
+      if (config && config.ativo) {
+        const totalItens = itensF.reduce((sum, i) => sum + i.quantity, 0);
+        const primeira = config.preco_primeira_unidade ?? 0;
+        const adicional = config.preco_unidade_adicional ?? 0;
+        const portesSemIva = totalItens > 0
+          ? primeira + Math.max(0, totalItens - 1) * adicional
+          : primeira;
+        portesPorFornecedor.push({
+          fornecedor,
+          portesSemIva,
+          portesComIva: portesSemIva * 1.23,
+          descricao: `${totalItens} artigo${totalItens !== 1 ? "s" : ""}`,
+        });
+      }
+    }
+  }
+
+  const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
+  const totalPortesComIva = portesPorFornecedor.reduce((s, p) => s + p.portesComIva, 0);
+  const temPortesCalculados = Object.keys(itensPorFornecedor).some(f =>
+    f !== "allto" && !shippingConfigs.find((c: any) => c.fornecedor === f && c.ativo)
+  );
 
   return (
     <>
@@ -149,32 +211,41 @@ export function CartDrawer() {
                   )}
                 </div>
 
-                {/* Portes DHL */}
-                {temPesoAllto && (
-                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1.5">
+                {/* Portes por fornecedor */}
+                {portesPorFornecedor.length > 0 && (
+                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
                     <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-primary" /> Portes estimados (DHL)
+                      <Truck className="h-3.5 w-3.5 text-primary" />
+                      Portes estimados
                     </p>
-                    {porteDHL ? (
-                      <>
-                        <div className="flex justify-between text-sm font-bold">
-                          <span>Portes ({pesoAllto.toFixed(2)}kg) c/ IVA:</span>
-                          <span className="text-primary">{porteDHLComIva!.toFixed(2).replace(".", ",")} €</span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground">Portugal Continental · DHL · valor indicativo</p>
-                      </>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Peso superior a 250kg — portes calculados no orçamento</p>
+                    {portesPorFornecedor.map((p) => (
+                      <div key={p.fornecedor} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground capitalize">
+                          {p.fornecedor} <span className="text-[10px]">({p.descricao})</span>
+                        </span>
+                        <span className="font-semibold">
+                          {p.portesComIva > 0
+                            ? `${p.portesComIva.toFixed(2).replace(".", ",")} €`
+                            : "ver orçamento"}
+                        </span>
+                      </div>
+                    ))}
+                    {portesPorFornecedor.length > 1 && totalPortesComIva > 0 && (
+                      <div className="flex justify-between text-sm font-bold border-t border-primary/20 pt-1.5 mt-1.5">
+                        <span>Total portes c/ IVA:</span>
+                        <span className="text-primary">{totalPortesComIva.toFixed(2).replace(".", ",")} €</span>
+                      </div>
                     )}
+                    <p className="text-[10px] text-muted-foreground">Portugal Continental · valores indicativos</p>
                   </div>
                 )}
 
                 {/* Notas */}
                 <div className="rounded-xl bg-muted/50 border border-border p-3 space-y-2 text-xs text-muted-foreground">
-                  {temOutrosFornecedores && (
+                  {temPortesCalculados && (
                     <div className="flex items-start gap-1.5">
                       <Truck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                      <span>Portes de outros produtos calculados no orçamento final.</span>
+                      <span>Portes de alguns produtos calculados no orçamento final.</span>
                     </div>
                   )}
                   {temEnvioEspecial && (

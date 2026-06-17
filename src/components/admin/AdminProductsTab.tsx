@@ -489,7 +489,14 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
                   return (
                     <tr key={p.id}
                       className="hover:bg-muted/30 cursor-pointer transition-colors"
-                      onClick={() => setEditingProduct(p)}>
+                      onClick={async () => {
+                        // Buscar produto completo (PRODUCT_COLUMNS inclui description,
+                        // upgrades, etc. que não vêm na listagem paginada LIST_COLUMNS)
+                        const { data } = await supabase.from("products")
+                          .select(PRODUCT_COLUMNS).eq("id", p.id).maybeSingle();
+                        if (data) setEditingProduct(data);
+                        else setEditingProduct(p); // fallback
+                      }}>
                       <td className="px-3 py-2.5 max-w-[220px]">
                         <div className="flex items-center gap-2">
                           {p.image_url && (

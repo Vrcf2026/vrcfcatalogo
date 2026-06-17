@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 interface Props {
   name: string; setName: (v: string) => void;
   description: string; setDescription: (v: string) => void;
+  shortDescription: string; setShortDescription: (v: string) => void;
   imageUrl: string; setImageUrl: (v: string) => void;
   mundo: string; setMundo: (v: string) => void;
   stockStatus: string; setStockStatus: (v: string) => void;
@@ -35,8 +36,12 @@ export function EditProductGeneral(p: Props) {
         <Input value={p.name} onChange={(e) => p.setName(e.target.value)} />
       </div>
       <div className="space-y-2">
-        <Label>Descrição</Label>
-        <Textarea value={p.description} onChange={(e) => p.setDescription(e.target.value)} rows={4} />
+        <Label>Descrição curta <span className="text-muted-foreground text-xs">(bullets, resumo — aparece nos cards)</span></Label>
+        <Textarea value={p.shortDescription} onChange={(e) => p.setShortDescription(e.target.value)} rows={2} placeholder="Resumo breve do produto..." />
+      </div>
+      <div className="space-y-2">
+        <Label>Descrição completa <span className="text-muted-foreground text-xs">(aparece na página do produto)</span></Label>
+        <Textarea value={p.description} onChange={(e) => p.setDescription(e.target.value)} rows={5} />
       </div>
       <div className="space-y-2">
         <Label>URL da Imagem</Label>

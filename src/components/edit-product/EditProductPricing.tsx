@@ -7,6 +7,7 @@ interface Props {
   purchasePrice: string; setPurchasePrice: (v: string) => void;
   purchasePriceVat: string; setPurchasePriceVat: (v: string) => void;
   price: string; setPrice: (v: string) => void;
+  priceWithVat?: string | null;
   weight: string; setWeight: (v: string) => void;
   margem: string | null;
   fornecedor?: string | null;
@@ -23,8 +24,8 @@ export function EditProductPricing(p: Props) {
           <Input type="number" step="0.01" value={p.purchasePrice} onChange={(e) => p.setPurchasePrice(e.target.value)} />
         </div>
         <div className="space-y-2">
-          <Label>Custo com IVA (€)</Label>
-          <Input type="number" step="0.01" value={p.purchasePriceVat} onChange={(e) => p.setPurchasePriceVat(e.target.value)} />
+          <Label>Custo com IVA (€) <span className="text-muted-foreground text-xs">auto</span></Label>
+          <Input type="number" step="0.01" value={p.purchasePriceVat} onChange={(e) => p.setPurchasePriceVat(e.target.value)} className="bg-muted/30" />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
@@ -33,8 +34,14 @@ export function EditProductPricing(p: Props) {
           <Input type="number" step="0.01" value={p.price} onChange={(e) => p.setPrice(e.target.value)} />
         </div>
         <div className="space-y-2">
+          <Label>Preço de venda c/ IVA (€) <span className="text-muted-foreground text-xs">calc.</span></Label>
+          <Input type="number" step="0.01" value={p.priceWithVat ?? ""} readOnly className="bg-muted/30 cursor-default" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
           <Label>Peso (kg)</Label>
-          <Input type="number" step="0.1" value={p.weight} onChange={(e) => p.setWeight(e.target.value)} />
+          <Input type="number" step="0.001" value={p.weight} onChange={(e) => p.setWeight(e.target.value)} placeholder="0.000" />
         </div>
       </div>
       {p.margem && (

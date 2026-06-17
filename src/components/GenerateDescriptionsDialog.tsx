@@ -21,14 +21,15 @@ interface Product {
 }
 
 interface GenerateDescriptionsDialogProps {
-  products: Product[];
+  products: Product[];          // produtos da página actual (fallback)
+  fetchAllWithoutDesc?: () => Promise<Product[]>; // opcional: buscar TODOS os filtrados sem desc
 }
 
 const CHUNK_SIZE = 10;
 const PAUSE_MS = 1500;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export function GenerateDescriptionsDialog({ products }: GenerateDescriptionsDialogProps) {
+export function GenerateDescriptionsDialog({ products, fetchAllWithoutDesc }: GenerateDescriptionsDialogProps) {
   const [open, setOpen] = useState(false);
   const [running, setRunning] = useState(false);
   const [stopRequested, setStopRequested] = useState(false);
@@ -37,14 +38,16 @@ export function GenerateDescriptionsDialog({ products }: GenerateDescriptionsDia
   const [success, setSuccess] = useState(0);
   const [errors, setErrors] = useState(0);
   const [currentName, setCurrentName] = useState<string>("");
+  const [loadingAll, setLoadingAll] = useState(false);
+  const [allQueue, setAllQueue] = useState<Product[] | null>(null); // null = não carregado ainda
 
-  const missing = useMemo(
-    () =>
-      products.filter(
-        (p) => !p.description || p.description.trim().length === 0
-      ),
+  const localMissing = useMemo(
+    () => products.filter((p) => !p.description || p.description.trim().length === 0),
     [products]
   );
+
+  // Se fetchAllWithoutDesc disponível, usa allQueue; senão usa localMissing
+  const missing = allQueue ?? localMissing;
 
   const queryClient = useQueryClient();
 
@@ -111,6 +114,18 @@ export function GenerateDescriptionsDialog({ products }: GenerateDescriptionsDia
       setSuccess(0);
       setErrors(0);
       setCurrentName("");
+      setAllQueue(null);
+    }
+  };
+
+  const handleFetchAll = async () => {
+    if (!fetchAllWithoutDesc) return;
+    setLoadingAll(true);
+    try {
+      const all = await fetchAllWithoutDesc();
+      setAllQueue(all);
+    } finally {
+      setLoadingAll(false);
     }
   };
 
@@ -139,12 +154,31 @@ export function GenerateDescriptionsDialog({ products }: GenerateDescriptionsDia
               <div className="rounded-lg border bg-secondary/40 p-4 space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total de produtos</span>
-                  <span className="font-medium">{products.length}</span>
+                  <span className="font-medium">{allQueue ? allQueue.length : products.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Sem descrição</span>
                   <span className="font-bold text-primary">{total}</span>
                 </div>
+                {fetchAllWithoutDesc && allQueue === null && (
+                  <div className="pt-1 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      A mostrar apenas os produtos da página actual. Para processar todos os filtrados:
+                    </p>
+                    <Button
+                      variant="outline" size="sm" className="w-full gap-1.5 h-8 text-xs"
+                      onClick={handleFetchAll} disabled={loadingAll}
+                    >
+                      {loadingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                      Carregar todos os produtos sem descrição
+                    </Button>
+                  </div>
+                )}
+                {allQueue !== null && (
+                  <div className="pt-1 border-t border-border">
+                    <p className="text-xs text-green-600">✓ {allQueue.length} produtos carregados (todos os filtros activos)</p>
+                  </div>
+                )}
               </div>
 
               {total === 0 ? (
