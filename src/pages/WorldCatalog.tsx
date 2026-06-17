@@ -548,23 +548,26 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 className="pl-9 h-9 text-sm bg-muted/60 border-transparent rounded-xl" />
             </div>
 
-            {/* Filtros mobile */}
-            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
-                  <SlidersHorizontal className="h-4 w-4" /> Filtros
-                  {activeFiltersCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] overflow-y-auto">
-                <SheetHeader className="pb-4">
-                  <SheetTitle>Filtros</SheetTitle>
-                </SheetHeader>
-                {renderFilterPanel()}
-              </SheetContent>
-            </Sheet>
+            {/* Filtros mobile — só após escolher categoria */}
+            {categoryFilter !== "all" && (
+              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+                    <SlidersHorizontal className="h-4 w-4" /> Filtros
+                    {activeFiltersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] overflow-y-auto">
+                  <SheetHeader className="pb-4">
+                    <SheetTitle>Filtros</SheetTitle>
+                  </SheetHeader>
+                  {renderFilterPanel()}
+                </SheetContent>
+              </Sheet>
+            )}
+
 
             <Select value={sortBy} onValueChange={v => { setSortBy(v); setPage(1); }}>
               <SelectTrigger className="w-[160px] h-9 text-sm"><SelectValue /></SelectTrigger>
