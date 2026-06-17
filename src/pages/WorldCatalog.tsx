@@ -148,15 +148,29 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const { data: facets = [] } = useQuery({
     queryKey: ["facets", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("products")
-        .select("category,family_id,type_id,brand_id,brand")
-        .eq("mundo", mundo)
-        .eq("include_in_catalog", true)
-        .limit(5000);
-      return data ?? [];
+      // Pagina manualmente para ultrapassar o limite default do PostgREST
+      // (1000 linhas) e garantir que cobre TODOS os produtos do mundo —
+      // caso contrário famílias/tipos/marcas inteiras desaparecem do
+      // filtro só porque os seus produtos ficam fora da primeira página.
+      const PAGE = 1000;
+      const all: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabase.from("products")
+          .select("category,family_id,type_id,brand_id,brand")
+          .eq("mundo", mundo)
+          .eq("include_in_catalog", true)
+          .order("id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE) break;
+      }
+      return all;
     },
     staleTime: 5 * 60 * 1000,
   });
+
 
 
   // Products query
