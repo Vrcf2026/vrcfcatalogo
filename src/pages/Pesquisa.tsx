@@ -78,35 +78,25 @@ const Pesquisa = () => {
   const total = productsQuery.data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Categorias com produtos para o mundo selecionado + termo de pesquisa
+  // Categorias com contagem precisa (agregação server-side)
   const categoriesQuery = useQuery({
     queryKey: ["search-categories", search, mundoFilter],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("search_products", {
+      const { data, error } = await (supabase.rpc as any)("get_search_category_counts", {
         p_query: search.trim(),
         p_mundo: mundoFilter,
-        p_limit: 500,
-        p_offset: 0,
-        p_order_by: "featured",
       });
       if (error) throw error;
-      return (data ?? []).map((r: any) => r.row_data);
+      return (data ?? []) as { category: string; count: number }[];
     },
     enabled: search.trim().length > 0 && mundoFilter !== "all",
     staleTime: 2 * 60 * 1000,
   });
 
   const categoryChips = useMemo(() => {
-    const rows = categoriesQuery.data ?? [];
-    const counts = new Map<string, number>();
-    for (const r of rows) {
-      const c = r.category;
-      if (!c) continue;
-      counts.set(c, (counts.get(c) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, count]) => ({ name, count }));
+    return (categoriesQuery.data ?? [])
+      .filter((r) => r.category)
+      .map((r) => ({ name: r.category, count: Number(r.count) }));
   }, [categoriesQuery.data]);
 
   return (
