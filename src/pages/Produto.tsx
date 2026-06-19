@@ -411,8 +411,8 @@ const Produto = () => {
                 <MessageCircle className="h-4 w-4" /> Por encomenda — saber mais, consulte-nos
               </a>
             )}
-            </Button>
             <div className="grid grid-cols-2 gap-2">
+
               <a href={`https://wa.me/351911564243?text=${waText}`} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-sm font-medium">
                 <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
