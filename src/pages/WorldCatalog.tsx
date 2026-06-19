@@ -38,9 +38,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [stockFilter, setStockFilter] = useState("all");
-  const [familyFilter, setFamilyFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [brandFilter, setBrandFilter] = useState<string[]>([]);
+  const parseCsv = (v: string | null) => (v && v !== "all" ? v.split(",").filter(Boolean) : []);
+  const [familyFilter, setFamilyFilter] = useState<string[]>(parseCsv(searchParams.get("familia")));
+  const [typeFilter, setTypeFilter] = useState<string[]>(parseCsv(searchParams.get("tipo")));
+  const [brandFilter, setBrandFilter] = useState<string[]>(parseCsv(searchParams.get("marca")));
   const [bannerIdx, setBannerIdx] = useState(0);
 
   const { data: banners = [] } = useQuery({
