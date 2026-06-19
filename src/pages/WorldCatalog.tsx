@@ -586,7 +586,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           </div>
 
           {/* Filtros activos */}
-          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter.length > 0 || stockFilter !== "all") && (
+          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter.length > 0 || typeFilter.length > 0 || brandFilter.length > 0 || stockFilter !== "all") && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {categoryFilter !== "all" && (
                 <Badge variant="secondary" className="gap-1 pr-1 text-xs">
