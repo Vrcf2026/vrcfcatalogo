@@ -39,6 +39,17 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [stockFilter, setStockFilter] = useState("all");
   const parseCsv = (v: string | null) => (v && v !== "all" ? v.split(",").filter(Boolean) : []);
+  const parseTechFilters = (v: string | null): Record<string, string[]> => {
+    if (!v) return {};
+    try {
+      const parsed = JSON.parse(v);
+      return Object.fromEntries(
+        Object.entries(parsed).filter(([, values]) => Array.isArray(values) && values.length > 0)
+      ) as Record<string, string[]>;
+    } catch {
+      return {};
+    }
+  };
   const [familyFilter, setFamilyFilter] = useState<string[]>(parseCsv(searchParams.get("familia")));
   const [typeFilter, setTypeFilter] = useState<string[]>(parseCsv(searchParams.get("tipo")));
   const [brandFilter, setBrandFilter] = useState<string[]>(parseCsv(searchParams.get("marca")));
@@ -66,7 +77,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   }, [banners.length]);
 
   const [sortBy, setSortBy] = useState("featured");
-  const [techFilters, setTechFilters] = useState<Record<string, string[]>>({});
+  const [techFilters, setTechFilters] = useState<Record<string, string[]>>(parseTechFilters(searchParams.get("specs")));
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -77,11 +88,13 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     const familiaArr = parseCsv(searchParams.get("familia"));
     const tipoArr = parseCsv(searchParams.get("tipo"));
     const marcaArr = parseCsv(searchParams.get("marca"));
+    const specsObj = parseTechFilters(searchParams.get("specs"));
     let changed = false;
     if (JSON.stringify(marcaArr) !== JSON.stringify(brandFilter)) { setBrandFilter(marcaArr); changed = true; }
     if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
     if (JSON.stringify(familiaArr) !== JSON.stringify(familyFilter)) { setFamilyFilter(familiaArr); changed = true; }
     if (JSON.stringify(tipoArr) !== JSON.stringify(typeFilter)) { setTypeFilter(tipoArr); changed = true; }
+    if (JSON.stringify(specsObj) !== JSON.stringify(techFilters)) { setTechFilters(specsObj); changed = true; }
     if (changed) setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -276,15 +289,39 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       if (error) throw error;
       return (data as any[]) ?? [];
     },
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
     enabled: categoryFilter !== "all",
   });
 
-  const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => ({
-    key: g.key,
-    label: g.label.charAt(0).toUpperCase() + g.label.slice(1),
-    values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
-  }));
+  const techSpecOptions: TechSpecGroup[] = (() => {
+    const groups = new Map<string, TechSpecGroup>();
+
+    for (const g of (specsRpcQuery.data ?? []) as any[]) {
+      const label = String(g.label ?? g.key).replace(/_/g, " ");
+      groups.set(g.key, {
+        key: g.key,
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
+      });
+    }
+
+    for (const [key, selectedValues] of Object.entries(techFilters)) {
+      if (!selectedValues.length) continue;
+      const group = groups.get(key) ?? {
+        key,
+        label: key.replace(/_/g, " ").replace(/^./, c => c.toUpperCase()),
+        values: [],
+      };
+      const existing = new Set(group.values.map(v => v.value));
+      for (const value of selectedValues) {
+        if (!existing.has(value)) group.values.unshift({ value, count: 0 });
+      }
+      groups.set(key, group);
+    }
+
+    return Array.from(groups.values());
+  })();
 
   // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
   const facetsQuery = useQuery({
@@ -388,10 +425,22 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     setSearchParams(searchParams, { replace: true });
   };
 
+  const setTechnicalFilters = (next: Record<string, string[]> | ((previous: Record<string, string[]>) => Record<string, string[]>)) => {
+    setTechFilters((previous) => {
+      const resolved = typeof next === "function" ? next(previous) : next;
+      const clean = Object.fromEntries(Object.entries(resolved).filter(([, values]) => values.length > 0));
+      const params = new URLSearchParams(searchParams);
+      if (Object.keys(clean).length === 0) params.delete("specs");
+      else params.set("specs", JSON.stringify(clean));
+      setSearchParams(params, { replace: true });
+      return clean;
+    });
+  };
+
   const clearAllFilters = () => {
     setCategoryFilter("all"); setFamilyFilter([]); setTypeFilter([]); setBrandFilter([]);
     setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
-    searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
+    searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo"); searchParams.delete("specs");
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -413,7 +462,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       onTypeFilterChange={setTypes}
       onBrandFilterChange={setBrands}
       onStockFilterChange={setStockFilter}
-      onTechFiltersChange={setTechFilters}
+      onTechFiltersChange={setTechnicalFilters}
       onPageReset={() => setPage(1)}
       onClearAll={clearAllFilters}
     />
@@ -602,7 +651,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
               {Object.entries(techFilters).map(([k, v]) => (
                 <Badge key={k} variant="secondary" className="gap-1 pr-1 text-xs">
                   {k.replace(/_/g, " ")}: {Array.isArray(v) ? v.join(", ") : v}
-                  <button onClick={() => setTechFilters(p => { const n = { ...p }; delete n[k]; return n; })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                  <button onClick={() => setTechnicalFilters(p => { const n = { ...p }; delete n[k]; return n; })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               ))}
               <button onClick={clearAllFilters} className="text-xs text-muted-foreground hover:text-destructive underline">Limpar tudo</button>
