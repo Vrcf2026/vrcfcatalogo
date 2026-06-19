@@ -88,11 +88,13 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     const familiaArr = parseCsv(searchParams.get("familia"));
     const tipoArr = parseCsv(searchParams.get("tipo"));
     const marcaArr = parseCsv(searchParams.get("marca"));
+    const specsObj = parseTechFilters(searchParams.get("specs"));
     let changed = false;
     if (JSON.stringify(marcaArr) !== JSON.stringify(brandFilter)) { setBrandFilter(marcaArr); changed = true; }
     if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
     if (JSON.stringify(familiaArr) !== JSON.stringify(familyFilter)) { setFamilyFilter(familiaArr); changed = true; }
     if (JSON.stringify(tipoArr) !== JSON.stringify(typeFilter)) { setTypeFilter(tipoArr); changed = true; }
+    if (JSON.stringify(specsObj) !== JSON.stringify(techFilters)) { setTechFilters(specsObj); changed = true; }
     if (changed) setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
