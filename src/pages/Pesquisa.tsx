@@ -182,7 +182,7 @@ const Pesquisa = () => {
               {categoryChips.map((c) => (
                 <button
                   key={c.name}
-                  onClick={() => navigate(`${MUNDO_ROUTES[mundoFilter]}?categoria=${encodeURIComponent(c.name)}`)}
+                  onClick={() => navigate(`${MUNDO_ROUTES[mundoFilter]}?categoria=${encodeURIComponent(c.name)}&q=${encodeURIComponent(search.trim())}`)}
                   className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
                   title={`Ver categoria ${c.name}`}
                 >
