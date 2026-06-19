@@ -38,9 +38,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [stockFilter, setStockFilter] = useState("all");
-  const [familyFilter, setFamilyFilter] = useState("all");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [brandFilter, setBrandFilter] = useState<string[]>([]);
+  const parseCsv = (v: string | null) => (v && v !== "all" ? v.split(",").filter(Boolean) : []);
+  const [familyFilter, setFamilyFilter] = useState<string[]>(parseCsv(searchParams.get("familia")));
+  const [typeFilter, setTypeFilter] = useState<string[]>(parseCsv(searchParams.get("tipo")));
+  const [brandFilter, setBrandFilter] = useState<string[]>(parseCsv(searchParams.get("marca")));
   const [bannerIdx, setBannerIdx] = useState(0);
 
   const { data: banners = [] } = useQuery({
@@ -72,16 +73,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   // Sincronizar filtros vindos da URL (categoria, familia, tipo, marca)
   useEffect(() => {
-    const marca = searchParams.get("marca");
     const categoria = searchParams.get("categoria") ?? "all";
-    const familia = searchParams.get("familia") ?? "all";
-    const tipo = searchParams.get("tipo") ?? "all";
-    const marcaArr = marca && marca !== "all" ? marca.split(",").filter(Boolean) : [];
+    const familiaArr = parseCsv(searchParams.get("familia"));
+    const tipoArr = parseCsv(searchParams.get("tipo"));
+    const marcaArr = parseCsv(searchParams.get("marca"));
     let changed = false;
     if (JSON.stringify(marcaArr) !== JSON.stringify(brandFilter)) { setBrandFilter(marcaArr); changed = true; }
     if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
-    if (familia !== familyFilter) { setFamilyFilter(familia); changed = true; }
-    if (tipo !== typeFilter) { setTypeFilter(tipo); changed = true; }
+    if (JSON.stringify(familiaArr) !== JSON.stringify(familyFilter)) { setFamilyFilter(familiaArr); changed = true; }
+    if (JSON.stringify(tipoArr) !== JSON.stringify(typeFilter)) { setTypeFilter(tipoArr); changed = true; }
     if (changed) setPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -156,7 +156,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       // "Câmara IP Bullet 4MP". search_products não cobre filtros JSONB
       // de especificações, por isso com techFilters activos mantém-se o
       // .ilike() abaixo (sem normalização de acentos nesse caso).
-      if (search && Object.keys(techFilters).length === 0) {
+      // search_products RPC só suporta single id por axis. Usa-o apenas se
+      // família/tipo/marca tiverem 0 ou 1 selecção.
+      const canUseRpc = search
+        && Object.keys(techFilters).length === 0
+        && familyFilter.length <= 1
+        && typeFilter.length <= 1
+        && brandFilter.length <= 1;
+
+      if (canUseRpc) {
         const orderMap: Record<string, { by: string; asc: boolean }> = {
           "featured":   { by: "featured",   asc: false },
           "price-asc":  { by: "price",      asc: true },
@@ -166,15 +174,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           "newest":     { by: "created_at", asc: false },
         };
         const order = orderMap[sortBy] ?? orderMap.featured;
-        const singleBrandId = brandFilter.length === 1 ? brandFilter[0] : null;
+        const singleBrandId = brandFilter[0] ?? null;
         const brandName = singleBrandId ? (brands.find((b: any) => b.id === singleBrandId)?.name ?? null) : null;
 
         const { data, error } = await supabase.rpc("search_products", {
           p_query: search,
           p_mundo: mundo,
           p_category: categoryFilter !== "all" ? categoryFilter : null,
-          p_family_id: familyFilter !== "all" ? familyFilter : null,
-          p_type_id: typeFilter !== "all" ? typeFilter : null,
+          p_family_id: familyFilter[0] ?? null,
+          p_type_id: typeFilter[0] ?? null,
           p_brand_id: singleBrandId,
           p_brand: brandName,
           p_limit: PAGE_SIZE,
@@ -199,8 +207,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         else if (stockFilter === "low") q = q.eq("stock_status", "low");
         else if (stockFilter === "out") q = q.in("stock_status", ["out", "on_request"]);
       }
-      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
-      if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
+      if (familyFilter.length > 0) q = q.in("family_id", familyFilter);
+      if (typeFilter.length > 0) q = q.in("type_id", typeFilter);
       if (brandFilter.length > 0) {
         const brandNames = brandFilter.map(id => brands.find((b: any) => b.id === id)?.name ?? "").filter(Boolean);
         const brandConds = brandFilter.map(id => `brand_id.eq.${id}`).concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
@@ -260,7 +268,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       const { data, error } = await (supabase as any).rpc("get_specs_aggregation", {
         p_mundo: mundo,
         p_category: categoryFilter !== "all" ? categoryFilter : null,
-        p_family_id: familyFilter !== "all" ? familyFilter : null,
+        p_family_id: familyFilter.length === 1 ? familyFilter[0] : null,
         p_brand_id: brandId,
         p_brand_name: brandName,
       });
@@ -277,38 +285,110 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
   }));
 
+  // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
+  const facetsQuery = useQuery({
+    queryKey: ["facets", mundo, categoryFilter, search],
+    queryFn: async () => {
+      if (categoryFilter === "all") return [] as any[];
+      let q = supabase.from("products")
+        .select("family_id, type_id, brand_id, brand")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .eq("category", categoryFilter)
+        .range(0, 9999);
+      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 2 * 60 * 1000,
+    enabled: categoryFilter !== "all",
+  });
+
+  const facetRows: any[] = (facetsQuery.data ?? []) as any[];
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+  const brandIdByName = Object.fromEntries(brands.map((b: any) => [b.name, b.id]));
+
+  const familyCount = new Map<string, number>();
+  const typeCount = new Map<string, number>();
+  const brandCount = new Map<string, number>();
+  for (const r of facetRows) {
+    if (r.family_id) familyCount.set(r.family_id, (familyCount.get(r.family_id) ?? 0) + 1);
+    if (r.type_id)   typeCount.set(r.type_id,     (typeCount.get(r.type_id)   ?? 0) + 1);
+    const bId = r.brand_id ?? brandIdByName[r.brand];
+    if (bId) brandCount.set(bId, (brandCount.get(bId) ?? 0) + 1);
+  }
+
+  const familyOptions = families
+    .filter((f: any) => f.category === categoryFilter)
+    .map((f: any) => ({ id: f.id, name: f.name, count: familyCount.get(f.id) ?? 0 }))
+    .filter((o: any) => o.count > 0 || familyFilter.includes(o.id))
+    .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const allowedFamilyIds = familyFilter.length > 0
+    ? new Set(familyFilter)
+    : new Set(familyOptions.map((o: any) => o.id));
+  const typeOptions = types
+    .filter((t: any) => allowedFamilyIds.has(t.family_id))
+    .map((t: any) => ({ id: t.id, name: t.name, count: typeCount.get(t.id) ?? 0 }))
+    .filter((o: any) => o.count > 0 || typeFilter.includes(o.id))
+    .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const brandOptions = brands
+    .map((b: any) => ({ id: b.id, name: b.name, count: brandCount.get(b.id) ?? 0 }))
+    .filter((o: any) => o.count > 0 || brandFilter.includes(o.id))
+    .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
-    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter.length > 0,
+    categoryFilter !== "all",
+    familyFilter.length > 0,
+    typeFilter.length > 0,
+    brandFilter.length > 0,
     Object.keys(techFilters).length > 0,
     stockFilter !== "all",
   ].filter(Boolean).length;
 
+  const csv = (arr: string[]) => arr.join(",");
+
   const setCategory = (name: string) => {
-    setCategoryFilter(name); setFamilyFilter("all"); setTypeFilter("all"); setPage(1);
+    setCategoryFilter(name); setFamilyFilter([]); setTypeFilter([]); setPage(1);
     if (name === "all") searchParams.delete("categoria"); else searchParams.set("categoria", name);
+    searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
   };
 
-  const setFamily = (id: string) => {
-    setFamilyFilter(id); setTypeFilter("all"); setPage(1);
-    if (id === "all") searchParams.delete("familia"); else searchParams.set("familia", id);
-    searchParams.delete("tipo");
+  const setFamilies = (ids: string[]) => {
+    setFamilyFilter(ids);
+    const allowed = new Set(ids);
+    const nextTypes = ids.length > 0
+      ? typeFilter.filter(tid => {
+          const t = types.find((x: any) => x.id === tid);
+          return t && allowed.has(t.family_id);
+        })
+      : typeFilter;
+    setTypeFilter(nextTypes);
+    setPage(1);
+    if (ids.length === 0) searchParams.delete("familia"); else searchParams.set("familia", csv(ids));
+    if (nextTypes.length === 0) searchParams.delete("tipo"); else searchParams.set("tipo", csv(nextTypes));
     setSearchParams(searchParams, { replace: true });
   };
 
-  const setType = (id: string) => {
-    setTypeFilter(id); setPage(1);
-    if (id === "all") searchParams.delete("tipo"); else searchParams.set("tipo", id);
+  const setTypes = (ids: string[]) => {
+    setTypeFilter(ids); setPage(1);
+    if (ids.length === 0) searchParams.delete("tipo"); else searchParams.set("tipo", csv(ids));
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const setBrands = (ids: string[]) => {
+    setBrandFilter(ids); setPage(1);
+    if (ids.length === 0) searchParams.delete("marca"); else searchParams.set("marca", csv(ids));
     setSearchParams(searchParams, { replace: true });
   };
 
   const clearAllFilters = () => {
-    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter([]);
+    setCategoryFilter("all"); setFamilyFilter([]); setTypeFilter([]); setBrandFilter([]);
     setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
     searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
@@ -316,24 +396,21 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const Icon = mundo === "seguranca" ? ShieldCheck : mundo === "economato" ? ShoppingBag : Monitor;
 
-  const onBrandChange = (v: string) => {
-    setBrandFilter([v]); setPage(1);
-    if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
-    setSearchParams(searchParams, { replace: true });
-  };
-
   const renderFilterPanel = () => (
     <CatalogFilterPanel
-      visibleFamilies={visibleFamilies}
-      brands={brands}
+      familyOptions={familyOptions}
+      typeOptions={typeOptions}
+      brandOptions={brandOptions}
       familyFilter={familyFilter}
+      typeFilter={typeFilter}
       brandFilter={brandFilter}
       stockFilter={stockFilter}
       techFilters={techFilters}
       techSpecOptions={techSpecOptions}
       activeFiltersCount={activeFiltersCount}
-      onFamilyChange={setFamily}
-      onBrandFilterChange={setBrandFilter}
+      onFamilyFilterChange={setFamilies}
+      onTypeFilterChange={setTypes}
+      onBrandFilterChange={setBrands}
       onStockFilterChange={setStockFilter}
       onTechFiltersChange={setTechFilters}
       onPageReset={() => setPage(1)}
@@ -454,18 +531,20 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {/* Main content */}
       <div className="container mx-auto px-4 pb-14 flex gap-6">
 
-        {/* Sidebar filtros — desktop */}
-        <aside className="hidden lg:block w-64 shrink-0 pt-4">
-          <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold">Filtrar</h2>
-              {activeFiltersCount > 0 && (
-                <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
-              )}
+        {/* Sidebar filtros — desktop (só aparece após escolher uma categoria) */}
+        {categoryFilter !== "all" && (
+          <aside className="hidden lg:block w-64 shrink-0 pt-4">
+            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-bold">Filtrar</h2>
+                {activeFiltersCount > 0 && (
+                  <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
+                )}
+              </div>
+              {renderFilterPanel()}
             </div>
-            {renderFilterPanel()}
-          </div>
-        </aside>
+          </aside>
+        )}
 
         <div className="flex-1 min-w-0 pt-4">
           {/* Toolbar */}
@@ -477,23 +556,25 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 className="pl-9 h-9 text-sm bg-muted/60 border-transparent rounded-xl" />
             </div>
 
-            {/* Filtros mobile */}
-            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
-                  <SlidersHorizontal className="h-4 w-4" /> Filtros
-                  {activeFiltersCount > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] overflow-y-auto">
-                <SheetHeader className="pb-4">
-                  <SheetTitle>Filtros</SheetTitle>
-                </SheetHeader>
-                {renderFilterPanel()}
-              </SheetContent>
-            </Sheet>
+            {/* Filtros mobile (só após escolher categoria) */}
+            {categoryFilter !== "all" && (
+              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+                    <SlidersHorizontal className="h-4 w-4" /> Filtros
+                    {activeFiltersCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
+                    )}
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[300px] overflow-y-auto">
+                  <SheetHeader className="pb-4">
+                    <SheetTitle>Filtros</SheetTitle>
+                  </SheetHeader>
+                  {renderFilterPanel()}
+                </SheetContent>
+              </Sheet>
+            )}
 
             <Select value={sortBy} onValueChange={v => { setSortBy(v); setPage(1); }}>
               <SelectTrigger className="w-[160px] h-9 text-sm"><SelectValue /></SelectTrigger>
@@ -509,7 +590,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           </div>
 
           {/* Filtros activos */}
-          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter.length > 0 || stockFilter !== "all") && (
+          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter.length > 0 || typeFilter.length > 0 || brandFilter.length > 0 || stockFilter !== "all") && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {categoryFilter !== "all" && (
                 <Badge variant="secondary" className="gap-1 pr-1 text-xs">
@@ -519,7 +600,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
               )}
               {Object.entries(techFilters).map(([k, v]) => (
                 <Badge key={k} variant="secondary" className="gap-1 pr-1 text-xs">
-                  {k.replace(/_/g, " ")}: {v}
+                  {k.replace(/_/g, " ")}: {Array.isArray(v) ? v.join(", ") : v}
                   <button onClick={() => setTechFilters(p => { const n = { ...p }; delete n[k]; return n; })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               ))}
