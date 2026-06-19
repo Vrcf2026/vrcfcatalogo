@@ -156,7 +156,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       // "Câmara IP Bullet 4MP". search_products não cobre filtros JSONB
       // de especificações, por isso com techFilters activos mantém-se o
       // .ilike() abaixo (sem normalização de acentos nesse caso).
-      if (search && Object.keys(techFilters).length === 0) {
+      // search_products RPC só suporta single id por axis. Usa-o apenas se
+      // família/tipo/marca tiverem 0 ou 1 selecção.
+      const canUseRpc = search
+        && Object.keys(techFilters).length === 0
+        && familyFilter.length <= 1
+        && typeFilter.length <= 1
+        && brandFilter.length <= 1;
+
+      if (canUseRpc) {
         const orderMap: Record<string, { by: string; asc: boolean }> = {
           "featured":   { by: "featured",   asc: false },
           "price-asc":  { by: "price",      asc: true },
@@ -166,15 +174,15 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           "newest":     { by: "created_at", asc: false },
         };
         const order = orderMap[sortBy] ?? orderMap.featured;
-        const singleBrandId = brandFilter.length === 1 ? brandFilter[0] : null;
+        const singleBrandId = brandFilter[0] ?? null;
         const brandName = singleBrandId ? (brands.find((b: any) => b.id === singleBrandId)?.name ?? null) : null;
 
         const { data, error } = await supabase.rpc("search_products", {
           p_query: search,
           p_mundo: mundo,
           p_category: categoryFilter !== "all" ? categoryFilter : null,
-          p_family_id: familyFilter !== "all" ? familyFilter : null,
-          p_type_id: typeFilter !== "all" ? typeFilter : null,
+          p_family_id: familyFilter[0] ?? null,
+          p_type_id: typeFilter[0] ?? null,
           p_brand_id: singleBrandId,
           p_brand: brandName,
           p_limit: PAGE_SIZE,
@@ -199,8 +207,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         else if (stockFilter === "low") q = q.eq("stock_status", "low");
         else if (stockFilter === "out") q = q.in("stock_status", ["out", "on_request"]);
       }
-      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
-      if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
+      if (familyFilter.length > 0) q = q.in("family_id", familyFilter);
+      if (typeFilter.length > 0) q = q.in("type_id", typeFilter);
       if (brandFilter.length > 0) {
         const brandNames = brandFilter.map(id => brands.find((b: any) => b.id === id)?.name ?? "").filter(Boolean);
         const brandConds = brandFilter.map(id => `brand_id.eq.${id}`).concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
