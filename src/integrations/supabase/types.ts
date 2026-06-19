@@ -1079,6 +1079,13 @@ export type Database = {
           week: string
         }[]
       }
+      get_search_category_counts: {
+        Args: { p_mundo?: string; p_query: string }
+        Returns: {
+          category: string
+          count: number
+        }[]
+      }
       get_specs_aggregation: {
         Args: {
           p_brand_id?: string
