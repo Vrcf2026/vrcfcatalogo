@@ -425,10 +425,22 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     setSearchParams(searchParams, { replace: true });
   };
 
+  const setTechnicalFilters = (next: Record<string, string[]> | ((previous: Record<string, string[]>) => Record<string, string[]>)) => {
+    setTechFilters((previous) => {
+      const resolved = typeof next === "function" ? next(previous) : next;
+      const clean = Object.fromEntries(Object.entries(resolved).filter(([, values]) => values.length > 0));
+      const params = new URLSearchParams(searchParams);
+      if (Object.keys(clean).length === 0) params.delete("specs");
+      else params.set("specs", JSON.stringify(clean));
+      setSearchParams(params, { replace: true });
+      return clean;
+    });
+  };
+
   const clearAllFilters = () => {
     setCategoryFilter("all"); setFamilyFilter([]); setTypeFilter([]); setBrandFilter([]);
     setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
-    searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
+    searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo"); searchParams.delete("specs");
     setSearchParams(searchParams, { replace: true });
   };
 
