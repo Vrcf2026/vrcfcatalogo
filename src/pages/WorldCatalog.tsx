@@ -39,6 +39,17 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [stockFilter, setStockFilter] = useState("all");
   const parseCsv = (v: string | null) => (v && v !== "all" ? v.split(",").filter(Boolean) : []);
+  const parseTechFilters = (v: string | null): Record<string, string[]> => {
+    if (!v) return {};
+    try {
+      const parsed = JSON.parse(v);
+      return Object.fromEntries(
+        Object.entries(parsed).filter(([, values]) => Array.isArray(values) && values.length > 0)
+      ) as Record<string, string[]>;
+    } catch {
+      return {};
+    }
+  };
   const [familyFilter, setFamilyFilter] = useState<string[]>(parseCsv(searchParams.get("familia")));
   const [typeFilter, setTypeFilter] = useState<string[]>(parseCsv(searchParams.get("tipo")));
   const [brandFilter, setBrandFilter] = useState<string[]>(parseCsv(searchParams.get("marca")));
@@ -66,7 +77,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   }, [banners.length]);
 
   const [sortBy, setSortBy] = useState("featured");
-  const [techFilters, setTechFilters] = useState<Record<string, string[]>>({});
+  const [techFilters, setTechFilters] = useState<Record<string, string[]>>(parseTechFilters(searchParams.get("specs")));
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
