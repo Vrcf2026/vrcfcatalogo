@@ -1086,16 +1086,28 @@ export type Database = {
           count: number
         }[]
       }
-      get_specs_aggregation: {
-        Args: {
-          p_brand_id?: string
-          p_brand_name?: string
-          p_category?: string
-          p_family_id?: string
-          p_mundo: string
-        }
-        Returns: Json
-      }
+      get_specs_aggregation:
+        | {
+            Args: {
+              p_brand_id?: string
+              p_brand_name?: string
+              p_category?: string
+              p_family_id?: string
+              p_mundo: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_brand_id?: string
+              p_brand_name?: string
+              p_category?: string
+              p_family_id?: string
+              p_mundo: string
+              p_tech_filters?: Json
+            }
+            Returns: Json
+          }
       get_top_products_with_context: {
         Args: { p_event_type?: string; p_limit?: number; p_since?: string }
         Returns: {
