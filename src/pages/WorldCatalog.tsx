@@ -72,12 +72,13 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   // Sincronizar filtros vindos da URL (categoria, familia, tipo, marca)
   useEffect(() => {
-    const marca = searchParams.get("marca") ?? "all";
+    const marca = searchParams.get("marca");
     const categoria = searchParams.get("categoria") ?? "all";
     const familia = searchParams.get("familia") ?? "all";
     const tipo = searchParams.get("tipo") ?? "all";
+    const marcaArr = marca && marca !== "all" ? marca.split(",").filter(Boolean) : [];
     let changed = false;
-    if (marca !== brandFilter) { setBrandFilter(marca); changed = true; }
+    if (JSON.stringify(marcaArr) !== JSON.stringify(brandFilter)) { setBrandFilter(marcaArr); changed = true; }
     if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
     if (familia !== familyFilter) { setFamilyFilter(familia); changed = true; }
     if (tipo !== typeFilter) { setTypeFilter(tipo); changed = true; }
