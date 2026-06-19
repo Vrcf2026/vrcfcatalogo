@@ -1,8 +1,8 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe } from "lucide-react";
+import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +17,15 @@ import { SiteFooter } from "@/components/SiteFooter";
 
 const PAGE_SIZE = 24;
 
+const MUNDO_ROUTES: Record<string, string> = {
+  seguranca: "/seguranca",
+  escritorio: "/escritorio",
+  economato: "/economato",
+};
+
 const Pesquisa = () => {
   const { totalItems, setIsOpen } = useCart();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQ = searchParams.get("q") ?? "";
   const [searchInput, setSearchInput] = useState(initialQ);
@@ -70,6 +77,37 @@ const Pesquisa = () => {
   const products = productsQuery.data?.rows ?? [];
   const total = productsQuery.data?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // Categorias com produtos para o mundo selecionado + termo de pesquisa
+  const categoriesQuery = useQuery({
+    queryKey: ["search-categories", search, mundoFilter],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("search_products", {
+        p_query: search.trim(),
+        p_mundo: mundoFilter,
+        p_limit: 500,
+        p_offset: 0,
+        p_order_by: "featured",
+      });
+      if (error) throw error;
+      return (data ?? []).map((r: any) => r.row_data);
+    },
+    enabled: search.trim().length > 0 && mundoFilter !== "all",
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const categoryChips = useMemo(() => {
+    const rows = categoriesQuery.data ?? [];
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      const c = r.category;
+      if (!c) continue;
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, count]) => ({ name, count }));
+  }, [categoriesQuery.data]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,6 +173,25 @@ const Pesquisa = () => {
             ))}
           </div>
         </div>
+
+        {/* Categorias do mundo selecionado */}
+        {mundoFilter !== "all" && search.trim() && categoryChips.length > 0 && (
+          <div className="border-t border-border/50 px-3 py-2 sm:px-4 flex items-start gap-2">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
+            <div className="flex gap-1.5 flex-wrap">
+              {categoryChips.map((c) => (
+                <button
+                  key={c.name}
+                  onClick={() => navigate(`${MUNDO_ROUTES[mundoFilter]}?categoria=${encodeURIComponent(c.name)}`)}
+                  className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
+                  title={`Ver categoria ${c.name}`}
+                >
+                  {c.name} <span className="text-muted-foreground/60">({c.count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       <section className="container mx-auto px-4 py-8">
