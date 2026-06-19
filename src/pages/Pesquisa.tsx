@@ -17,8 +17,15 @@ import { SiteFooter } from "@/components/SiteFooter";
 
 const PAGE_SIZE = 24;
 
+const MUNDO_ROUTES: Record<string, string> = {
+  seguranca: "/seguranca",
+  escritorio: "/escritorio",
+  economato: "/economato",
+};
+
 const Pesquisa = () => {
   const { totalItems, setIsOpen } = useCart();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialQ = searchParams.get("q") ?? "";
   const [searchInput, setSearchInput] = useState(initialQ);
