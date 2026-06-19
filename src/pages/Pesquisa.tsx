@@ -173,6 +173,25 @@ const Pesquisa = () => {
             ))}
           </div>
         </div>
+
+        {/* Categorias do mundo selecionado */}
+        {mundoFilter !== "all" && search.trim() && categoryChips.length > 0 && (
+          <div className="border-t border-border/50 px-3 py-2 sm:px-4 flex items-start gap-2">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
+            <div className="flex gap-1.5 flex-wrap">
+              {categoryChips.map((c) => (
+                <button
+                  key={c.name}
+                  onClick={() => navigate(`${MUNDO_ROUTES[mundoFilter]}?categoria=${encodeURIComponent(c.name)}`)}
+                  className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
+                  title={`Ver categoria ${c.name}`}
+                >
+                  {c.name} <span className="text-muted-foreground/60">({c.count})</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </header>
 
       <section className="container mx-auto px-4 py-8">
