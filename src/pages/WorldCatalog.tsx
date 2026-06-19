@@ -260,7 +260,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   // Specs via RPC no servidor — agrega TODOS os produtos da categoria/família
   // sem trazer JSONB para o browser. Sem limites artificiais de valores ou grupos.
   const specsRpcQuery = useQuery({
-    queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, brandFilter],
+    queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, brandFilter, techFilters],
     queryFn: async () => {
       if (categoryFilter === "all") return [];
       const brandId = brandFilter.length === 1 ? brandFilter[0] : null;
@@ -271,6 +271,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         p_family_id: familyFilter.length === 1 ? familyFilter[0] : null,
         p_brand_id: brandId,
         p_brand_name: brandName,
+        p_tech_filters: techFilters,
       });
       if (error) throw error;
       return (data as any[]) ?? [];
