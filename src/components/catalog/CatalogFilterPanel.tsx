@@ -246,7 +246,7 @@ export function CatalogFilterPanel({
               key={group.key}
               title={group.label}
               count={(techFilters[group.key] ?? []).length}
-              defaultOpen={group.values.length <= 6}
+              defaultOpen={false}
             >
               <div className="flex flex-wrap gap-1.5">
                 {group.values.map(({ value, count }) => {
