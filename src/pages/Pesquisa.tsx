@@ -1,8 +1,8 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe } from "lucide-react";
+import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
