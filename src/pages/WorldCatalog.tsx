@@ -276,15 +276,39 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       if (error) throw error;
       return (data as any[]) ?? [];
     },
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
     enabled: categoryFilter !== "all",
   });
 
-  const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => ({
-    key: g.key,
-    label: g.label.charAt(0).toUpperCase() + g.label.slice(1),
-    values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
-  }));
+  const techSpecOptions: TechSpecGroup[] = (() => {
+    const groups = new Map<string, TechSpecGroup>();
+
+    for (const g of (specsRpcQuery.data ?? []) as any[]) {
+      const label = String(g.label ?? g.key).replace(/_/g, " ");
+      groups.set(g.key, {
+        key: g.key,
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+        values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
+      });
+    }
+
+    for (const [key, selectedValues] of Object.entries(techFilters)) {
+      if (!selectedValues.length) continue;
+      const group = groups.get(key) ?? {
+        key,
+        label: key.replace(/_/g, " ").replace(/^./, c => c.toUpperCase()),
+        values: [],
+      };
+      const existing = new Set(group.values.map(v => v.value));
+      for (const value of selectedValues) {
+        if (!existing.has(value)) group.values.unshift({ value, count: 0 });
+      }
+      groups.set(key, group);
+    }
+
+    return Array.from(groups.values());
+  })();
 
   // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
   const facetsQuery = useQuery({
