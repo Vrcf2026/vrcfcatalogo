@@ -268,7 +268,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       const { data, error } = await (supabase as any).rpc("get_specs_aggregation", {
         p_mundo: mundo,
         p_category: categoryFilter !== "all" ? categoryFilter : null,
-        p_family_id: familyFilter !== "all" ? familyFilter : null,
+        p_family_id: familyFilter.length === 1 ? familyFilter[0] : null,
         p_brand_id: brandId,
         p_brand_name: brandName,
       });
@@ -285,38 +285,110 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
   }));
 
+  // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
+  const facetsQuery = useQuery({
+    queryKey: ["facets", mundo, categoryFilter, search],
+    queryFn: async () => {
+      if (categoryFilter === "all") return [] as any[];
+      let q = supabase.from("products")
+        .select("family_id, type_id, brand_id, brand")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .eq("category", categoryFilter)
+        .range(0, 9999);
+      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 2 * 60 * 1000,
+    enabled: categoryFilter !== "all",
+  });
+
+  const facetRows: any[] = (facetsQuery.data ?? []) as any[];
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
-  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+  const brandIdByName = Object.fromEntries(brands.map((b: any) => [b.name, b.id]));
+
+  const familyCount = new Map<string, number>();
+  const typeCount = new Map<string, number>();
+  const brandCount = new Map<string, number>();
+  for (const r of facetRows) {
+    if (r.family_id) familyCount.set(r.family_id, (familyCount.get(r.family_id) ?? 0) + 1);
+    if (r.type_id)   typeCount.set(r.type_id,     (typeCount.get(r.type_id)   ?? 0) + 1);
+    const bId = r.brand_id ?? brandIdByName[r.brand];
+    if (bId) brandCount.set(bId, (brandCount.get(bId) ?? 0) + 1);
+  }
+
+  const familyOptions = families
+    .filter((f: any) => f.category === categoryFilter)
+    .map((f: any) => ({ id: f.id, name: f.name, count: familyCount.get(f.id) ?? 0 }))
+    .filter((o: any) => o.count > 0 || familyFilter.includes(o.id))
+    .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const allowedFamilyIds = familyFilter.length > 0
+    ? new Set(familyFilter)
+    : new Set(familyOptions.map((o: any) => o.id));
+  const typeOptions = types
+    .filter((t: any) => allowedFamilyIds.has(t.family_id))
+    .map((t: any) => ({ id: t.id, name: t.name, count: typeCount.get(t.id) ?? 0 }))
+    .filter((o: any) => o.count > 0 || typeFilter.includes(o.id))
+    .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
+  const brandOptions = brands
+    .map((b: any) => ({ id: b.id, name: b.name, count: brandCount.get(b.id) ?? 0 }))
+    .filter((o: any) => o.count > 0 || brandFilter.includes(o.id))
+    .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
-    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter.length > 0,
+    categoryFilter !== "all",
+    familyFilter.length > 0,
+    typeFilter.length > 0,
+    brandFilter.length > 0,
     Object.keys(techFilters).length > 0,
     stockFilter !== "all",
   ].filter(Boolean).length;
 
+  const csv = (arr: string[]) => arr.join(",");
+
   const setCategory = (name: string) => {
-    setCategoryFilter(name); setFamilyFilter("all"); setTypeFilter("all"); setPage(1);
+    setCategoryFilter(name); setFamilyFilter([]); setTypeFilter([]); setPage(1);
     if (name === "all") searchParams.delete("categoria"); else searchParams.set("categoria", name);
+    searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
   };
 
-  const setFamily = (id: string) => {
-    setFamilyFilter(id); setTypeFilter("all"); setPage(1);
-    if (id === "all") searchParams.delete("familia"); else searchParams.set("familia", id);
-    searchParams.delete("tipo");
+  const setFamilies = (ids: string[]) => {
+    setFamilyFilter(ids);
+    const allowed = new Set(ids);
+    const nextTypes = ids.length > 0
+      ? typeFilter.filter(tid => {
+          const t = types.find((x: any) => x.id === tid);
+          return t && allowed.has(t.family_id);
+        })
+      : typeFilter;
+    setTypeFilter(nextTypes);
+    setPage(1);
+    if (ids.length === 0) searchParams.delete("familia"); else searchParams.set("familia", csv(ids));
+    if (nextTypes.length === 0) searchParams.delete("tipo"); else searchParams.set("tipo", csv(nextTypes));
     setSearchParams(searchParams, { replace: true });
   };
 
-  const setType = (id: string) => {
-    setTypeFilter(id); setPage(1);
-    if (id === "all") searchParams.delete("tipo"); else searchParams.set("tipo", id);
+  const setTypes = (ids: string[]) => {
+    setTypeFilter(ids); setPage(1);
+    if (ids.length === 0) searchParams.delete("tipo"); else searchParams.set("tipo", csv(ids));
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const setBrands = (ids: string[]) => {
+    setBrandFilter(ids); setPage(1);
+    if (ids.length === 0) searchParams.delete("marca"); else searchParams.set("marca", csv(ids));
     setSearchParams(searchParams, { replace: true });
   };
 
   const clearAllFilters = () => {
-    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter([]);
+    setCategoryFilter("all"); setFamilyFilter([]); setTypeFilter([]); setBrandFilter([]);
     setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
     searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
@@ -324,24 +396,21 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const Icon = mundo === "seguranca" ? ShieldCheck : mundo === "economato" ? ShoppingBag : Monitor;
 
-  const onBrandChange = (v: string) => {
-    setBrandFilter([v]); setPage(1);
-    if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
-    setSearchParams(searchParams, { replace: true });
-  };
-
   const renderFilterPanel = () => (
     <CatalogFilterPanel
-      visibleFamilies={visibleFamilies}
-      brands={brands}
+      familyOptions={familyOptions}
+      typeOptions={typeOptions}
+      brandOptions={brandOptions}
       familyFilter={familyFilter}
+      typeFilter={typeFilter}
       brandFilter={brandFilter}
       stockFilter={stockFilter}
       techFilters={techFilters}
       techSpecOptions={techSpecOptions}
       activeFiltersCount={activeFiltersCount}
-      onFamilyChange={setFamily}
-      onBrandFilterChange={setBrandFilter}
+      onFamilyFilterChange={setFamilies}
+      onTypeFilterChange={setTypes}
+      onBrandFilterChange={setBrands}
       onStockFilterChange={setStockFilter}
       onTechFiltersChange={setTechFilters}
       onPageReset={() => setPage(1)}
