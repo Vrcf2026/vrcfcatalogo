@@ -462,7 +462,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       onTypeFilterChange={setTypes}
       onBrandFilterChange={setBrands}
       onStockFilterChange={setStockFilter}
-      onTechFiltersChange={setTechFilters}
+      onTechFiltersChange={setTechnicalFilters}
       onPageReset={() => setPage(1)}
       onClearAll={clearAllFilters}
     />
@@ -651,7 +651,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
               {Object.entries(techFilters).map(([k, v]) => (
                 <Badge key={k} variant="secondary" className="gap-1 pr-1 text-xs">
                   {k.replace(/_/g, " ")}: {Array.isArray(v) ? v.join(", ") : v}
-                  <button onClick={() => setTechFilters(p => { const n = { ...p }; delete n[k]; return n; })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                  <button onClick={() => setTechnicalFilters(p => { const n = { ...p }; delete n[k]; return n; })} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               ))}
               <button onClick={clearAllFilters} className="text-xs text-muted-foreground hover:text-destructive underline">Limpar tudo</button>
