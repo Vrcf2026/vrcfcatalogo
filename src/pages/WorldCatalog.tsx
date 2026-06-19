@@ -23,7 +23,7 @@ import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CategoryTile } from "@/components/catalog/CategoryTile";
-import { CatalogFilterPanel } from "@/components/catalog/CatalogFilterPanel";
+import { CatalogFilterPanel, type TechSpecGroup } from "@/components/catalog/CatalogFilterPanel";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
@@ -72,12 +72,13 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   // Sincronizar filtros vindos da URL (categoria, familia, tipo, marca)
   useEffect(() => {
-    const marca = searchParams.get("marca") ?? "all";
+    const marca = searchParams.get("marca");
     const categoria = searchParams.get("categoria") ?? "all";
     const familia = searchParams.get("familia") ?? "all";
     const tipo = searchParams.get("tipo") ?? "all";
+    const marcaArr = marca && marca !== "all" ? marca.split(",").filter(Boolean) : [];
     let changed = false;
-    if (marca !== brandFilter) { setBrandFilter(marca); changed = true; }
+    if (JSON.stringify(marcaArr) !== JSON.stringify(brandFilter)) { setBrandFilter(marcaArr); changed = true; }
     if (categoria !== categoryFilter) { setCategoryFilter(categoria); changed = true; }
     if (familia !== familyFilter) { setFamilyFilter(familia); changed = true; }
     if (tipo !== typeFilter) { setTypeFilter(tipo); changed = true; }
@@ -165,7 +166,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           "newest":     { by: "created_at", asc: false },
         };
         const order = orderMap[sortBy] ?? orderMap.featured;
-        const brandName = brandFilter !== "all" ? brands.find((b: any) => b.id === brandFilter)?.name ?? null : null;
+        const singleBrandId = brandFilter.length === 1 ? brandFilter[0] : null;
+        const brandName = singleBrandId ? (brands.find((b: any) => b.id === singleBrandId)?.name ?? null) : null;
 
         const { data, error } = await supabase.rpc("search_products", {
           p_query: search,
@@ -173,7 +175,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           p_category: categoryFilter !== "all" ? categoryFilter : null,
           p_family_id: familyFilter !== "all" ? familyFilter : null,
           p_type_id: typeFilter !== "all" ? typeFilter : null,
-          p_brand_id: brandFilter !== "all" ? brandFilter : null,
+          p_brand_id: singleBrandId,
           p_brand: brandName,
           p_limit: PAGE_SIZE,
           p_offset: from,
@@ -276,7 +278,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   }));
 
 
-  const familyMap  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
+  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
   const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
   const hasPrices = products.some((p: any) => p.price != null);
@@ -323,7 +325,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const renderFilterPanel = () => (
     <CatalogFilterPanel
       visibleFamilies={visibleFamilies}
-      brands={visibleBrands}
+      brands={brands}
       familyFilter={familyFilter}
       brandFilter={brandFilter}
       stockFilter={stockFilter}
