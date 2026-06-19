@@ -1,4 +1,4 @@
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useState } from "react";
 import { X, Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ interface CatalogFilterPanelProps {
   onTypeFilterChange: (ids: string[]) => void;
   onBrandFilterChange: (ids: string[]) => void;
   onStockFilterChange: (v: string) => void;
-  onTechFiltersChange: Dispatch<SetStateAction<Record<string, string[]>>>;
+  onTechFiltersChange: (next: Record<string, string[]>) => void;
   onPageReset: () => void;
   onClearAll: () => void;
 }
@@ -164,16 +164,14 @@ export function CatalogFilterPanel({
     arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id];
 
   const toggleSpec = (key: string, value: string) => {
-    onTechFiltersChange((previous) => {
-      const current = previous[key] ?? [];
-      const next = current.includes(value)
-        ? current.filter(v => v !== value)
-        : [...current, value];
-      const updated = { ...previous };
-      if (next.length === 0) delete updated[key];
-      else updated[key] = next;
-      return updated;
-    });
+    const current = techFilters[key] ?? [];
+    const next = current.includes(value)
+      ? current.filter(v => v !== value)
+      : [...current, value];
+    const updated = { ...techFilters };
+    if (next.length === 0) delete updated[key];
+    else updated[key] = next;
+    onTechFiltersChange(updated);
     onPageReset();
   };
 
@@ -255,15 +253,13 @@ export function CatalogFilterPanel({
                   const active = (techFilters[group.key] ?? []).includes(value);
                   return (
                     <button key={value}
-                      type="button"
                       onClick={() => toggleSpec(group.key, value)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                         active
                           ? "bg-primary text-primary-foreground border-primary"
                           : "bg-card border-border hover:border-primary/50 text-foreground"
                       }`}
                     >
-                      {active && <span className="text-[10px] font-bold">✓</span>}
                       {value} <span className="opacity-60 text-[10px]">({count})</span>
                     </button>
                   );
