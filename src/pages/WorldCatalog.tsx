@@ -325,7 +325,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const renderFilterPanel = () => (
     <CatalogFilterPanel
       visibleFamilies={visibleFamilies}
-      brands={visibleBrands}
+      brands={brands}
       familyFilter={familyFilter}
       brandFilter={brandFilter}
       stockFilter={stockFilter}
