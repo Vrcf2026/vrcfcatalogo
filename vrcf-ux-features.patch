@@ -1,0 +1,1044 @@
+diff -ruN ux-base/scripts/allto_import.py ux-mod/scripts/allto_import.py
+--- ux-base/scripts/allto_import.py	2026-06-17 21:27:26.428019288 +0000
++++ ux-mod/scripts/allto_import.py	2026-06-17 21:27:26.510773603 +0000
+@@ -203,7 +203,7 @@
+     if pvr <= 0:
+         return None
+     pvp = calcular_pvp(pvr, categoria, tipo_produto, marca, (taxa_iva or 23) / 100)
+-    preco_venda = pvp["pvp_com_iva"]
++    preco_venda = pvp["pvp_sem_iva"]   # s/IVA — o site aplica ×1.23 ao mostrar
+     return {
+         "purchase_price":     round(primeiro_preco if primeiro_preco > 0 else pvr, 2),
+         "price":              preco_venda,
+@@ -220,6 +220,26 @@
+     except (ValueError, TypeError):
+         return 0.0
+ 
++
++def parse_stock_allto(val) -> int:
++    """
++    Converte o campo Stock da ALL.TO para inteiro.
++    Formatos: "0", "1-10", "11-100", "101-1000", ">1000", "1.000", "2.969"
++    """
++    if not val:
++        return 0
++    s = str(val).strip()
++    if not s:
++        return 0
++    if s.startswith(">"):
++        try: return int(s[1:].strip()) + 1
++        except: return 1001
++    if "-" in s:
++        try: return int(s.split("-")[0].strip())
++        except: return 0
++    try: return int(s.replace(".", ""))
++    except: return 0
++
+ # ─────────────────────────────────────────────
+ # EDGE FUNCTION
+ # ─────────────────────────────────────────────
+@@ -464,8 +484,8 @@
+                 precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
+                 stats["preco_estavel"] += 1
+ 
+-        # Stock
+-        stock_qty = int(parse_float(row.get("Stock")))
++        # Stock — campo pode ser número ou intervalo ("101-1000", "1.000", ">1000", etc.)
++        stock_qty = parse_stock_allto(row.get("Stock"))
+         if stock_qty > 10:    stock_status = "high"
+         elif stock_qty > 0:   stock_status = "low"
+         else:                 stock_status = "on_request"
+diff -ruN ux-base/src/components/catalog/CatalogFilterPanel.tsx ux-mod/src/components/catalog/CatalogFilterPanel.tsx
+--- ux-base/src/components/catalog/CatalogFilterPanel.tsx	2026-06-17 21:27:26.440559933 +0000
++++ ux-mod/src/components/catalog/CatalogFilterPanel.tsx	2026-06-17 21:27:26.509224113 +0000
+@@ -1,6 +1,7 @@
+-import { X } from "lucide-react";
++import { useState } from "react";
++import { X, Search, ChevronDown, ChevronUp } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
++import { Input } from "@/components/ui/input";
+ 
+ export interface TechSpecGroup {
+   key: string;
+@@ -10,100 +11,198 @@
+ 
+ interface CatalogFilterPanelProps {
+   visibleFamilies: any[];
+-  visibleTypes: any[];
+   brands: any[];
+   familyFilter: string;
+-  typeFilter: string;
+-  brandFilter: string;
+-  techFilters: Record<string, string>;
++  brandFilter: string | string[];          // multi-select
++  stockFilter: string;
++  techFilters: Record<string, string[]>;   // multi-select por spec
+   techSpecOptions: TechSpecGroup[];
+   activeFiltersCount: number;
+   onFamilyChange: (id: string) => void;
+-  onTypeChange: (id: string) => void;
+-  onBrandChange: (id: string) => void;
+-  onTechFiltersChange: (next: Record<string, string>) => void;
++  onBrandFilterChange: (ids: string[]) => void;
++  onStockFilterChange: (v: string) => void;
++  onTechFiltersChange: (next: Record<string, string[]>) => void;
+   onPageReset: () => void;
+   onClearAll: () => void;
+ }
+ 
++function FilterSection({ title, children, defaultOpen = true }: {
++  title: string; children: React.ReactNode; defaultOpen?: boolean;
++}) {
++  const [open, setOpen] = useState(defaultOpen);
++  return (
++    <div className="space-y-2">
++      <button
++        onClick={() => setOpen(!open)}
++        className="flex items-center justify-between w-full text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
++      >
++        {title}
++        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
++      </button>
++      {open && children}
++    </div>
++  );
++}
++
+ export function CatalogFilterPanel({
+   visibleFamilies,
+-  visibleTypes,
+   brands,
+   familyFilter,
+-  typeFilter,
+   brandFilter,
++  stockFilter,
+   techFilters,
+   techSpecOptions,
+   activeFiltersCount,
+   onFamilyChange,
+-  onTypeChange,
+-  onBrandChange,
++  onBrandFilterChange,
++  onStockFilterChange,
+   onTechFiltersChange,
+   onPageReset,
+   onClearAll,
+ }: CatalogFilterPanelProps) {
++  const [brandSearch, setBrandSearch] = useState("");
++
++  const selectedBrands = Array.isArray(brandFilter) ? brandFilter : (brandFilter !== "all" ? [brandFilter] : []);
++
++  const filteredBrands = brands.filter((b: any) =>
++    !brandSearch.trim() || b.name.toLowerCase().includes(brandSearch.toLowerCase())
++  );
++
++  const toggleBrand = (id: string) => {
++    const next = selectedBrands.includes(id)
++      ? selectedBrands.filter(b => b !== id)
++      : [...selectedBrands, id];
++    onBrandFilterChange(next);
++    onPageReset();
++  };
++
++  const toggleSpec = (key: string, value: string) => {
++    const current = techFilters[key] ?? [];
++    const next = current.includes(value)
++      ? current.filter(v => v !== value)
++      : [...current, value];
++    const updated = { ...techFilters };
++    if (next.length === 0) delete updated[key];
++    else updated[key] = next;
++    onTechFiltersChange(updated);
++    onPageReset();
++  };
++
+   return (
+     <div className="space-y-5">
+-      {visibleFamilies.length > 0 && (
+-        <div className="space-y-2">
+-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Família</p>
+-          <Select value={familyFilter} onValueChange={onFamilyChange}>
+-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
+-            <SelectContent>
+-              <SelectItem value="all">Todas as famílias</SelectItem>
+-              {visibleFamilies.map((f: any) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
+-            </SelectContent>
+-          </Select>
++      {/* Stock */}
++      <FilterSection title="Disponibilidade">
++        <div className="space-y-1">
++          {[
++            { value: "all",      label: "Todos" },
++            { value: "in_stock", label: "Em stock" },
++            { value: "low",      label: "Stock baixo" },
++            { value: "out",      label: "Por encomenda" },
++          ].map((opt) => (
++            <button key={opt.value}
++              onClick={() => { onStockFilterChange(opt.value); onPageReset(); }}
++              className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
++                stockFilter === opt.value
++                  ? "bg-primary/10 text-primary font-semibold"
++                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
++              }`}
++            >
++              {opt.label}
++            </button>
++          ))}
+         </div>
+-      )}
++      </FilterSection>
+ 
+-      {visibleTypes.length > 0 && (
+-        <div className="space-y-2">
+-          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Tipo</p>
+-          <Select value={typeFilter} onValueChange={onTypeChange}>
+-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todos" /></SelectTrigger>
+-            <SelectContent>
+-              <SelectItem value="all">Todos os tipos</SelectItem>
+-              {visibleTypes.map((t: any) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+-            </SelectContent>
+-          </Select>
+-        </div>
++      {/* Família */}
++      {visibleFamilies.length > 0 && (
++        <FilterSection title="Família">
++          <div className="space-y-1">
++            <button
++              onClick={() => { onFamilyChange("all"); onPageReset(); }}
++              className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
++                familyFilter === "all"
++                  ? "bg-primary/10 text-primary font-semibold"
++                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
++              }`}
++            >
++              Todas
++            </button>
++            {visibleFamilies.map((f: any) => (
++              <button key={f.id}
++                onClick={() => { onFamilyChange(familyFilter === f.id ? "all" : f.id); onPageReset(); }}
++                className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors ${
++                  familyFilter === f.id
++                    ? "bg-primary/10 text-primary font-semibold"
++                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
++                }`}
++              >
++                {f.name}
++              </button>
++            ))}
++          </div>
++        </FilterSection>
+       )}
+ 
+-      <div className="space-y-2">
+-        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Marca</p>
+-        <Select value={brandFilter} onValueChange={onBrandChange}>
+-          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Todas" /></SelectTrigger>
+-          <SelectContent>
+-            <SelectItem value="all">Todas as marcas</SelectItem>
+-            {brands.map((b: any) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+-          </SelectContent>
+-        </Select>
+-      </div>
++      {/* Marca — com pesquisa + multi-select */}
++      {brands.length > 0 && (
++        <FilterSection title="Marca">
++          {brands.length > 6 && (
++            <div className="relative mb-2">
++              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
++              <Input
++                placeholder="Pesquisar marca..."
++                value={brandSearch}
++                onChange={(e) => setBrandSearch(e.target.value)}
++                className="h-7 pl-7 text-xs"
++              />
++            </div>
++          )}
++          <div className="space-y-1 max-h-52 overflow-y-auto pr-1">
++            {filteredBrands.map((b: any) => {
++              const active = selectedBrands.includes(b.id);
++              return (
++                <button key={b.id}
++                  onClick={() => toggleBrand(b.id)}
++                  className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
++                    active
++                      ? "bg-primary/10 text-primary font-semibold"
++                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
++                  }`}
++                >
++                  <span className={`h-3.5 w-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
++                    active ? "bg-primary border-primary" : "border-muted-foreground/40"
++                  }`}>
++                    {active && <span className="text-[8px] text-primary-foreground font-bold">✓</span>}
++                  </span>
++                  {b.name}
++                </button>
++              );
++            })}
++            {filteredBrands.length === 0 && (
++              <p className="text-xs text-muted-foreground px-3 py-2">Sem resultados</p>
++            )}
++          </div>
++          {selectedBrands.length > 0 && (
++            <button onClick={() => { onBrandFilterChange([]); onPageReset(); }}
++              className="text-xs text-muted-foreground hover:text-primary mt-1 px-3">
++              Limpar marcas
++            </button>
++          )}
++        </FilterSection>
++      )}
+ 
++      {/* Specs técnicas — multi-select, sem Tipo separado */}
+       {techSpecOptions.length > 0 && (
+         <div className="space-y-4 pt-2 border-t border-border">
+           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Especificações</p>
+           {techSpecOptions.map(group => (
+-            <div key={group.key} className="space-y-1.5">
+-              <p className="text-xs font-medium text-muted-foreground capitalize">{group.label}</p>
++            <FilterSection key={group.key} title={group.label} defaultOpen={group.values.length <= 8}>
+               <div className="flex flex-wrap gap-1.5">
+                 {group.values.map(({ value, count }) => {
+-                  const active = techFilters[group.key] === value;
++                  const active = (techFilters[group.key] ?? []).includes(value);
+                   return (
+-                    <button
+-                      key={value}
+-                      onClick={() => {
+-                        if (active) {
+-                          const n = { ...techFilters };
+-                          delete n[group.key];
+-                          onTechFiltersChange(n);
+-                        } else {
+-                          onTechFiltersChange({ ...techFilters, [group.key]: value });
+-                        }
+-                        onPageReset();
+-                      }}
++                    <button key={value}
++                      onClick={() => toggleSpec(group.key, value)}
+                       className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                         active
+                           ? "bg-primary text-primary-foreground border-primary"
+@@ -115,7 +214,7 @@
+                   );
+                 })}
+               </div>
+-            </div>
++            </FilterSection>
+           ))}
+         </div>
+       )}
+diff -ruN ux-base/src/pages/Index.tsx ux-mod/src/pages/Index.tsx
+--- ux-base/src/pages/Index.tsx	2026-06-17 21:27:26.447732846 +0000
++++ ux-mod/src/pages/Index.tsx	2026-06-17 21:27:26.503960854 +0000
+@@ -5,6 +5,7 @@
+   ShieldCheck, Monitor, Search, ShoppingCart,
+   ArrowRight, ChevronLeft, ChevronRight, Star, Package, Send, Zap,
+   Wifi, Camera, Lock, Cpu, Printer, Tablet, ShoppingBag,
++  Clock, TrendingUp, History,
+ } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+@@ -94,6 +95,70 @@
+ 
+ // ── COMPONENT ─────────────────────────────────────────────────────────────────
+ 
++// Hook: Novidades (últimos produtos importados, qualquer mundo)
++const useNovidades = () =>
++  useQuery({
++    queryKey: ["hp-novidades"],
++    queryFn: async () => {
++      const { data } = await supabase.from("products").select(
++        "id,name,slug,price,image_url,stock_status,category,brand,mundo,min_sale_qty,short_description,sku"
++      ).eq("include_in_catalog", true)
++        .order("created_at", { ascending: false })
++        .limit(8);
++      return data ?? [];
++    },
++    staleTime: 5 * 60 * 1000,
++  });
++
++// Hook: Mais Vistos (via analytics de cliques)
++const useMaisVistos = () =>
++  useQuery({
++    queryKey: ["hp-mais-vistos"],
++    queryFn: async () => {
++      const { data } = await (supabase as any).rpc("get_top_products_with_context", {
++        p_event_type: "click",
++        p_since: null,
++        p_limit: 8,
++      });
++      if (!data || data.length === 0) {
++        // fallback: produtos em destaque
++        const { data: fb } = await supabase.from("products").select(
++          "id,name,slug,price,image_url,stock_status,category,brand,mundo,min_sale_qty,short_description,sku"
++        ).eq("include_in_catalog", true).eq("featured", true).limit(8);
++        return fb ?? [];
++      }
++      return data.map((r: any) => ({ ...r, id: r.product_id }));
++    },
++    staleTime: 5 * 60 * 1000,
++  });
++
++// Hook: Vistos Recentemente (localStorage — sem login)
++const useRecentlyViewed = () => {
++  const [items, setItems] = useState<any[]>([]);
++  useEffect(() => {
++    try {
++      const raw = localStorage.getItem("vrcf_recently_viewed");
++      if (raw) setItems(JSON.parse(raw));
++    } catch { /* ignore */ }
++  }, []);
++  return items;
++};
++
++// Util: adicionar produto ao "vistos recentemente" (chamar na página de produto)
++export function addToRecentlyViewed(product: {
++  id: string; name: string; slug?: string; price?: number;
++  image_url?: string; stock_status?: string; category?: string;
++  brand?: string; mundo?: string; min_sale_qty?: number; sku?: string;
++}) {
++  try {
++    const raw = localStorage.getItem("vrcf_recently_viewed");
++    const existing: any[] = raw ? JSON.parse(raw) : [];
++    const filtered = existing.filter((p: any) => p.id !== product.id);
++    const updated = [product, ...filtered].slice(0, 8);
++    localStorage.setItem("vrcf_recently_viewed", JSON.stringify(updated));
++  } catch { /* ignore */ }
++}
++
+ const Index = () => {
+   const { totalItems, setIsOpen } = useCart();
+   const [query, setQuery] = useState("");
+@@ -111,6 +176,9 @@
+   const ecoCount = useWorldCount("economato");
+   const ecoCats = useCategories("economato");
+   const featured = useFeaturedProducts();
++  const novidades = useNovidades();
++  const maisVistos = useMaisVistos();
++  const recentlyViewed = useRecentlyViewed();
+ 
+   useEffect(() => {
+     if (!banners.data || banners.data.length <= 1) return;
+@@ -393,6 +461,87 @@
+         </div>
+       </nav>
+ 
++      {/* ── NOVIDADES ── */}
++      {novidades.data && novidades.data.length > 0 && (
++        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
++          <div className="flex items-center justify-between mb-3">
++            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
++              <Clock className="h-4 w-4 text-primary" /> Novidades
++            </h2>
++            <Link to="/pesquisa" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
++              Ver mais <ArrowRight className="h-3 w-3" />
++            </Link>
++          </div>
++          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
++            {novidades.data.slice(0, 8).map((p: any) => (
++              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
++                <ProductCard
++                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                  description={p.short_description ?? p.description}
++                  category={p.category} price={p.price}
++                  imageUrl={p.image_url} images={[]}
++                  familyName={null} brandName={p.brand || null}
++                  featured={p.featured} stockStatus={p.stock_status}
++                  minSaleQty={p.min_sale_qty ?? null}
++                />
++              </Link>
++            ))}
++          </div>
++        </section>
++      )}
++
++      {/* ── MAIS VISTOS ── */}
++      {maisVistos.data && maisVistos.data.length > 0 && (
++        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
++          <div className="flex items-center justify-between mb-3">
++            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
++              <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
++            </h2>
++          </div>
++          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
++            {maisVistos.data.slice(0, 8).map((p: any) => (
++              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
++                <ProductCard
++                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                  description={p.short_description ?? p.description}
++                  category={p.category} price={p.price}
++                  imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
++                  familyName={null} brandName={p.brand || null}
++                  featured={false} stockStatus={p.stock_status}
++                  minSaleQty={p.min_sale_qty ?? null}
++                />
++              </Link>
++            ))}
++          </div>
++        </section>
++      )}
++
++      {/* ── VISTOS RECENTEMENTE ── */}
++      {recentlyViewed.length > 0 && (
++        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
++          <div className="flex items-center justify-between mb-3">
++            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
++              <History className="h-4 w-4 text-muted-foreground" /> Vistos Recentemente
++            </h2>
++          </div>
++          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
++            {recentlyViewed.slice(0, 4).map((p: any) => (
++              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
++                <ProductCard
++                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                  description={p.short_description ?? null}
++                  category={p.category} price={p.price}
++                  imageUrl={p.image_url} images={[]}
++                  familyName={null} brandName={p.brand || null}
++                  featured={false} stockStatus={p.stock_status}
++                  minSaleQty={p.min_sale_qty ?? null}
++                />
++              </Link>
++            ))}
++          </div>
++        </section>
++      )}
++
+       {/* Espaço para a bottom nav no mobile */}
+       <div className="h-14 sm:hidden" />
+ 
+diff -ruN ux-base/src/pages/Produto.tsx ux-mod/src/pages/Produto.tsx
+--- ux-base/src/pages/Produto.tsx	2026-06-17 21:27:26.448439525 +0000
++++ ux-mod/src/pages/Produto.tsx	2026-06-17 21:27:26.506850080 +0000
+@@ -1,7 +1,7 @@
+ import { useQuery } from "@tanstack/react-query";
+ import { Link, useParams, Navigate } from "react-router-dom";
+ import { Helmet } from "react-helmet-async";
+-import { useState } from "react";
++import { useState, useEffect } from "react";
+ import {
+   Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2,
+   MessageCircle, Copy, Truck, Clock, Info, ChevronLeft, ChevronRight,
+@@ -15,6 +15,7 @@
+ import { DarkModeToggle } from "@/components/DarkModeToggle";
+ import { UserMenuButton } from "@/components/UserMenuButton";
+ import { GlobalSearchBar } from "@/components/GlobalSearchBar";
++import { addToRecentlyViewed } from "@/pages/Index";
+ import ContactFloatingBubble from "@/components/ContactFloatingBubble";
+ import { StockAlertButton } from "@/components/StockAlertButton";
+ import { SiteFooter } from "@/components/SiteFooter";
+@@ -135,6 +136,19 @@
+   };
+   const worldInfo = WORLD_INFO[product.mundo ?? ""] ?? WORLD_INFO.seguranca;
+   const worldPath = worldInfo.path;
++
++  // Guardar em "vistos recentemente" (localStorage)
++  useEffect(() => {
++    if (product) {
++      addToRecentlyViewed({
++        id: product.id, name: product.name, slug: product.slug,
++        price: product.price, image_url: product.image_url,
++        stock_status: product.stock_status, category: product.category,
++        brand: product.brand, mundo: product.mundo,
++        min_sale_qty: product.min_sale_qty, sku: product.sku,
++      });
++    }
++  }, [product?.id]);
+   const worldLabel = worldInfo.label;
+   const priceWithVat = product.price ? product.price * 1.23 : null;
+   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
+@@ -388,6 +402,16 @@
+             <Button size="lg" className="gap-2 h-12 text-base font-bold rounded-xl" onClick={handleAddToCart}>
+               <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento{minSaleQty > 1 ? ` (${minSaleQty} un.)` : ""}
+             </Button>
++            {/* Por encomenda — CTA discreto */}
++            {(product.stock_status === "out" || product.stock_status === "on_request") && (
++              <a
++                href={`mailto:info@vrcf.pt?subject=Consulta%20sobre%20produto%20por%20encomenda&body=Olá,%0A%0AGostaria%20de%20saber%20mais%20sobre%20o%20produto%20por%20encomenda:%0A%0A${encodeURIComponent(product.name)}%0AREF:%20${encodeURIComponent(product.sku ?? product.id)}%0A%0AObrigado`}
++                className="flex items-center justify-center gap-2 h-10 rounded-xl border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-sm font-medium text-blue-700 dark:text-blue-400"
++              >
++                <MessageCircle className="h-4 w-4" /> Por encomenda — saber mais, consulte-nos
++              </a>
++            )}
++            </Button>
+             <div className="grid grid-cols-2 gap-2">
+               <a href={`https://wa.me/351911564243?text=${waText}`} target="_blank" rel="noopener noreferrer"
+                 className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-sm font-medium">
+diff -ruN ux-base/src/pages/WorldCatalog.tsx ux-mod/src/pages/WorldCatalog.tsx
+--- ux-base/src/pages/WorldCatalog.tsx	2026-06-17 21:27:26.449122360 +0000
++++ ux-mod/src/pages/WorldCatalog.tsx	2026-06-17 21:27:26.501283397 +0000
+@@ -37,9 +37,10 @@
+   const [searchInput, setSearchInput] = useState("");
+   const [search, setSearch] = useState("");
+   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
++  const [stockFilter, setStockFilter] = useState("all");
+   const [familyFilter, setFamilyFilter] = useState("all");
+   const [typeFilter, setTypeFilter] = useState("all");
+-  const [brandFilter, setBrandFilter] = useState(searchParams.get("marca") ?? "all");
++  const [brandFilter, setBrandFilter] = useState<string[]>([]);
+   const [bannerIdx, setBannerIdx] = useState(0);
+ 
+   const { data: banners = [] } = useQuery({
+@@ -64,7 +65,7 @@
+   }, [banners.length]);
+ 
+   const [sortBy, setSortBy] = useState("featured");
+-  const [techFilters, setTechFilters] = useState<Record<string, string>>({});
++  const [techFilters, setTechFilters] = useState<Record<string, string[]>>({});
+   const [page, setPage] = useState(1);
+   const [filtersOpen, setFiltersOpen] = useState(false);
+   const scrollRef = useRef<HTMLDivElement>(null);
+@@ -142,40 +143,9 @@
+     staleTime: 10 * 60 * 1000,
+   });
+ 
+-  // Facetas — lista leve de produtos do mundo (apenas chaves de filtro)
+-  // para calcular dinamicamente que famílias, tipos e marcas têm produtos
+-  // dentro do contexto actual (categoria → família → tipo).
+-  const { data: facets = [] } = useQuery({
+-    queryKey: ["facets", mundo],
+-    queryFn: async () => {
+-      // Pagina manualmente para ultrapassar o limite default do PostgREST
+-      // (1000 linhas) e garantir que cobre TODOS os produtos do mundo —
+-      // caso contrário famílias/tipos/marcas inteiras desaparecem do
+-      // filtro só porque os seus produtos ficam fora da primeira página.
+-      const PAGE = 1000;
+-      const all: any[] = [];
+-      for (let from = 0; ; from += PAGE) {
+-        const { data, error } = await supabase.from("products")
+-          .select("category,family_id,type_id,brand_id,brand")
+-          .eq("mundo", mundo)
+-          .eq("include_in_catalog", true)
+-          .order("id", { ascending: true })
+-          .range(from, from + PAGE - 1);
+-        if (error) throw error;
+-        if (!data || data.length === 0) break;
+-        all.push(...data);
+-        if (data.length < PAGE) break;
+-      }
+-      return all;
+-    },
+-    staleTime: 5 * 60 * 1000,
+-  });
+-
+-
+-
+   // Products query
+   const productsQuery = useQuery({
+-    queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
++    queryKey: ["products", mundo, search, categoryFilter, stockFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
+     queryFn: async () => {
+       const from = (page - 1) * PAGE_SIZE;
+ 
+@@ -222,9 +192,18 @@
+ 
+       if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+       if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
++      if (stockFilter !== "all") {
++        if (stockFilter === "in_stock") q = q.in("stock_status", ["high", "low"]);
++        else if (stockFilter === "low") q = q.eq("stock_status", "low");
++        else if (stockFilter === "out") q = q.in("stock_status", ["out", "on_request"]);
++      }
+       if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
+       if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
+-      if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
++      if (brandFilter.length > 0) {
++        const brandNames = brandFilter.map(id => brands.find((b: any) => b.id === id)?.name ?? "").filter(Boolean);
++        const brandConds = brandFilter.map(id => `brand_id.eq.${id}`).concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
++        if (brandConds) q = q.or(brandConds);
++      }
+ 
+       // Filtros técnicos (specs) — aplicados no servidor sobre o JSONB
+       // "especificacoes", para que a contagem/paginação considere TODOS os
+@@ -232,8 +211,18 @@
+       // Usa .filter() com o operador "->>" do PostgREST explicitamente —
+       // .eq("col->>key", v) pode não ser codificado correctamente em
+       // todas as versões do supabase-js.
+-      for (const [key, value] of Object.entries(techFilters)) {
+-        q = q.filter(`especificacoes->>${key}`, "eq", value);
++      // Filtros técnicos multi-select:
++      // Dentro de cada chave → OR (ex: resolucao=4MP OR 8MP)
++      // Entre chaves → AND (ex: resolucao=4MP AND protocolo=ONVIF)
++      for (const [key, values] of Object.entries(techFilters)) {
++        if (!values || values.length === 0) continue;
++        if (values.length === 1) {
++          q = q.filter(`especificacoes->>${key}`, "eq", values[0]);
++        } else {
++          // PostgREST: usar .in() sobre jsonb extract
++          const orConds = values.map(v => `especificacoes->>${key}.eq.${v}`).join(",");
++          q = q.or(orConds);
++        }
+       }
+ 
+       if (sortBy === "featured") q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
+@@ -258,115 +247,43 @@
+   const total = productsQuery.data?.count ?? 0;
+   const totalPages = Math.ceil(total / PAGE_SIZE);
+ 
+-  // Specs de TODOS os produtos que correspondem aos filtros base (mundo,
+-  // categoria, família, tipo, marca, pesquisa) — excluindo os próprios
+-  // techFilters, para que as opções de filtro técnico reflitam toda a
+-  // categoria/família, não só os 24 produtos da página actual. Traz só a
+-  // coluna "especificacoes" (JSONB), por isso é leve mesmo para centenas
+-  // de produtos.
+-  const specsAllQuery = useQuery({
+-    queryKey: ["products-specs", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter],
++  // Specs via RPC no servidor — agrega TODOS os produtos da categoria/família
++  // sem trazer JSONB para o browser. Sem limites artificiais de valores ou grupos.
++  const specsRpcQuery = useQuery({
++    queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, brandFilter],
+     queryFn: async () => {
+-      let q = supabase.from("products").select("especificacoes")
+-        .eq("mundo", mundo)
+-        .eq("include_in_catalog", true);
+-
+-      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
+-      if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
+-      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
+-      if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
+-      if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
+-
+-      const { data, error } = await q.limit(2000);
++      if (categoryFilter === "all") return [];
++      const brandId = brandFilter.length === 1 ? brandFilter[0] : null;
++      const brandName = brandId ? (brands.find((b: any) => b.id === brandId)?.name ?? null) : null;
++      const { data, error } = await (supabase as any).rpc("get_specs_aggregation", {
++        p_mundo: mundo,
++        p_category: categoryFilter !== "all" ? categoryFilter : null,
++        p_family_id: familyFilter !== "all" ? familyFilter : null,
++        p_brand_id: brandId,
++        p_brand_name: brandName,
++      });
+       if (error) throw error;
+-      return data ?? [];
++      return (data as any[]) ?? [];
+     },
+-    staleTime: 60 * 1000,
++    staleTime: 5 * 60 * 1000,
++    enabled: categoryFilter !== "all",
+   });
+ 
+-  // Filtros técnicos — gerados a partir de TODOS os produtos que
+-  // correspondem aos filtros base (não só os 24 da página actual).
+-  const techSpecOptions = useMemo(() => {
+-    const map: Record<string, Map<string, number>> = {};
+-    const source = specsAllQuery.data ?? [];
+-    source.forEach((p: any) => {
+-      const specs = (typeof p.especificacoes === "string"
+-        ? JSON.parse(p.especificacoes || "{}")
+-        : p.especificacoes ?? {}) as Record<string, unknown>;
+-      Object.entries(specs).forEach(([k, v]) => {
+-        if (!v || typeof v !== "string" || v.length > 50) return;
+-        // Ignorar campos muito específicos
+-        if (["portas", "compatibilidade", "firmware_ota", "teclado_nota"].includes(k)) return;
+-        if (!map[k]) map[k] = new Map();
+-        map[k].set(v, (map[k].get(v) ?? 0) + 1);
+-      });
+-    });
+-    return Object.entries(map)
+-      .map(([key, vals]) => ({
+-        key,
+-        label: key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+-        values: [...vals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([v, c]) => ({ value: v, count: c })),
+-      }))
+-      .filter(g => g.values.length > 1)
+-      .sort((a, b) => b.values.length - a.values.length)
+-      .slice(0, 10);
+-  }, [specsAllQuery.data]);
+-
+-
+-  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
+-
+-  // Facetas filtradas pelo contexto actual — para cada eixo (família/tipo/marca)
+-  // calculamos as opções considerando os OUTROS filtros activos.
+-  const facetsByCategory = useMemo(
+-    () => (categoryFilter === "all" ? facets : facets.filter((p: any) => p.category === categoryFilter)),
+-    [facets, categoryFilter]
+-  );
+-
+-  const availableFamilyIds = useMemo(() => {
+-    const set = new Set<string>();
+-    facetsByCategory.forEach((p: any) => {
+-      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
+-      if (p.family_id) set.add(p.family_id);
+-    });
+-    return set;
+-  }, [facetsByCategory, brandFilter]);
+-
+-  const availableTypeIds = useMemo(() => {
+-    const set = new Set<string>();
+-    facetsByCategory.forEach((p: any) => {
+-      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
+-      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
+-      if (p.type_id) set.add(p.type_id);
+-    });
+-    return set;
+-  }, [facetsByCategory, familyFilter, brandFilter]);
+-
+-  const availableBrand = useMemo(() => {
+-    const ids = new Set<string>();
+-    const names = new Set<string>();
+-    facetsByCategory.forEach((p: any) => {
+-      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
+-      if (typeFilter !== "all" && p.type_id !== typeFilter) return;
+-      if (p.brand_id) ids.add(p.brand_id);
+-      if (p.brand) names.add(p.brand);
+-    });
+-    return { ids, names };
+-  }, [facetsByCategory, familyFilter, typeFilter]);
++  const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => ({
++    key: g.key,
++    label: g.label.charAt(0).toUpperCase() + g.label.slice(1),
++    values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
++  }));
+ 
+-  const visibleFamilies = families.filter((f: any) =>
+-    (categoryFilter === "all" || f.category === categoryFilter) && availableFamilyIds.has(f.id)
+-  );
+-  const visibleTypes = types.filter((t: any) =>
+-    familyFilter !== "all" && t.family_id === familyFilter && availableTypeIds.has(t.id)
+-  );
+-  const visibleBrands = brands.filter((b: any) =>
+-    availableBrand.ids.has(b.id) || availableBrand.names.has(b.name)
+-  );
+ 
++  const familyMap  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
++  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
++  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
+   const hasPrices = products.some((p: any) => p.price != null);
+   const activeFiltersCount = [
+-    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
++    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter.length > 0,
+     Object.keys(techFilters).length > 0,
++    stockFilter !== "all",
+   ].filter(Boolean).length;
+ 
+   const setCategory = (name: string) => {
+@@ -389,8 +306,8 @@
+   };
+ 
+   const clearAllFilters = () => {
+-    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter("all");
+-    setTechFilters({}); setSearch(""); setSearchInput(""); setPage(1);
++    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter([]);
++    setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
+     searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
+     setSearchParams(searchParams, { replace: true });
+   };
+@@ -398,7 +315,7 @@
+   const Icon = mundo === "seguranca" ? ShieldCheck : mundo === "economato" ? ShoppingBag : Monitor;
+ 
+   const onBrandChange = (v: string) => {
+-    setBrandFilter(v); setPage(1);
++    setBrandFilter([v]); setPage(1);
+     if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
+     setSearchParams(searchParams, { replace: true });
+   };
+@@ -406,17 +323,16 @@
+   const renderFilterPanel = () => (
+     <CatalogFilterPanel
+       visibleFamilies={visibleFamilies}
+-      visibleTypes={visibleTypes}
+       brands={visibleBrands}
+       familyFilter={familyFilter}
+-      typeFilter={typeFilter}
+       brandFilter={brandFilter}
++      stockFilter={stockFilter}
+       techFilters={techFilters}
+       techSpecOptions={techSpecOptions}
+       activeFiltersCount={activeFiltersCount}
+       onFamilyChange={setFamily}
+-      onTypeChange={setType}
+-      onBrandChange={onBrandChange}
++      onBrandFilterChange={setBrandFilter}
++      onStockFilterChange={setStockFilter}
+       onTechFiltersChange={setTechFilters}
+       onPageReset={() => setPage(1)}
+       onClearAll={clearAllFilters}
+@@ -536,21 +452,18 @@
+       {/* Main content */}
+       <div className="container mx-auto px-4 pb-14 flex gap-6">
+ 
+-        {/* Sidebar filtros — desktop (só após escolher categoria) */}
+-        {categoryFilter !== "all" && (
+-          <aside className="hidden lg:block w-64 shrink-0 pt-4">
+-            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
+-              <div className="flex items-center justify-between mb-4">
+-                <h2 className="text-sm font-bold">Filtrar</h2>
+-                {activeFiltersCount > 0 && (
+-                  <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
+-                )}
+-              </div>
+-              {renderFilterPanel()}
++        {/* Sidebar filtros — desktop */}
++        <aside className="hidden lg:block w-64 shrink-0 pt-4">
++          <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
++            <div className="flex items-center justify-between mb-4">
++              <h2 className="text-sm font-bold">Filtrar</h2>
++              {activeFiltersCount > 0 && (
++                <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
++              )}
+             </div>
+-          </aside>
+-        )}
+-
++            {renderFilterPanel()}
++          </div>
++        </aside>
+ 
+         <div className="flex-1 min-w-0 pt-4">
+           {/* Toolbar */}
+@@ -562,26 +475,23 @@
+                 className="pl-9 h-9 text-sm bg-muted/60 border-transparent rounded-xl" />
+             </div>
+ 
+-            {/* Filtros mobile — só após escolher categoria */}
+-            {categoryFilter !== "all" && (
+-              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+-                <SheetTrigger asChild>
+-                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+-                    <SlidersHorizontal className="h-4 w-4" /> Filtros
+-                    {activeFiltersCount > 0 && (
+-                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
+-                    )}
+-                  </Button>
+-                </SheetTrigger>
+-                <SheetContent side="left" className="w-[300px] overflow-y-auto">
+-                  <SheetHeader className="pb-4">
+-                    <SheetTitle>Filtros</SheetTitle>
+-                  </SheetHeader>
+-                  {renderFilterPanel()}
+-                </SheetContent>
+-              </Sheet>
+-            )}
+-
++            {/* Filtros mobile */}
++            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
++              <SheetTrigger asChild>
++                <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
++                  <SlidersHorizontal className="h-4 w-4" /> Filtros
++                  {activeFiltersCount > 0 && (
++                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
++                  )}
++                </Button>
++              </SheetTrigger>
++              <SheetContent side="left" className="w-[300px] overflow-y-auto">
++                <SheetHeader className="pb-4">
++                  <SheetTitle>Filtros</SheetTitle>
++                </SheetHeader>
++                {renderFilterPanel()}
++              </SheetContent>
++            </Sheet>
+ 
+             <Select value={sortBy} onValueChange={v => { setSortBy(v); setPage(1); }}>
+               <SelectTrigger className="w-[160px] h-9 text-sm"><SelectValue /></SelectTrigger>
+@@ -597,7 +507,7 @@
+           </div>
+ 
+           {/* Filtros activos */}
+-          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter !== "all") && (
++          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter.length > 0 || stockFilter !== "all") && (
+             <div className="flex flex-wrap gap-1.5 mb-4">
+               {categoryFilter !== "all" && (
+                 <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+diff -ruN ux-base/supabase/migrations/20260617000000_add_specs_aggregation_rpc.sql ux-mod/supabase/migrations/20260617000000_add_specs_aggregation_rpc.sql
+--- ux-base/supabase/migrations/20260617000000_add_specs_aggregation_rpc.sql	1970-01-01 00:00:00.000000000 +0000
++++ ux-mod/supabase/migrations/20260617000000_add_specs_aggregation_rpc.sql	2026-06-17 21:27:26.513309078 +0000
+@@ -0,0 +1,97 @@
++-- RPC para agregar valores de specs de todos os produtos de uma
++-- categoria/família sem trazer JSONB para o browser.
++-- Devolve array de grupos [{key, values:[{value,count}]}]
++-- ordenados por número de valores distintos (desc).
++-- Sem limite artificial — mostra TODAS as specs e TODOS os valores.
++
++CREATE OR REPLACE FUNCTION public.get_specs_aggregation(
++  p_mundo      text,
++  p_category   text DEFAULT NULL,
++  p_family_id  uuid DEFAULT NULL,
++  p_brand_id   uuid DEFAULT NULL,
++  p_brand_name text DEFAULT NULL
++)
++RETURNS jsonb
++LANGUAGE plpgsql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++DECLARE
++  v_map  jsonb := '{}'::jsonb;
++  v_rec  record;
++  v_key  text;
++  v_val  text;
++  v_result jsonb := '[]'::jsonb;
++BEGIN
++  -- Campos a ignorar sempre (não fazem sentido como filtro)
++  FOR v_rec IN
++    SELECT especificacoes
++    FROM products
++    WHERE mundo = p_mundo
++      AND include_in_catalog = true
++      AND especificacoes IS NOT NULL
++      AND especificacoes != '{}'::jsonb
++      AND (p_category  IS NULL OR category  = p_category)
++      AND (p_family_id IS NULL OR family_id = p_family_id)
++      AND (
++        p_brand_id IS NULL AND p_brand_name IS NULL
++        OR brand_id  = p_brand_id
++        OR brand     = p_brand_name
++      )
++  LOOP
++    FOR v_key, v_val IN
++      SELECT key, value::text
++      FROM jsonb_each_text(v_rec.especificacoes)
++      WHERE key NOT IN (
++        'portas','compatibilidade','firmware_ota','teclado_nota',
++        'marca','modelo','sku','ref'
++      )
++        AND char_length(value::text) <= 60
++        AND char_length(value::text) > 0
++    LOOP
++      -- Incrementa contador para (key, value)
++      v_map := jsonb_set(
++        v_map,
++        ARRAY[v_key, v_val],
++        to_jsonb(COALESCE((v_map -> v_key -> v_val)::int, 0) + 1)
++      );
++    END LOOP;
++  END LOOP;
++
++  -- Converter map para array de grupos
++  SELECT jsonb_agg(
++    jsonb_build_object(
++      'key', grp.key,
++      'label', replace(grp.key, '_', ' '),
++      'values', grp.vals
++    )
++    ORDER BY jsonb_array_length(grp.vals) DESC
++  )
++  INTO v_result
++  FROM (
++    SELECT
++      gkey AS key,
++      (
++        SELECT jsonb_agg(
++          jsonb_build_object('value', vkey, 'count', vcount)
++          ORDER BY vcount DESC
++        )
++        FROM (
++          SELECT vkey, (v_map -> gkey -> vkey)::int AS vcount
++          FROM jsonb_object_keys(v_map -> gkey) AS vkey
++          ORDER BY (v_map -> gkey -> vkey)::int DESC
++        ) sub
++        WHERE vcount > 0
++      ) AS vals
++    FROM jsonb_object_keys(v_map) AS gkey
++  ) grp
++  WHERE jsonb_array_length(grp.vals) > 1;
++
++  RETURN COALESCE(v_result, '[]'::jsonb);
++END;
++$$;
++
++GRANT EXECUTE ON FUNCTION public.get_specs_aggregation TO anon, authenticated;
++
++NOTIFY pgrst, 'reload schema';

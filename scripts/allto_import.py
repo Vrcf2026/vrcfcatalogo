@@ -203,7 +203,7 @@ def calcular_precos(pvr: float, primeiro_preco: float, categoria: str = "",
     if pvr <= 0:
         return None
     pvp = calcular_pvp(pvr, categoria, tipo_produto, marca, (taxa_iva or 23) / 100)
-    preco_venda = pvp["pvp_com_iva"]
+    preco_venda = pvp["pvp_sem_iva"]   # s/IVA — o site aplica ×1.23 ao mostrar
     return {
         "purchase_price":     round(primeiro_preco if primeiro_preco > 0 else pvr, 2),
         "price":              preco_venda,
@@ -219,6 +219,26 @@ def parse_float(val) -> float:
         return float(str(val).replace(",", ".").strip())
     except (ValueError, TypeError):
         return 0.0
+
+
+def parse_stock_allto(val) -> int:
+    """
+    Converte o campo Stock da ALL.TO para inteiro.
+    Formatos: "0", "1-10", "11-100", "101-1000", ">1000", "1.000", "2.969"
+    """
+    if not val:
+        return 0
+    s = str(val).strip()
+    if not s:
+        return 0
+    if s.startswith(">"):
+        try: return int(s[1:].strip()) + 1
+        except: return 1001
+    if "-" in s:
+        try: return int(s.split("-")[0].strip())
+        except: return 0
+    try: return int(s.replace(".", ""))
+    except: return 0
 
 # ─────────────────────────────────────────────
 # EDGE FUNCTION
@@ -464,8 +484,8 @@ def main():
                 precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
                 stats["preco_estavel"] += 1
 
-        # Stock
-        stock_qty = int(parse_float(row.get("Stock")))
+        # Stock — campo pode ser número ou intervalo ("101-1000", "1.000", ">1000", etc.)
+        stock_qty = parse_stock_allto(row.get("Stock"))
         if stock_qty > 10:    stock_status = "high"
         elif stock_qty > 0:   stock_status = "low"
         else:                 stock_status = "on_request"

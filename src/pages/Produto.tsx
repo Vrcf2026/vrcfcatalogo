@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2,
   MessageCircle, Copy, Truck, Clock, Info, ChevronLeft, ChevronRight,
@@ -15,6 +15,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { UserMenuButton } from "@/components/UserMenuButton";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
+import { addToRecentlyViewed } from "@/pages/Index";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { StockAlertButton } from "@/components/StockAlertButton";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -135,6 +136,19 @@ const Produto = () => {
   };
   const worldInfo = WORLD_INFO[product.mundo ?? ""] ?? WORLD_INFO.seguranca;
   const worldPath = worldInfo.path;
+
+  // Guardar em "vistos recentemente" (localStorage)
+  useEffect(() => {
+    if (product) {
+      addToRecentlyViewed({
+        id: product.id, name: product.name, slug: product.slug,
+        price: product.price, image_url: product.image_url,
+        stock_status: product.stock_status, category: product.category,
+        brand: product.brand, mundo: product.mundo,
+        min_sale_qty: product.min_sale_qty, sku: product.sku,
+      });
+    }
+  }, [product?.id]);
   const worldLabel = worldInfo.label;
   const priceWithVat = product.price ? product.price * 1.23 : null;
   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
@@ -387,6 +401,16 @@ const Produto = () => {
             )}
             <Button size="lg" className="gap-2 h-12 text-base font-bold rounded-xl" onClick={handleAddToCart}>
               <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento{minSaleQty > 1 ? ` (${minSaleQty} un.)` : ""}
+            </Button>
+            {/* Por encomenda — CTA discreto */}
+            {(product.stock_status === "out" || product.stock_status === "on_request") && (
+              <a
+                href={`mailto:info@vrcf.pt?subject=Consulta%20sobre%20produto%20por%20encomenda&body=Olá,%0A%0AGostaria%20de%20saber%20mais%20sobre%20o%20produto%20por%20encomenda:%0A%0A${encodeURIComponent(product.name)}%0AREF:%20${encodeURIComponent(product.sku ?? product.id)}%0A%0AObrigado`}
+                className="flex items-center justify-center gap-2 h-10 rounded-xl border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-sm font-medium text-blue-700 dark:text-blue-400"
+              >
+                <MessageCircle className="h-4 w-4" /> Por encomenda — saber mais, consulte-nos
+              </a>
+            )}
             </Button>
             <div className="grid grid-cols-2 gap-2">
               <a href={`https://wa.me/351911564243?text=${waText}`} target="_blank" rel="noopener noreferrer"

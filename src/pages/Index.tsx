@@ -5,6 +5,7 @@ import {
   ShieldCheck, Monitor, Search, ShoppingCart,
   ArrowRight, ChevronLeft, ChevronRight, Star, Package, Send, Zap,
   Wifi, Camera, Lock, Cpu, Printer, Tablet, ShoppingBag,
+  Clock, TrendingUp, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +95,70 @@ const useBanners = () =>
 
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
 
+// Hook: Novidades (últimos produtos importados, qualquer mundo)
+const useNovidades = () =>
+  useQuery({
+    queryKey: ["hp-novidades"],
+    queryFn: async () => {
+      const { data } = await supabase.from("products").select(
+        "id,name,slug,price,image_url,stock_status,category,brand,mundo,min_sale_qty,short_description,sku"
+      ).eq("include_in_catalog", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+// Hook: Mais Vistos (via analytics de cliques)
+const useMaisVistos = () =>
+  useQuery({
+    queryKey: ["hp-mais-vistos"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc("get_top_products_with_context", {
+        p_event_type: "click",
+        p_since: null,
+        p_limit: 8,
+      });
+      if (!data || data.length === 0) {
+        // fallback: produtos em destaque
+        const { data: fb } = await supabase.from("products").select(
+          "id,name,slug,price,image_url,stock_status,category,brand,mundo,min_sale_qty,short_description,sku"
+        ).eq("include_in_catalog", true).eq("featured", true).limit(8);
+        return fb ?? [];
+      }
+      return data.map((r: any) => ({ ...r, id: r.product_id }));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+// Hook: Vistos Recentemente (localStorage — sem login)
+const useRecentlyViewed = () => {
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("vrcf_recently_viewed");
+      if (raw) setItems(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+  return items;
+};
+
+// Util: adicionar produto ao "vistos recentemente" (chamar na página de produto)
+export function addToRecentlyViewed(product: {
+  id: string; name: string; slug?: string; price?: number;
+  image_url?: string; stock_status?: string; category?: string;
+  brand?: string; mundo?: string; min_sale_qty?: number; sku?: string;
+}) {
+  try {
+    const raw = localStorage.getItem("vrcf_recently_viewed");
+    const existing: any[] = raw ? JSON.parse(raw) : [];
+    const filtered = existing.filter((p: any) => p.id !== product.id);
+    const updated = [product, ...filtered].slice(0, 8);
+    localStorage.setItem("vrcf_recently_viewed", JSON.stringify(updated));
+  } catch { /* ignore */ }
+}
+
 const Index = () => {
   const { totalItems, setIsOpen } = useCart();
   const [query, setQuery] = useState("");
@@ -111,6 +176,9 @@ const Index = () => {
   const ecoCount = useWorldCount("economato");
   const ecoCats = useCategories("economato");
   const featured = useFeaturedProducts();
+  const novidades = useNovidades();
+  const maisVistos = useMaisVistos();
+  const recentlyViewed = useRecentlyViewed();
 
   useEffect(() => {
     if (!banners.data || banners.data.length <= 1) return;
@@ -392,6 +460,87 @@ const Index = () => {
           </button>
         </div>
       </nav>
+
+      {/* ── NOVIDADES ── */}
+      {novidades.data && novidades.data.length > 0 && (
+        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <Clock className="h-4 w-4 text-primary" /> Novidades
+            </h2>
+            <Link to="/pesquisa" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+              Ver mais <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {novidades.data.slice(0, 8).map((p: any) => (
+              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+                <ProductCard
+                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                  description={p.short_description ?? p.description}
+                  category={p.category} price={p.price}
+                  imageUrl={p.image_url} images={[]}
+                  familyName={null} brandName={p.brand || null}
+                  featured={p.featured} stockStatus={p.stock_status}
+                  minSaleQty={p.min_sale_qty ?? null}
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── MAIS VISTOS ── */}
+      {maisVistos.data && maisVistos.data.length > 0 && (
+        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {maisVistos.data.slice(0, 8).map((p: any) => (
+              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+                <ProductCard
+                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                  description={p.short_description ?? p.description}
+                  category={p.category} price={p.price}
+                  imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
+                  familyName={null} brandName={p.brand || null}
+                  featured={false} stockStatus={p.stock_status}
+                  minSaleQty={p.min_sale_qty ?? null}
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── VISTOS RECENTEMENTE ── */}
+      {recentlyViewed.length > 0 && (
+        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <History className="h-4 w-4 text-muted-foreground" /> Vistos Recentemente
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {recentlyViewed.slice(0, 4).map((p: any) => (
+              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+                <ProductCard
+                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                  description={p.short_description ?? null}
+                  category={p.category} price={p.price}
+                  imageUrl={p.image_url} images={[]}
+                  familyName={null} brandName={p.brand || null}
+                  featured={false} stockStatus={p.stock_status}
+                  minSaleQty={p.min_sale_qty ?? null}
+                />
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Espaço para a bottom nav no mobile */}
       <div className="h-14 sm:hidden" />

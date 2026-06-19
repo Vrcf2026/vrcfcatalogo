@@ -37,9 +37,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
+  const [stockFilter, setStockFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [brandFilter, setBrandFilter] = useState(searchParams.get("marca") ?? "all");
+  const [brandFilter, setBrandFilter] = useState<string[]>([]);
   const [bannerIdx, setBannerIdx] = useState(0);
 
   const { data: banners = [] } = useQuery({
@@ -64,7 +65,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   }, [banners.length]);
 
   const [sortBy, setSortBy] = useState("featured");
-  const [techFilters, setTechFilters] = useState<Record<string, string>>({});
+  const [techFilters, setTechFilters] = useState<Record<string, string[]>>({});
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -142,40 +143,9 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Facetas — lista leve de produtos do mundo (apenas chaves de filtro)
-  // para calcular dinamicamente que famílias, tipos e marcas têm produtos
-  // dentro do contexto actual (categoria → família → tipo).
-  const { data: facets = [] } = useQuery({
-    queryKey: ["facets", mundo],
-    queryFn: async () => {
-      // Pagina manualmente para ultrapassar o limite default do PostgREST
-      // (1000 linhas) e garantir que cobre TODOS os produtos do mundo —
-      // caso contrário famílias/tipos/marcas inteiras desaparecem do
-      // filtro só porque os seus produtos ficam fora da primeira página.
-      const PAGE = 1000;
-      const all: any[] = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase.from("products")
-          .select("category,family_id,type_id,brand_id,brand")
-          .eq("mundo", mundo)
-          .eq("include_in_catalog", true)
-          .order("id", { ascending: true })
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all.push(...data);
-        if (data.length < PAGE) break;
-      }
-      return all;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-
-
   // Products query
   const productsQuery = useQuery({
-    queryKey: ["products", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
+    queryKey: ["products", mundo, search, categoryFilter, stockFilter, familyFilter, typeFilter, brandFilter, sortBy, page, techFilters],
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
 
@@ -222,9 +192,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
       if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
       if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
+      if (stockFilter !== "all") {
+        if (stockFilter === "in_stock") q = q.in("stock_status", ["high", "low"]);
+        else if (stockFilter === "low") q = q.eq("stock_status", "low");
+        else if (stockFilter === "out") q = q.in("stock_status", ["out", "on_request"]);
+      }
       if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
       if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
-      if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
+      if (brandFilter.length > 0) {
+        const brandNames = brandFilter.map(id => brands.find((b: any) => b.id === id)?.name ?? "").filter(Boolean);
+        const brandConds = brandFilter.map(id => `brand_id.eq.${id}`).concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
+        if (brandConds) q = q.or(brandConds);
+      }
 
       // Filtros técnicos (specs) — aplicados no servidor sobre o JSONB
       // "especificacoes", para que a contagem/paginação considere TODOS os
@@ -232,8 +211,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       // Usa .filter() com o operador "->>" do PostgREST explicitamente —
       // .eq("col->>key", v) pode não ser codificado correctamente em
       // todas as versões do supabase-js.
-      for (const [key, value] of Object.entries(techFilters)) {
-        q = q.filter(`especificacoes->>${key}`, "eq", value);
+      // Filtros técnicos multi-select:
+      // Dentro de cada chave → OR (ex: resolucao=4MP OR 8MP)
+      // Entre chaves → AND (ex: resolucao=4MP AND protocolo=ONVIF)
+      for (const [key, values] of Object.entries(techFilters)) {
+        if (!values || values.length === 0) continue;
+        if (values.length === 1) {
+          q = q.filter(`especificacoes->>${key}`, "eq", values[0]);
+        } else {
+          // PostgREST: usar .in() sobre jsonb extract
+          const orConds = values.map(v => `especificacoes->>${key}.eq.${v}`).join(",");
+          q = q.or(orConds);
+        }
       }
 
       if (sortBy === "featured") q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
@@ -258,115 +247,43 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const total = productsQuery.data?.count ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  // Specs de TODOS os produtos que correspondem aos filtros base (mundo,
-  // categoria, família, tipo, marca, pesquisa) — excluindo os próprios
-  // techFilters, para que as opções de filtro técnico reflitam toda a
-  // categoria/família, não só os 24 produtos da página actual. Traz só a
-  // coluna "especificacoes" (JSONB), por isso é leve mesmo para centenas
-  // de produtos.
-  const specsAllQuery = useQuery({
-    queryKey: ["products-specs", mundo, search, categoryFilter, familyFilter, typeFilter, brandFilter],
+  // Specs via RPC no servidor — agrega TODOS os produtos da categoria/família
+  // sem trazer JSONB para o browser. Sem limites artificiais de valores ou grupos.
+  const specsRpcQuery = useQuery({
+    queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, brandFilter],
     queryFn: async () => {
-      let q = supabase.from("products").select("especificacoes")
-        .eq("mundo", mundo)
-        .eq("include_in_catalog", true);
-
-      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
-      if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
-      if (familyFilter !== "all") q = q.eq("family_id", familyFilter);
-      if (typeFilter !== "all") q = q.eq("type_id", typeFilter);
-      if (brandFilter !== "all") q = q.or(`brand_id.eq.${brandFilter},brand.eq.${brands.find((b: any) => b.id === brandFilter)?.name ?? ""}`);
-
-      const { data, error } = await q.limit(2000);
+      if (categoryFilter === "all") return [];
+      const brandId = brandFilter.length === 1 ? brandFilter[0] : null;
+      const brandName = brandId ? (brands.find((b: any) => b.id === brandId)?.name ?? null) : null;
+      const { data, error } = await (supabase as any).rpc("get_specs_aggregation", {
+        p_mundo: mundo,
+        p_category: categoryFilter !== "all" ? categoryFilter : null,
+        p_family_id: familyFilter !== "all" ? familyFilter : null,
+        p_brand_id: brandId,
+        p_brand_name: brandName,
+      });
       if (error) throw error;
-      return data ?? [];
+      return (data as any[]) ?? [];
     },
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    enabled: categoryFilter !== "all",
   });
 
-  // Filtros técnicos — gerados a partir de TODOS os produtos que
-  // correspondem aos filtros base (não só os 24 da página actual).
-  const techSpecOptions = useMemo(() => {
-    const map: Record<string, Map<string, number>> = {};
-    const source = specsAllQuery.data ?? [];
-    source.forEach((p: any) => {
-      const specs = (typeof p.especificacoes === "string"
-        ? JSON.parse(p.especificacoes || "{}")
-        : p.especificacoes ?? {}) as Record<string, unknown>;
-      Object.entries(specs).forEach(([k, v]) => {
-        if (!v || typeof v !== "string" || v.length > 50) return;
-        // Ignorar campos muito específicos
-        if (["portas", "compatibilidade", "firmware_ota", "teclado_nota"].includes(k)) return;
-        if (!map[k]) map[k] = new Map();
-        map[k].set(v, (map[k].get(v) ?? 0) + 1);
-      });
-    });
-    return Object.entries(map)
-      .map(([key, vals]) => ({
-        key,
-        label: key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-        values: [...vals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([v, c]) => ({ value: v, count: c })),
-      }))
-      .filter(g => g.values.length > 1)
-      .sort((a, b) => b.values.length - a.values.length)
-      .slice(0, 10);
-  }, [specsAllQuery.data]);
+  const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => ({
+    key: g.key,
+    label: g.label.charAt(0).toUpperCase() + g.label.slice(1),
+    values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
+  }));
 
 
-  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
-
-  // Facetas filtradas pelo contexto actual — para cada eixo (família/tipo/marca)
-  // calculamos as opções considerando os OUTROS filtros activos.
-  const facetsByCategory = useMemo(
-    () => (categoryFilter === "all" ? facets : facets.filter((p: any) => p.category === categoryFilter)),
-    [facets, categoryFilter]
-  );
-
-  const availableFamilyIds = useMemo(() => {
-    const set = new Set<string>();
-    facetsByCategory.forEach((p: any) => {
-      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
-      if (p.family_id) set.add(p.family_id);
-    });
-    return set;
-  }, [facetsByCategory, brandFilter]);
-
-  const availableTypeIds = useMemo(() => {
-    const set = new Set<string>();
-    facetsByCategory.forEach((p: any) => {
-      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
-      if (brandFilter !== "all" && p.brand_id !== brandFilter) return;
-      if (p.type_id) set.add(p.type_id);
-    });
-    return set;
-  }, [facetsByCategory, familyFilter, brandFilter]);
-
-  const availableBrand = useMemo(() => {
-    const ids = new Set<string>();
-    const names = new Set<string>();
-    facetsByCategory.forEach((p: any) => {
-      if (familyFilter !== "all" && p.family_id !== familyFilter) return;
-      if (typeFilter !== "all" && p.type_id !== typeFilter) return;
-      if (p.brand_id) ids.add(p.brand_id);
-      if (p.brand) names.add(p.brand);
-    });
-    return { ids, names };
-  }, [facetsByCategory, familyFilter, typeFilter]);
-
-  const visibleFamilies = families.filter((f: any) =>
-    (categoryFilter === "all" || f.category === categoryFilter) && availableFamilyIds.has(f.id)
-  );
-  const visibleTypes = types.filter((t: any) =>
-    familyFilter !== "all" && t.family_id === familyFilter && availableTypeIds.has(t.id)
-  );
-  const visibleBrands = brands.filter((b: any) =>
-    availableBrand.ids.has(b.id) || availableBrand.names.has(b.name)
-  );
-
+  const familyMap  const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
+  const visibleFamilies = families.filter((f: any) => categoryFilter === "all" || f.category === categoryFilter);
+  const visibleTypes = types.filter((t: any) => familyFilter !== "all" && t.family_id === familyFilter);
   const hasPrices = products.some((p: any) => p.price != null);
   const activeFiltersCount = [
-    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter !== "all",
+    categoryFilter !== "all", familyFilter !== "all", typeFilter !== "all", brandFilter.length > 0,
     Object.keys(techFilters).length > 0,
+    stockFilter !== "all",
   ].filter(Boolean).length;
 
   const setCategory = (name: string) => {
@@ -389,8 +306,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   };
 
   const clearAllFilters = () => {
-    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter("all");
-    setTechFilters({}); setSearch(""); setSearchInput(""); setPage(1);
+    setCategoryFilter("all"); setFamilyFilter("all"); setTypeFilter("all"); setBrandFilter([]);
+    setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
     searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
     setSearchParams(searchParams, { replace: true });
   };
@@ -398,7 +315,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const Icon = mundo === "seguranca" ? ShieldCheck : mundo === "economato" ? ShoppingBag : Monitor;
 
   const onBrandChange = (v: string) => {
-    setBrandFilter(v); setPage(1);
+    setBrandFilter([v]); setPage(1);
     if (v === "all") searchParams.delete("marca"); else searchParams.set("marca", v);
     setSearchParams(searchParams, { replace: true });
   };
@@ -406,17 +323,16 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const renderFilterPanel = () => (
     <CatalogFilterPanel
       visibleFamilies={visibleFamilies}
-      visibleTypes={visibleTypes}
       brands={visibleBrands}
       familyFilter={familyFilter}
-      typeFilter={typeFilter}
       brandFilter={brandFilter}
+      stockFilter={stockFilter}
       techFilters={techFilters}
       techSpecOptions={techSpecOptions}
       activeFiltersCount={activeFiltersCount}
       onFamilyChange={setFamily}
-      onTypeChange={setType}
-      onBrandChange={onBrandChange}
+      onBrandFilterChange={setBrandFilter}
+      onStockFilterChange={setStockFilter}
       onTechFiltersChange={setTechFilters}
       onPageReset={() => setPage(1)}
       onClearAll={clearAllFilters}
@@ -536,21 +452,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       {/* Main content */}
       <div className="container mx-auto px-4 pb-14 flex gap-6">
 
-        {/* Sidebar filtros — desktop (só após escolher categoria) */}
-        {categoryFilter !== "all" && (
-          <aside className="hidden lg:block w-64 shrink-0 pt-4">
-            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-bold">Filtrar</h2>
-                {activeFiltersCount > 0 && (
-                  <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
-                )}
-              </div>
-              {renderFilterPanel()}
+        {/* Sidebar filtros — desktop */}
+        <aside className="hidden lg:block w-64 shrink-0 pt-4">
+          <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold">Filtrar</h2>
+              {activeFiltersCount > 0 && (
+                <Badge className="bg-primary text-primary-foreground text-[10px]">{activeFiltersCount}</Badge>
+              )}
             </div>
-          </aside>
-        )}
-
+            {renderFilterPanel()}
+          </div>
+        </aside>
 
         <div className="flex-1 min-w-0 pt-4">
           {/* Toolbar */}
@@ -562,26 +475,23 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 className="pl-9 h-9 text-sm bg-muted/60 border-transparent rounded-xl" />
             </div>
 
-            {/* Filtros mobile — só após escolher categoria */}
-            {categoryFilter !== "all" && (
-              <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
-                    <SlidersHorizontal className="h-4 w-4" /> Filtros
-                    {activeFiltersCount > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
-                    )}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] overflow-y-auto">
-                  <SheetHeader className="pb-4">
-                    <SheetTitle>Filtros</SheetTitle>
-                  </SheetHeader>
-                  {renderFilterPanel()}
-                </SheetContent>
-              </Sheet>
-            )}
-
+            {/* Filtros mobile */}
+            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+                  <SlidersHorizontal className="h-4 w-4" /> Filtros
+                  {activeFiltersCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] overflow-y-auto">
+                <SheetHeader className="pb-4">
+                  <SheetTitle>Filtros</SheetTitle>
+                </SheetHeader>
+                {renderFilterPanel()}
+              </SheetContent>
+            </Sheet>
 
             <Select value={sortBy} onValueChange={v => { setSortBy(v); setPage(1); }}>
               <SelectTrigger className="w-[160px] h-9 text-sm"><SelectValue /></SelectTrigger>
@@ -597,7 +507,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           </div>
 
           {/* Filtros activos */}
-          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter !== "all") && (
+          {(Object.keys(techFilters).length > 0 || categoryFilter !== "all" || familyFilter !== "all" || typeFilter !== "all" || brandFilter.length > 0 || stockFilter !== "all") && (
             <div className="flex flex-wrap gap-1.5 mb-4">
               {categoryFilter !== "all" && (
                 <Badge variant="secondary" className="gap-1 pr-1 text-xs">
