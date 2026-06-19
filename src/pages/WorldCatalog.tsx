@@ -260,11 +260,14 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   // Specs via RPC no servidor — agrega TODOS os produtos da categoria/família
   // sem trazer JSONB para o browser. Sem limites artificiais de valores ou grupos.
   const specsRpcQuery = useQuery({
-    queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, brandFilter, techFilters],
+    queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, typeFilter, brandFilter, techFilters],
     queryFn: async () => {
       if (categoryFilter === "all") return [];
       const brandId = brandFilter.length === 1 ? brandFilter[0] : null;
       const brandName = brandId ? (brands.find((b: any) => b.id === brandId)?.name ?? null) : null;
+      const brandNames = brandFilter
+        .map(id => brands.find((b: any) => b.id === id)?.name ?? "")
+        .filter(Boolean);
       const { data, error } = await (supabase as any).rpc("get_specs_aggregation", {
         p_mundo: mundo,
         p_category: categoryFilter !== "all" ? categoryFilter : null,
@@ -272,6 +275,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         p_brand_id: brandId,
         p_brand_name: brandName,
         p_tech_filters: techFilters,
+        p_family_ids: familyFilter.length > 0 ? familyFilter : null,
+        p_type_ids: typeFilter.length > 0 ? typeFilter : null,
+        p_brand_ids: brandFilter.length > 0 ? brandFilter : null,
+        p_brand_names: brandNames.length > 0 ? brandNames : null,
       });
       if (error) throw error;
       return (data as any[]) ?? [];
