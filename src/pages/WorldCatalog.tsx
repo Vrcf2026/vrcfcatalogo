@@ -166,7 +166,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           "newest":     { by: "created_at", asc: false },
         };
         const order = orderMap[sortBy] ?? orderMap.featured;
-        const brandName = brandFilter !== "all" ? brands.find((b: any) => b.id === brandFilter)?.name ?? null : null;
+        const singleBrandId = brandFilter.length === 1 ? brandFilter[0] : null;
+        const brandName = singleBrandId ? (brands.find((b: any) => b.id === singleBrandId)?.name ?? null) : null;
 
         const { data, error } = await supabase.rpc("search_products", {
           p_query: search,
@@ -174,7 +175,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           p_category: categoryFilter !== "all" ? categoryFilter : null,
           p_family_id: familyFilter !== "all" ? familyFilter : null,
           p_type_id: typeFilter !== "all" ? typeFilter : null,
-          p_brand_id: brandFilter !== "all" ? brandFilter : null,
+          p_brand_id: singleBrandId,
           p_brand: brandName,
           p_limit: PAGE_SIZE,
           p_offset: from,
