@@ -34,8 +34,8 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const { totalItems, setIsOpen } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
   const [globalQuery, setGlobalQuery] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("categoria") ?? "all");
   const [stockFilter, setStockFilter] = useState("all");
   const [familyFilter, setFamilyFilter] = useState("all");
