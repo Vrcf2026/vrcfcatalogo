@@ -93,6 +93,19 @@ const Produto = () => {
     enabled: !!product?.id,
   });
 
+  // Guardar em "vistos recentemente" (localStorage) — ANTES de qualquer early return
+  useEffect(() => {
+    if (product) {
+      addToRecentlyViewed({
+        id: product.id, name: product.name, slug: product.slug,
+        price: product.price, image_url: product.image_url,
+        stock_status: product.stock_status, category: product.category,
+        brand: product.brand, mundo: product.mundo,
+        min_sale_qty: product.min_sale_qty, sku: product.sku,
+      });
+    }
+  }, [product?.id]);
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!product) return <Navigate to="/404" replace />;
 
@@ -137,18 +150,6 @@ const Produto = () => {
   const worldInfo = WORLD_INFO[product.mundo ?? ""] ?? WORLD_INFO.seguranca;
   const worldPath = worldInfo.path;
 
-  // Guardar em "vistos recentemente" (localStorage)
-  useEffect(() => {
-    if (product) {
-      addToRecentlyViewed({
-        id: product.id, name: product.name, slug: product.slug,
-        price: product.price, image_url: product.image_url,
-        stock_status: product.stock_status, category: product.category,
-        brand: product.brand, mundo: product.mundo,
-        min_sale_qty: product.min_sale_qty, sku: product.sku,
-      });
-    }
-  }, [product?.id]);
   const worldLabel = worldInfo.label;
   const priceWithVat = product.price ? product.price * 1.23 : null;
   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
