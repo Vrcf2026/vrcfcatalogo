@@ -389,30 +389,20 @@ const Index = () => {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS (linha compacta) ── */}
-      <section className="border-t border-border bg-muted/30 py-4 px-4">
-        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs">
-          <span className="font-semibold text-foreground">Como funciona:</span>
-          {[
-            { n: "1", icon: Search, t: "Explore" },
-            { n: "2", icon: ShoppingCart, t: "Selecciona" },
-            { n: "3", icon: Send, t: "Recebe orçamento" },
-          ].map((s, i, arr) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">{s.n}</span>
-                <s.icon className="h-3.5 w-3.5 text-primary" />
-                <span className="font-medium text-foreground">{s.t}</span>
-              </div>
-              {i < arr.length - 1 && <span className="hidden sm:inline text-border">→</span>}
-            </div>
-          ))}
-        </div>
-      </section>
-
-
-      {/* ── FOOTER ── */}
-      <SiteFooter />
+      {/* ── BRANDS ── */}
+      {brands.data && brands.data.length > 0 && (
+        <section className="border-t border-border bg-muted/30 py-5 px-3">
+          <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Marcas disponíveis</p>
+          <div className="flex flex-wrap justify-center gap-2 max-w-screen-xl mx-auto">
+            {brands.data.map((b: any) => (
+              <Link key={b.id} to={`/seguranca?marca=${b.id}`}
+                className="px-3.5 py-2 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground">
+                {b.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── MOBILE BOTTOM NAV ── */}
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
@@ -528,20 +518,30 @@ const Index = () => {
         </section>
       )}
 
-      {/* ── BRANDS ── */}
-      {brands.data && brands.data.length > 0 && (
-        <section className="border-t border-border bg-muted/30 py-5 px-3">
-          <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Marcas disponíveis</p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-screen-xl mx-auto">
-            {brands.data.map((b: any) => (
-              <Link key={b.id} to={`/seguranca?marca=${b.id}`}
-                className="px-3.5 py-2 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground">
-                {b.name}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── HOW IT WORKS (linha compacta) ── */}
+      <section className="border-t border-border bg-muted/30 py-4 px-4">
+        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs">
+          <span className="font-semibold text-foreground">Como funciona:</span>
+          {[
+            { n: "1", icon: Search, t: "Explore" },
+            { n: "2", icon: ShoppingCart, t: "Selecciona" },
+            { n: "3", icon: Send, t: "Recebe orçamento" },
+          ].map((s, i, arr) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <span className="h-5 w-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold">{s.n}</span>
+                <s.icon className="h-3.5 w-3.5 text-primary" />
+                <span className="font-medium text-foreground">{s.t}</span>
+              </div>
+              {i < arr.length - 1 && <span className="hidden sm:inline text-border">→</span>}
+            </div>
+          ))}
+        </div>
+      </section>
+
+
+      {/* ── FOOTER ── */}
+      <SiteFooter />
 
       {/* Espaço para a bottom nav no mobile */}
       <div className="h-14 sm:hidden" />
