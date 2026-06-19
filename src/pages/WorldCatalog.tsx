@@ -23,7 +23,7 @@ import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CategoryTile } from "@/components/catalog/CategoryTile";
-import { CatalogFilterPanel } from "@/components/catalog/CatalogFilterPanel";
+import { CatalogFilterPanel, type TechSpecGroup } from "@/components/catalog/CatalogFilterPanel";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
