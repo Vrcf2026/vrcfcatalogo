@@ -255,14 +255,11 @@ export function AdminDashboard(_props = {}) {
   const { data: totalsAnalytics } = useQuery({
     queryKey: ["analytics-totals", since],
     queryFn: async () => {
-      let q = (supabase as any).from("product_analytics")
-        .select("event_type", { count: "exact" });
-      if (since) q = q.gte("created_at", since);
+      const clicksQ = (supabase as any).from("product_analytics").select("id", { count: "exact", head: true }).eq("event_type", "click");
+      const quotesQ = (supabase as any).from("product_analytics").select("id", { count: "exact", head: true }).eq("event_type", "quote");
       const [clicks, quotes] = await Promise.all([
-        (supabase as any).from("product_analytics").select("id", { count: "exact", head: true })
-          .eq("event_type", "click").then(({ count }: any) => count ?? 0),
-        (supabase as any).from("product_analytics").select("id", { count: "exact", head: true })
-          .eq("event_type", "quote").then(({ count }: any) => count ?? 0),
+        (since ? clicksQ.gte("created_at", since) : clicksQ).then(({ count }: any) => count ?? 0),
+        (since ? quotesQ.gte("created_at", since) : quotesQ).then(({ count }: any) => count ?? 0),
       ]);
       return { clicks, quotes };
     },
@@ -270,7 +267,7 @@ export function AdminDashboard(_props = {}) {
   });
 
   const handleClearAnalytics = async () => {
-    if (!confirm("Limpar todos os dados de analytics? Esta acção é irreversível.")) return;
+    if (!confirm("Limpar TODOS os dados de analytics (independentemente do período seleccionado acima)? Esta acção é irreversível.")) return;
     setClearing(true);
     try {
       const { error } = await (supabase as any).from("product_analytics")

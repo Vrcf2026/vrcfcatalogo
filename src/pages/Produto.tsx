@@ -118,9 +118,17 @@ const Produto = () => {
       : extraImgs;
   const currentImage = allImages[imgIdx] || null;
 
-  const specs = (typeof product.especificacoes === "string"
-    ? JSON.parse(product.especificacoes || "{}")
-    : product.especificacoes ?? {}) as Record<string, string>;
+  let specs: Record<string, string> = {};
+  if (typeof product.especificacoes === "string") {
+    try {
+      specs = JSON.parse(product.especificacoes || "{}");
+    } catch (e) {
+      console.error("especificacoes JSON malformado para produto", product.id, product.sku, e);
+      specs = {};
+    }
+  } else if (product.especificacoes && typeof product.especificacoes === "object") {
+    specs = product.especificacoes as Record<string, string>;
+  }
 
   // Mapear valores de teclado para texto legível
   const TECLADO_DISPLAY: Record<string, string> = {

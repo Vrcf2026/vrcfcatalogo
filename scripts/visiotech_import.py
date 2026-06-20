@@ -729,12 +729,10 @@ def main(local=False):
     print(f"  Preço actualizado:      {stats['preco_actualizado']}")
     print(f"  Preço estável (<{int(LIMIAR_VARIACAO*100)}%): {stats['preco_estavel']}")
     if alteracoes_preco:
-        print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}%:")
-        for a in sorted(alteracoes_preco, key=lambda x: abs(x['variacao_pct']), reverse=True)[:5]:
+        print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}% ({len(alteracoes_preco)} produtos):")
+        for a in sorted(alteracoes_preco, key=lambda x: abs(x['variacao_pct']), reverse=True):
             sinal = "+" if a['price_new'] > a['price_old'] else ""
             print(f"    {a['sku']:30s} {a['price_old']:.2f}€ → {a['price_new']:.2f}€ ({sinal}{a['variacao_pct']}%)")
-        if len(alteracoes_preco) > 5:
-            print(f"    ... e mais {len(alteracoes_preco)-5} produtos")
 
     if not IMPORT_API_KEY:
         print("\n⚠️  IMPORT_API_KEY não definida — a guardar preview local")

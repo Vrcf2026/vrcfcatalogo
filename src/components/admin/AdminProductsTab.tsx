@@ -12,7 +12,7 @@ import { Search, Trash2, ChevronUp, ChevronDown, Loader2, Package, Download, Shu
 import { toast } from "sonner";
 import { LIST_COLUMNS, PRODUCT_COLUMNS } from "@/lib/fetchAllRows";
 
-const FORNECEDORES = ["diginova", "visiotech", "bydemes", "manual"];
+const FORNECEDORES = ["diginova", "visiotech", "bydemes", "allto", "manual"];
 const PAGE_SIZE = 50;
 
 interface ProductFilters {
@@ -295,6 +295,23 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
     }
   };
 
+  const fetchAllWithoutDesc = async () => {
+    let query = supabase.from("products").select("id,name,description,category");
+    query = applyProductFilters(query, activeFilters, filterOpts);
+    const PAGE = 1000;
+    const all: any[] = [];
+    let from = 0;
+    while (true) {
+      const { data, error } = await query.range(from, from + PAGE - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
+    }
+    return all.filter((p: any) => !p.description || p.description.trim().length === 0);
+  };
+
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm("Eliminar este produto?")) return;
@@ -436,7 +453,7 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
           >
             <Download className="h-3.5 w-3.5" /> Exportar
           </Button>
-          <GenerateDescriptionsDialog products={paginated.filter((p: any) => !p.description) as any} />
+          <GenerateDescriptionsDialog products={paginated.filter((p: any) => !p.description) as any} fetchAllWithoutDesc={fetchAllWithoutDesc} />
           <span>Página {page} de {totalPages || 1}</span>
         </div>
       </div>
@@ -482,7 +499,13 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
                     </td>
                   </tr>
                 ) : paginated.map((p: any) => {
-                  const specs = typeof p.especificacoes === "string" ? JSON.parse(p.especificacoes || "{}") : (p.especificacoes || {});
+                  let specs: Record<string, any> = {};
+                  if (typeof p.especificacoes === "string") {
+                    try { specs = JSON.parse(p.especificacoes || "{}"); }
+                    catch (e) { console.error("especificacoes JSON malformado:", p.id, p.sku, e); specs = {}; }
+                  } else if (p.especificacoes && typeof p.especificacoes === "object") {
+                    specs = p.especificacoes;
+                  }
                   const familyName = p.family || (p.family_id ? familyMap[p.family_id] : null) || "—";
                   const typeName = p.type || (p.type_id ? typeMap[p.type_id] : null) || "—";
                   const brandName = p.brand || (p.brand_id ? brandMap[p.brand_id] : null) || "—";

@@ -93,28 +93,21 @@ export function UsersManager() {
     }
     setInviting(true);
     try {
-      // Criar utilizador via signUp (cria conta mas fica por confirmar)
-      const { data, error } = await supabase.auth.signUp({
-        email: inviteEmail.trim(),
-        password: invitePassword,
-        options: {
-          data: inviteFullName.trim() ? { full_name: inviteFullName.trim() } : undefined,
-          // emailRedirectTo é necessário mas o admin pode confirmar manualmente via Supabase
-          emailRedirectTo: `${window.location.origin}/conta`,
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: {
+          email: inviteEmail.trim(),
+          password: invitePassword,
+          fullName: inviteFullName.trim() || undefined,
+          role: inviteRole || undefined,
         },
       });
       if (error) throw error;
-      if (!data.user) throw new Error("Utilizador não criado.");
-
-      // Atribuir role se selecionado
-      if (inviteRole) {
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: data.user.id, role: inviteRole });
-        if (roleError && roleError.code !== "23505") throw roleError;
+      if (data?.error) throw new Error(data.error);
+      if (data?.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success(`Utilizador ${inviteEmail} criado.${inviteRole ? ` Role "${ROLE_META[inviteRole as AppRole].label}" atribuído.` : ""} A conta já pode ser usada para login.`);
       }
-
-      toast.success(`Utilizador ${inviteEmail} criado.${inviteRole ? ` Role "${ROLE_META[inviteRole as AppRole].label}" atribuído.` : ""} Irá receber email de confirmação.`);
       setInviteOpen(false);
       setInviteEmail(""); setInvitePassword(""); setInviteFullName(""); setInviteRole("");
       qc.invalidateQueries({ queryKey: ["admin-users"] });
@@ -238,8 +231,8 @@ export function UsersManager() {
           <DialogHeader>
             <DialogTitle>Criar novo utilizador</DialogTitle>
             <DialogDescription>
-              Cria uma conta e opcionalmente atribui um role de acesso.
-              O utilizador irá receber um email de confirmação.
+              Cria uma conta já confirmada e opcionalmente atribui um role de acesso.
+              O utilizador pode fazer login de imediato com o email e palavra-passe definidos.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleInvite} className="space-y-3">

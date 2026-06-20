@@ -476,12 +476,12 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
       {/* Banners deste mundo (ou transversais, mundo="todos") */}
       {banners.length > 0 && (
-        <div className="relative overflow-hidden bg-black" style={{ maxHeight: 240 }}>
+        <div className="relative overflow-hidden bg-black min-h-[110px]" style={{ aspectRatio: "1200 / 300" }}>
           {banners.map((b: any, i: number) => (
-            <div key={b.id} className={`transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0 absolute inset-0"}`}>
+            <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
               {b.link
-                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} /></Link>
-                : <img src={b.image_url} alt={b.titulo || ""} className="w-full object-cover" style={{ maxHeight: 240 }} />
+                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} className="w-full h-full object-cover" /></Link>
+                : <img src={b.image_url} alt={b.titulo || ""} className="w-full h-full object-cover" />
               }
             </div>
           ))}

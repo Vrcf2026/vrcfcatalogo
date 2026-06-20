@@ -128,6 +128,50 @@ def parsear_descricao_tecnica(texto: str) -> tuple[dict, list[str]]:
     return specs_extra, prosa
 
 
+# Gramagem de papel ("075gr", "80g", "130g") frequentemente só aparece no
+# nome do produto, não na Descrição Técnica. Cobre 145/146 produtos da
+# linha "Papel Fotocópia" (testado sobre catálogo real), contra 28/146 só
+# com o parser da Descrição Técnica.
+_RE_GRAMAGEM_NOME = re.compile(r"(?<!\d)(\d{2,3})\s?gr?(?=[^a-zA-Z]|$)", re.IGNORECASE)
+
+def extrair_gramagem_do_nome(nome: str) -> str | None:
+    """Devolve 'NN g/m²' se encontrar um padrão de gramagem no nome, senão None."""
+    if not nome:
+        return None
+    m = _RE_GRAMAGEM_NOME.search(nome)
+    if not m:
+        return None
+    return f"{int(m.group(1))} g/m²"
+
+
+# Cor de tinteiros/toners ("...BTD180BK Preto 7500 Pág.") — testado sobre
+# catálogo real: 88.4% de cobertura em Tinteiros + Toners e Drums (5.999
+# produtos), que hoje têm apenas 1-6% de specs extraídas da Descrição
+# Técnica. Lista fechada de cores PT comuns nestes produtos.
+_CORES_TINTEIRO = ["Preto", "Negro", "Azul", "Cyan", "Ciano", "Magenta",
+                   "Amarelo", "Tricolor", "Cores", "Colorido"]
+_RE_COR_TINTEIRO = re.compile(r"\b(" + "|".join(_CORES_TINTEIRO) + r")\b", re.IGNORECASE)
+
+def extrair_cor_tinteiro(nome: str) -> str | None:
+    """Devolve a cor capitalizada se encontrar uma palavra de cor conhecida no nome."""
+    if not nome:
+        return None
+    m = _RE_COR_TINTEIRO.search(nome)
+    if not m:
+        return None
+    return m.group(1).capitalize()
+
+
+def extrair_rendimento_paginas(ncopias_raw) -> str | None:
+    """Converte o campo NCopias em 'NNNN páginas' — é o rendimento real do
+    tinteiro/toner (confirmado contra o nome do produto, ex: NCopias=7500.00
+    para um produto chamado "...7500 Pág."). 90.4% de cobertura testada."""
+    val = parse_float(ncopias_raw)
+    if not val or val <= 0:
+        return None
+    return f"{int(val)} páginas"
+
+
 # ─────────────────────────────────────────────
 # CONFIGURAÇÃO DE MARGENS (Preco_Venda_Cliente)
 # Portado de margin-config.json / pricing.ts — calcula o PVP a partir
@@ -221,24 +265,35 @@ def parse_float(val) -> float:
         return 0.0
 
 
-def parse_stock_allto(val) -> int:
+def parse_stock_allto(val, sku: str = "") -> int:
     """
     Converte o campo Stock da ALL.TO para inteiro.
     Formatos: "0", "1-10", "11-100", "101-1000", ">1000", "1.000", "2.969"
+
+    NOTA (bug corrigido): valores com vírgula como separador de milhar
+    (ex. "2,969" em vez de "2.969") ou com espaços invisíveis (NBSP) caíam
+    no except e silenciosamente viravam stock 0 — produto aparecia como
+    "sem stock" quando na verdade tinha. Agora normaliza vírgula+ponto
+    como separadores de milhar antes de converter, e quando mesmo assim
+    falha, regista o valor em vez de o engolir silenciosamente.
     """
     if not val:
         return 0
-    s = str(val).strip()
+    s = str(val).strip().replace("\xa0", "").replace(" ", "")
     if not s:
         return 0
     if s.startswith(">"):
-        try: return int(s[1:].strip()) + 1
+        try: return int(s[1:].replace(".", "").replace(",", "")) + 1
         except: return 1001
     if "-" in s:
-        try: return int(s.split("-")[0].strip())
-        except: return 0
-    try: return int(s.replace(".", ""))
-    except: return 0
+        try: return int(s.split("-")[0].replace(".", "").replace(",", ""))
+        except: pass
+    else:
+        try: return int(s.replace(".", "").replace(",", ""))
+        except: pass
+
+    print(f"  ⚠ Stock ALL.TO ilegível{f' (SKU {sku})' if sku else ''}: {val!r} — assumido sem stock, confirmar formato.")
+    return 0
 
 # ─────────────────────────────────────────────
 # EDGE FUNCTION
@@ -485,7 +540,7 @@ def main():
                 stats["preco_estavel"] += 1
 
         # Stock — campo pode ser número ou intervalo ("101-1000", "1.000", ">1000", etc.)
-        stock_qty = parse_stock_allto(row.get("Stock"))
+        stock_qty = parse_stock_allto(row.get("Stock"), sku)
         if stock_qty > 10:    stock_status = "high"
         elif stock_qty > 0:   stock_status = "low"
         else:                 stock_status = "on_request"
@@ -544,6 +599,26 @@ def main():
         for k, v in specs_tecnica.items():
             if k not in specs:
                 specs[k] = v
+
+        # Fallback: gramagem de papel frequentemente só vem no nome, não na
+        # Descrição Técnica (ex: "Papel 080gr Fotocópia A4...").
+        if "gramagem" not in specs:
+            gramagem_nome = extrair_gramagem_do_nome(descricao_curta)
+            if gramagem_nome:
+                specs["gramagem"] = gramagem_nome
+
+        # Tinteiros/Toners: cor (do nome) e rendimento em páginas (de NCopias)
+        # — a Descrição Técnica destes produtos é só "modelos compatíveis",
+        # nunca tem "Label: Valor" para cor/rendimento.
+        if linha_produto in ("Tinteiros", "Toners e Drums"):
+            if "cor" not in specs:
+                cor = extrair_cor_tinteiro(descricao_curta)
+                if cor:
+                    specs["cor"] = cor
+            if "rendimento" not in specs:
+                rendimento = extrair_rendimento_paginas(row.get("NCopias"))
+                if rendimento:
+                    specs["rendimento"] = rendimento
 
         # Destaques
         destaques = []
@@ -607,12 +682,10 @@ def main():
               "(type=full) devolve este campo; ver nota em allto_import.py")
 
     if alteracoes_preco:
-        print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}%:")
-        for a in sorted(alteracoes_preco, key=lambda x: abs(x['variacao_pct']), reverse=True)[:5]:
+        print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}% ({len(alteracoes_preco)} produtos):")
+        for a in sorted(alteracoes_preco, key=lambda x: abs(x['variacao_pct']), reverse=True):
             sinal = "+" if a['price_new'] > a['price_old'] else ""
             print(f"    {a['sku']:30s} {a['price_old']:.2f}€ → {a['price_new']:.2f}€ ({sinal}{a['variacao_pct']}%)")
-        if len(alteracoes_preco) > 5:
-            print(f"    ... e mais {len(alteracoes_preco)-5} produtos")
 
     if not IMPORT_API_KEY:
         print("\n⚠️  IMPORT_API_KEY não definida — a guardar preview local")
