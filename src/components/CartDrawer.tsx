@@ -182,12 +182,8 @@ export function CartDrawer() {
                     </div>
                   )}
                   <div className="flex items-start gap-1.5">
-                    <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                    <span>Entrega em 48h a 72h úteis após confirmação de pagamento.</span>
-                  </div>
-                  <div className="flex items-start gap-1.5">
                     <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                    <span>Preços indicativos. Stock referente ao armazém online.</span>
+                    <span>Stock sujeito a disponibilidade.</span>
                   </div>
                 </div>
 
