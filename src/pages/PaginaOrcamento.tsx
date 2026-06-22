@@ -12,6 +12,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/trackEvent";
 import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
+import { DarkModeToggle } from "@/components/DarkModeToggle";
+import { UserMenuButton } from "@/components/UserMenuButton";
+import { SiteFooter } from "@/components/SiteFooter";
+import vrcfLogo from "@/assets/vrcf-logo.png";
 import {
   Minus, Plus, Trash2, ShoppingCart, Send, Loader2,
   CheckCircle, Truck, ArrowLeft, Package, Info, Clock, MessageCircle,
@@ -178,24 +182,28 @@ export default function PaginaOrcamento() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-          <h1 className="font-bold text-base flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4 text-primary" />
-            Pedido de Orçamento
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Header do projecto */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-lg">
+        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4">
+          <Link to="/" className="shrink-0 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Início</span>
+          </Link>
+          <Link to="/" className="shrink-0">
+            <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" />
+          </Link>
+          <h1 className="flex-1 text-sm font-bold text-foreground flex items-center gap-2 truncate">
+            <ShoppingCart className="h-4 w-4 text-primary shrink-0" />
+            <span className="truncate">Pedido de Orçamento</span>
           </h1>
-          <span className="ml-auto text-xs text-muted-foreground">
-            {items.reduce((s, i) => s + i.quantity, 0)} artigo{items.reduce((s, i) => s + i.quantity, 0) !== 1 ? "s" : ""}
-          </span>
+          <div className="flex items-center gap-2 shrink-0">
+            <DarkModeToggle />
+            <UserMenuButton />
+          </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
 
         {/* ── COLUNA ESQUERDA: produtos + formulário ── */}
         <div className="space-y-6">
@@ -407,6 +415,8 @@ export default function PaginaOrcamento() {
         </div>
 
       </div>
+
+      <SiteFooter />
     </div>
   );
 }
