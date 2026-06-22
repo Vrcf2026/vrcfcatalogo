@@ -107,7 +107,10 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
           )}
           {/* Quick add overlay */}
           {!isAdmin && (
-            <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 p-2">
+            <div
+              className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               <button
                 onClick={handleAddToCart}
                 className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 active:scale-95 transition-all">
@@ -138,14 +141,34 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
           {/* SKU */}
           {sku && <p className="text-[10px] text-muted-foreground/60 font-mono">{sku}</p>}
 
-          {/* Preço */}
+          {/* Preço + indicador de stock */}
           <div className="mt-auto pt-2">
             {price != null ? (
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-bold text-foreground tabular-nums">
-                  {(price * 1.23).toFixed(2).replace(".", ",")} €
-                </span>
-                <span className="text-[10px] text-muted-foreground">c/ IVA</span>
+              <div className="flex items-baseline justify-between gap-1">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-bold text-foreground tabular-nums">
+                    {(price * 1.23).toFixed(2).replace(".", ",")} €
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">c/ IVA</span>
+                </div>
+                {stockStatus && (
+                  <span
+                    title={
+                      stockStatus === "high"       ? "Em stock"
+                    : stockStatus === "medium"     ? "Stock médio"
+                    : stockStatus === "low"        ? "Últimas unidades"
+                    : stockStatus === "on_request" ? "Por encomenda"
+                    : "Disponibilidade desconhecida"
+                    }
+                    className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mb-0.5 ${
+                      stockStatus === "high"       ? "bg-green-500"
+                    : stockStatus === "medium"     ? "bg-amber-400"
+                    : stockStatus === "low"        ? "bg-orange-500"
+                    : stockStatus === "on_request" ? "bg-blue-500"
+                    : "bg-gray-400"
+                    }`}
+                  />
+                )}
               </div>
             ) : (
               <span className="text-xs text-muted-foreground italic">Preço sob consulta</span>
