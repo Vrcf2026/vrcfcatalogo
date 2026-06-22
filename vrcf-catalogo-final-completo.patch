@@ -1,0 +1,917 @@
+diff --git a/src/components/CartDrawer.tsx b/src/components/CartDrawer.tsx
+index fa4d2a1..1869294 100644
+--- a/src/components/CartDrawer.tsx
++++ b/src/components/CartDrawer.tsx
+@@ -6,26 +6,7 @@ import { useState } from "react";
+ import { useQuery } from "@tanstack/react-query";
+ import { supabase } from "@/integrations/supabase/client";
+ import { CheckoutDialog } from "./CheckoutDialog";
+-
+-// Tabela DHL Portugal Continental (s/IVA) — custo real cobrado pela DHL
+-const DHL_TABELA: [number, number][] = [
+-  [1, 3.65], [3, 3.78], [5, 3.78], [10, 4.37], [20, 4.88],
+-  [30, 5.20], [40, 6.22], [50, 7.59], [60, 9.08], [70, 10.59],
+-  [80, 12.11], [90, 13.62], [100, 15.13], [125, 18.51], [150, 22.22],
+-  [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
+-];
+-
+-const MARGEM_PORTES = 0.15;
+-
+-function calcularPorteDHL(pesoKg: number): number | null {
+-  let custoBase: number | null = null;
+-  for (const [limite, preco] of DHL_TABELA) {
+-    if (pesoKg <= limite) { custoBase = preco; break; }
+-  }
+-  if (pesoKg <= 0) custoBase = DHL_TABELA[0][1];
+-  if (custoBase === null) return null;
+-  return Math.round(custoBase * (1 + MARGEM_PORTES) * 100) / 100;
+-}
++import { calcularPortesPorFornecedor, totalPortesComIva as somarPortesComIva } from "@/lib/calcularPortes";
+ 
+ export function CartDrawer() {
+   const { items, isOpen, setIsOpen, updateQuantity, removeItem, clearCart } = useCart();
+@@ -44,7 +25,7 @@ export function CartDrawer() {
+   const totalValueSemVat = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
+   const totalValueComVat = totalValueSemVat * 1.23;
+ 
+-  // Agrupar itens por fornecedor
++  // Agrupar itens por fornecedor (só para a label "X artigos" e o aviso de envio especial)
+   const itensPorFornecedor = items.reduce((acc: Record<string, typeof items>, item) => {
+     const f = (item as any).fornecedor || "manual";
+     if (!acc[f]) acc[f] = [];
+@@ -52,64 +33,17 @@ export function CartDrawer() {
+     return acc;
+   }, {});
+ 
+-  // Calcular portes por fornecedor
+-  const portesPorFornecedor: Array<{
+-    fornecedor: string;
+-    portesSemIva: number;
+-    portesComIva: number;
+-    descricao: string;
+-    isDHL?: boolean;
+-  }> = [];
+-
+   const temEnvioEspecial = items.some(i => (i as any).envio_especial);
+ 
+-  for (const [fornecedor, itensF] of Object.entries(itensPorFornecedor)) {
+-    if (fornecedor === "allto") {
+-      // ALL.TO: cálculo por peso via tabela DHL
+-      const pesoAllto = itensF.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
+-      if (pesoAllto > 0) {
+-        const porte = calcularPorteDHL(pesoAllto);
+-        if (porte !== null) {
+-          portesPorFornecedor.push({
+-            fornecedor: "allto",
+-            portesSemIva: porte,
+-            portesComIva: porte * 1.23,
+-            descricao: `${pesoAllto.toFixed(2)}kg · DHL`,
+-            isDHL: true,
+-          });
+-        } else {
+-          portesPorFornecedor.push({
+-            fornecedor: "allto",
+-            portesSemIva: 0,
+-            portesComIva: 0,
+-            descricao: "Peso >250kg — calculado no orçamento",
+-          });
+-        }
+-      }
+-    } else {
+-      // Outros fornecedores: configuração da BD (preco_primeira_unidade + adicional)
+-      const config = shippingConfigs.find((c: any) => c.fornecedor === fornecedor);
+-      if (config && config.ativo) {
+-        const totalItens = itensF.reduce((sum, i) => sum + i.quantity, 0);
+-        const primeira = config.preco_primeira_unidade ?? 0;
+-        const adicional = config.preco_unidade_adicional ?? 0;
+-        const portesSemIva = totalItens > 0
+-          ? primeira + Math.max(0, totalItens - 1) * adicional
+-          : primeira;
+-        portesPorFornecedor.push({
+-          fornecedor,
+-          portesSemIva,
+-          portesComIva: portesSemIva * 1.23,
+-          descricao: `${totalItens} artigo${totalItens !== 1 ? "s" : ""}`,
+-        });
+-      }
+-    }
+-  }
++  const portesPorFornecedor = calcularPortesPorFornecedor(
++    items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
++    shippingConfigs as any,
++  );
+ 
+   const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
+-  const totalPortesComIva = portesPorFornecedor.reduce((s, p) => s + p.portesComIva, 0);
++  const totalPortesComIva = somarPortesComIva(portesPorFornecedor);
+   const temPortesCalculados = Object.keys(itensPorFornecedor).some(f =>
+-    f !== "allto" && !shippingConfigs.find((c: any) => c.fornecedor === f && c.ativo)
++    f !== "allto" && !(shippingConfigs as any).find((c: any) => c.fornecedor === f && c.ativo)
+   );
+ 
+   return (
+@@ -245,9 +179,13 @@ export function CartDrawer() {
+                   {temPortesCalculados && (
+                     <div className="flex items-start gap-1.5">
+                       <Truck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+-                      <span>Portes de alguns produtos calculados no orçamento final.</span>
++                      <span>Portes de alguns produtos a confirmar — incluídos no orçamento final.</span>
+                     </div>
+                   )}
++                  <div className="flex items-start gap-1.5">
++                    <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
++                    <span>Vai receber por email o orçamento completo, com produtos, portes e prazo de entrega confirmados.</span>
++                  </div>
+                   {temEnvioEspecial && (
+                     <div className="flex items-start gap-1.5">
+                       <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+diff --git a/src/components/CheckoutDialog.tsx b/src/components/CheckoutDialog.tsx
+index 3af6961..55d6d18 100644
+--- a/src/components/CheckoutDialog.tsx
++++ b/src/components/CheckoutDialog.tsx
+@@ -12,6 +12,8 @@ import { Loader2, Send, CheckCircle, Plus, Trash2 } from "lucide-react";
+ import { trackEvent } from "@/lib/trackEvent";
+ import { useAuth } from "@/hooks/useAuth";
+ import { Link } from "react-router-dom";
++import { useQuery } from "@tanstack/react-query";
++import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
+ 
+ interface CheckoutDialogProps {
+   open: boolean;
+@@ -38,6 +40,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+   const [sendCopy, setSendCopy] = useState(true);
+   const submitTimestamps = useRef<number[]>([]);
+ 
++  const { data: shippingConfigs = [] } = useQuery({
++    queryKey: ["shipping_config"],
++    queryFn: async () => {
++      const { data } = await supabase.from("shipping_config").select("*").eq("ativo", true);
++      return data ?? [];
++    },
++    staleTime: 5 * 60 * 1000,
++  });
++
+   const MAX_SUBMITS = 3;
+   const RATE_WINDOW_MS = 60_000; // 1 minute
+ 
+@@ -111,6 +122,11 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+         })),
+       ];
+ 
++      const portesEstimados = totalPortesComIva(calcularPortesPorFornecedor(
++        items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
++        shippingConfigs as any,
++      ));
++
+       const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
+         body: {
+           customerName: name.trim(),
+@@ -119,6 +135,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+           notes: notes.trim(),
+           items: quoteItems,
+           sendCopyToCustomer: sendCopy,
++          shippingEstimate: portesEstimados,
+         },
+       });
+       if (fnError) throw fnError;
+@@ -128,13 +145,19 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+       // Isto garante que TODOS os orçamentos aparecem na área de Gestão.
+       try {
+         const subtotal = items.reduce((s, i) => s + ((i.price ?? 0) * i.quantity), 0);
++        const portes = calcularPortesPorFornecedor(
++          items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
++          shippingConfigs as any,
++        );
++        const shippingTotal = totalPortesComIva(portes);
+         const { data: quote, error: qErr } = await supabase
+           .from("quotes")
+           .insert({
+             ...(user ? { user_id: user.id } : {}),
+             status: "sent",
+             subtotal,
+-            total: subtotal,
++            total: subtotal + shippingTotal,
++            shipping_total: shippingTotal,
+             notes: notes.trim() || null,
+             customer_name: name.trim(),
+             customer_email: email.trim(),
+@@ -189,7 +212,8 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+             <CheckCircle className="h-16 w-16 text-green-500" />
+             <h3 className="font-heading text-xl font-bold">Pedido Enviado!</h3>
+             <p className="text-muted-foreground text-sm">
+-              O seu pedido de orçamento foi enviado com sucesso. Entraremos em contacto brevemente.
++              O seu pedido de orçamento foi enviado com sucesso. Vai receber por email o orçamento
++              completo, com produtos, portes e prazo de entrega confirmados.
+             </p>
+           </div>
+         </DialogContent>
+diff --git a/src/lib/calcularPortes.ts b/src/lib/calcularPortes.ts
+new file mode 100644
+index 0000000..fe7e49f
+--- /dev/null
++++ b/src/lib/calcularPortes.ts
+@@ -0,0 +1,111 @@
++// Cálculo de portes por fornecedor — partilhado entre CartDrawer (preview
++// ao cliente), CheckoutDialog (gravado no orçamento ao submeter) e
++// Gestão/Orcamentos (sugestão editável ao finalizar). Manter UMA só lógica
++// aqui evita os três sítios divergirem ao longo do tempo.
++
++export interface ShippingConfigRow {
++  fornecedor: string;
++  ativo: boolean;
++  preco_primeira_unidade: number | null;
++  preco_unidade_adicional: number | null;
++}
++
++export interface PorteCalculado {
++  fornecedor: string;
++  portesSemIva: number;
++  portesComIva: number;
++  descricao: string;
++  isDHL?: boolean;
++}
++
++export interface ItemParaPortes {
++  fornecedor?: string | null;
++  quantity: number;
++  weight?: number | null;
++}
++
++// Tabela DHL Portugal Continental (s/IVA) — custo real cobrado pela DHL
++const DHL_TABELA: [number, number][] = [
++  [1, 3.65], [3, 3.78], [5, 3.78], [10, 4.37], [20, 4.88],
++  [30, 5.20], [40, 6.22], [50, 7.59], [60, 9.08], [70, 10.59],
++  [80, 12.11], [90, 13.62], [100, 15.13], [125, 18.51], [150, 22.22],
++  [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
++];
++
++const MARGEM_PORTES = 0.15;
++
++export function calcularPorteDHL(pesoKg: number): number | null {
++  let custoBase: number | null = null;
++  for (const [limite, preco] of DHL_TABELA) {
++    if (pesoKg <= limite) { custoBase = preco; break; }
++  }
++  if (pesoKg <= 0) custoBase = DHL_TABELA[0][1];
++  if (custoBase === null) return null;
++  return Math.round(custoBase * (1 + MARGEM_PORTES) * 100) / 100;
++}
++
++/**
++ * Calcula os portes agrupados por fornecedor para uma lista de itens.
++ * `shippingConfigs` é o conteúdo (já filtrado a ativo=true, idealmente)
++ * da tabela `shipping_config`.
++ */
++export function calcularPortesPorFornecedor(
++  items: ItemParaPortes[],
++  shippingConfigs: ShippingConfigRow[],
++): PorteCalculado[] {
++  const itensPorFornecedor = items.reduce((acc: Record<string, ItemParaPortes[]>, item) => {
++    const f = item.fornecedor || "manual";
++    if (!acc[f]) acc[f] = [];
++    acc[f].push(item);
++    return acc;
++  }, {});
++
++  const resultado: PorteCalculado[] = [];
++
++  for (const [fornecedor, itensF] of Object.entries(itensPorFornecedor)) {
++    if (fornecedor === "allto") {
++      const pesoAllto = itensF.reduce((sum, i) => sum + (i.weight ?? 0) * i.quantity, 0);
++      if (pesoAllto > 0) {
++        const porte = calcularPorteDHL(pesoAllto);
++        if (porte !== null) {
++          resultado.push({
++            fornecedor: "allto",
++            portesSemIva: porte,
++            portesComIva: porte * 1.23,
++            descricao: `${pesoAllto.toFixed(2)}kg · DHL`,
++            isDHL: true,
++          });
++        } else {
++          resultado.push({
++            fornecedor: "allto",
++            portesSemIva: 0,
++            portesComIva: 0,
++            descricao: "Peso >250kg — confirmar manualmente",
++          });
++        }
++      }
++    } else {
++      const config = shippingConfigs.find((c) => c.fornecedor === fornecedor && c.ativo);
++      if (config) {
++        const totalItens = itensF.reduce((sum, i) => sum + i.quantity, 0);
++        const primeira = config.preco_primeira_unidade ?? 0;
++        const adicional = config.preco_unidade_adicional ?? 0;
++        const portesSemIva = totalItens > 0
++          ? primeira + Math.max(0, totalItens - 1) * adicional
++          : primeira;
++        resultado.push({
++          fornecedor,
++          portesSemIva,
++          portesComIva: portesSemIva * 1.23,
++          descricao: `${totalItens} artigo${totalItens !== 1 ? "s" : ""}`,
++        });
++      }
++    }
++  }
++
++  return resultado;
++}
++
++export function totalPortesComIva(portes: PorteCalculado[]): number {
++  return portes.reduce((s, p) => s + p.portesComIva, 0);
++}
+diff --git a/src/pages/gestao/Orcamentos.tsx b/src/pages/gestao/Orcamentos.tsx
+index 5a6bb1a..71e5454 100644
+--- a/src/pages/gestao/Orcamentos.tsx
++++ b/src/pages/gestao/Orcamentos.tsx
+@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
+ import { Textarea } from "@/components/ui/textarea";
+ import { Label } from "@/components/ui/label";
+ import { Input } from "@/components/ui/input";
+-import { ArrowLeft, Loader2, FileText, Eye, Search } from "lucide-react";
++import { ArrowLeft, Loader2, FileText, Eye, Search, Truck, PackageX, Send, CheckCircle2 } from "lucide-react";
+ import { toast } from "sonner";
++import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
+ 
+ const STATUS_OPTIONS = [
+   { value: "pending",   label: "Pendente" },
+@@ -32,6 +33,8 @@ const STATUS_COLOR: Record<string, string> = {
+   completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+ };
+ 
++const PRAZO_OPCOES = ["24-48h", "3-5 dias úteis", "5-10 dias úteis", "Sob consulta"];
++
+ // ─── Lista de orçamentos ───────────────────────────────────────────────────
+ 
+ function OrcamentosList() {
+@@ -148,28 +151,44 @@ function OrcamentoDetalhe() {
+   const qc = useQueryClient();
+   const navigate = useNavigate();
+   const [saving, setSaving] = useState(false);
++  const [sendingFinal, setSendingFinal] = useState(false);
+   const [status, setStatus] = useState("");
+   const [notes, setNotes] = useState("");
+   const [total, setTotal] = useState("");
++  const [shippingTotal, setShippingTotal] = useState("");
++  const [prazoEntrega, setPrazoEntrega] = useState("");
+ 
+   const { data, isLoading } = useQuery({
+     queryKey: ["gestao-quote", id],
+     queryFn: async () => {
+-      const [q, items] = await Promise.all([
++      const [q, items, shipCfg] = await Promise.all([
+         supabase.from("quotes").select("*,customer_profiles(*)").eq("id", id!).maybeSingle(),
+-        supabase.from("quote_items").select("*").eq("quote_id", id!),
++        supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight)").eq("quote_id", id!),
++        supabase.from("shipping_config").select("*").eq("ativo", true),
+       ]);
+       if (q.error) throw q.error;
+       if (q.data) {
+         setStatus(q.data.status);
+         setNotes(q.data.notes ?? "");
+         setTotal(q.data.total != null ? String(q.data.total) : "");
++        setShippingTotal((q.data as any).shipping_total != null ? String((q.data as any).shipping_total) : "");
++        setPrazoEntrega((q.data as any).prazo_entrega ?? "");
+       }
+-      return { quote: q.data, items: items.data ?? [] };
++      return { quote: q.data, items: items.data ?? [], shippingConfigs: shipCfg.data ?? [] };
+     },
+     enabled: !!id,
+   });
+ 
++  const portesSugeridos = data ? calcularPortesPorFornecedor(
++    data.items.map((it: any) => ({
++      fornecedor: it.products?.fornecedor,
++      quantity: it.quantity,
++      weight: it.products?.weight,
++    })),
++    data.shippingConfigs as any,
++  ) : [];
++  const sugestaoTotal = totalPortesComIva(portesSugeridos);
++
+   const handleSave = async () => {
+     if (!id) return;
+     setSaving(true);
+@@ -177,20 +196,58 @@ function OrcamentoDetalhe() {
+       status: status as any,
+       notes: notes.trim() || null,
+       total: total ? parseFloat(total.replace(",", ".")) : null,
+-    }).eq("id", id);
++      shipping_total: shippingTotal ? parseFloat(shippingTotal.replace(",", ".")) : null,
++      prazo_entrega: prazoEntrega.trim() || null,
++    } as any).eq("id", id);
+     setSaving(false);
+     if (error) { toast.error(error.message); return; }
+     toast.success("Orçamento atualizado.");
+     qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
++    qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
+     qc.invalidateQueries({ queryKey: ["gestao-stats"] });
+     qc.invalidateQueries({ queryKey: ["gestao-recent-quotes"] });
+   };
+ 
++  const handleSendFinal = async () => {
++    if (!id) return;
++    if (!shippingTotal.trim() || !prazoEntrega.trim()) {
++      toast.error("Preenche portes e prazo de entrega antes de enviar o orçamento final.");
++      return;
++    }
++    setSendingFinal(true);
++    try {
++      // Garante que o que está no ecrã fica gravado antes de enviar.
++      await supabase.from("quotes").update({
++        status: status as any,
++        notes: notes.trim() || null,
++        total: total ? parseFloat(total.replace(",", ".")) : null,
++        shipping_total: parseFloat(shippingTotal.replace(",", ".")),
++        prazo_entrega: prazoEntrega.trim(),
++      } as any).eq("id", id);
++
++      const { data: result, error } = await supabase.functions.invoke("send-quote-final", { body: { quoteId: id } });
++      if (error) throw error;
++      if (result?.error) throw new Error(result.error);
++      if (result?.skipped) {
++        toast.warning("Orçamento gravado, mas o cliente não tem email associado — não foi possível enviar.");
++      } else {
++        toast.success("Orçamento final enviado ao cliente.");
++      }
++      qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
++      qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
++    } catch (e: any) {
++      toast.error(e.message ?? "Erro ao enviar orçamento final.");
++    } finally {
++      setSendingFinal(false);
++    }
++  };
++
+   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
+   if (!data?.quote) return <Card><CardContent className="py-12 text-center text-muted-foreground">Orçamento não encontrado.</CardContent></Card>;
+ 
+   const { quote, items } = data;
+   const profile = (quote as any).customer_profiles;
++  const sentFinalAt = (quote as any).sent_final_at;
+ 
+   return (
+     <div className="space-y-4">
+@@ -238,10 +295,18 @@ function OrcamentoDetalhe() {
+                     <img src={it.product_image_snapshot} alt="" className="h-12 w-12 object-cover rounded bg-secondary flex-shrink-0" />
+                   )}
+                   <div className="flex-1 min-w-0">
+-                    <p className="text-sm font-medium truncate">{it.product_name_snapshot}</p>
++                    <p className="text-sm font-medium truncate flex items-center gap-1.5">
++                      {it.product_name_snapshot}
++                      {it.products?.stock_status === "on_request" && (
++                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full flex-shrink-0">
++                          <PackageX className="h-2.5 w-2.5" /> Sem stock — confirmar c/ fornecedor
++                        </span>
++                      )}
++                    </p>
+                     <p className="text-xs text-muted-foreground">
+                       Qtd: {it.quantity}
+                       {it.unit_price != null && ` · ${Number(it.unit_price).toFixed(2).replace(".", ",")} €/un`}
++                      {it.products?.fornecedor && ` · ${it.products.fornecedor}`}
+                     </p>
+                   </div>
+                   {it.line_total != null && Number(it.line_total) > 0 && (
+@@ -274,12 +339,70 @@ function OrcamentoDetalhe() {
+ 
+               <div className="space-y-1.5">
+                 <Label className="text-xs">Total (€)</Label>
++                <div className="flex gap-2">
++                  <Input
++                    value={total}
++                    onChange={(e) => setTotal(e.target.value)}
++                    placeholder="0.00"
++                    className="h-9"
++                  />
++                  <Button
++                    type="button" variant="outline" size="sm" className="h-9 whitespace-nowrap text-xs"
++                    onClick={() => {
++                      const subtotalItens = items.reduce((s: number, it: any) => s + (Number(it.line_total) || 0), 0);
++                      const portes = shippingTotal ? parseFloat(shippingTotal.replace(",", ".")) || 0 : 0;
++                      setTotal((subtotalItens + portes).toFixed(2));
++                    }}
++                  >
++                    Recalcular
++                  </Button>
++                </div>
++                <p className="text-[11px] text-muted-foreground">Soma dos produtos + portes preenchidos acima.</p>
++              </div>
++
++              <div className="space-y-1.5">
++                <Label className="text-xs flex items-center gap-1"><Truck className="h-3 w-3" /> Portes (€, c/ IVA)</Label>
++                <div className="flex gap-2">
++                  <Input
++                    value={shippingTotal}
++                    onChange={(e) => setShippingTotal(e.target.value)}
++                    placeholder="0.00"
++                    className="h-9"
++                  />
++                  {sugestaoTotal > 0 && (
++                    <Button
++                      type="button" variant="outline" size="sm" className="h-9 whitespace-nowrap text-xs"
++                      onClick={() => setShippingTotal(sugestaoTotal.toFixed(2))}
++                    >
++                      Sugestão: {sugestaoTotal.toFixed(2).replace(".", ",")} €
++                    </Button>
++                  )}
++                </div>
++                {portesSugeridos.length > 0 && (
++                  <p className="text-[11px] text-muted-foreground">
++                    {portesSugeridos.map(p => `${p.fornecedor}: ${p.portesComIva.toFixed(2).replace(".", ",")}€ (${p.descricao})`).join(" · ")}
++                  </p>
++                )}
++              </div>
++
++              <div className="space-y-1.5">
++                <Label className="text-xs">Prazo de entrega</Label>
+                 <Input
+-                  value={total}
+-                  onChange={(e) => setTotal(e.target.value)}
+-                  placeholder="0.00"
++                  value={prazoEntrega}
++                  onChange={(e) => setPrazoEntrega(e.target.value)}
++                  placeholder="ex: 3-5 dias úteis"
+                   className="h-9"
+                 />
++                <div className="flex flex-wrap gap-1.5">
++                  {PRAZO_OPCOES.map(opt => (
++                    <Button
++                      key={opt} type="button" variant="secondary" size="sm" className="h-7 text-[11px] px-2"
++                      onClick={() => setPrazoEntrega(opt)}
++                    >
++                      {opt}
++                    </Button>
++                  ))}
++                </div>
+               </div>
+ 
+               <div className="space-y-1.5">
+@@ -287,8 +410,8 @@ function OrcamentoDetalhe() {
+                 <Textarea
+                   value={notes}
+                   onChange={(e) => setNotes(e.target.value)}
+-                  rows={5}
+-                  placeholder="Observações, condições de pagamento, prazo de entrega..."
++                  rows={4}
++                  placeholder="Observações, condições de pagamento..."
+                 />
+               </div>
+ 
+@@ -296,6 +419,19 @@ function OrcamentoDetalhe() {
+                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                 Guardar alterações
+               </Button>
++
++              {quote.customer_email && (
++                <Button className="w-full" variant="default" onClick={handleSendFinal} disabled={sendingFinal}>
++                  {sendingFinal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
++                  Enviar Orçamento Final
++                </Button>
++              )}
++              {sentFinalAt && (
++                <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-center">
++                  <CheckCircle2 className="h-3 w-3 text-green-600" />
++                  Enviado em {new Date(sentFinalAt).toLocaleString("pt-PT")}
++                </p>
++              )}
+             </CardContent>
+           </Card>
+ 
+diff --git a/supabase/functions/_shared/transactional-email-templates/quote-final-customer.tsx b/supabase/functions/_shared/transactional-email-templates/quote-final-customer.tsx
+new file mode 100644
+index 0000000..59a0ed7
+--- /dev/null
++++ b/supabase/functions/_shared/transactional-email-templates/quote-final-customer.tsx
+@@ -0,0 +1,111 @@
++import * as React from 'npm:react@18.3.1'
++import {
++  Body, Container, Head, Heading, Html, Preview, Section, Text, Hr,
++} from 'npm:@react-email/components@0.0.22'
++import type { TemplateEntry } from './registry.ts'
++
++interface QuoteFinalItem {
++  name: string
++  quantity: number
++  unitPrice?: number | null
++  lineTotal?: number | null
++}
++
++interface Props {
++  customerName?: string
++  quoteNumber?: string
++  items?: QuoteFinalItem[]
++  subtotal?: number
++  shippingTotal?: number | null
++  prazoEntrega?: string
++  total?: number
++  notes?: string
++}
++
++const formatPrice = (p?: number | null) =>
++  p != null ? `${Number(p).toFixed(2).replace('.', ',')} €` : 'Sob consulta'
++
++const QuoteFinalCustomerEmail = ({
++  customerName = '',
++  quoteNumber = '',
++  items = [],
++  subtotal = 0,
++  shippingTotal = null,
++  prazoEntrega = '',
++  total = 0,
++  notes = '',
++}: Props) => (
++  <Html lang="pt" dir="ltr">
++    <Head />
++    <Preview>O seu orçamento {quoteNumber} está pronto</Preview>
++    <Body style={main}>
++      <Container style={container}>
++        <Heading style={h1}>✅ O seu Orçamento está Pronto</Heading>
++        <Text style={text}>Olá {customerName || ''},</Text>
++        <Text style={text}>
++          Segue o orçamento completo <strong>{quoteNumber}</strong>, com produtos, portes e prazo de entrega confirmados.
++        </Text>
++        <Hr style={hr} />
++        <Heading as="h2" style={h2}>Produtos</Heading>
++        <Section>
++          {items.map((item, idx) => (
++            <Section key={idx} style={itemRow}>
++              <Text style={itemText}><strong>{item.name}</strong></Text>
++              <Text style={itemMeta}>
++                Quantidade: {item.quantity} · Preço unit.: {formatPrice(item.unitPrice)}
++                {item.lineTotal != null ? ` · Total: ${formatPrice(item.lineTotal)}` : ''}
++              </Text>
++            </Section>
++          ))}
++        </Section>
++        <Hr style={hr} />
++        <Text style={text}><strong>Subtotal produtos:</strong> {formatPrice(subtotal)}</Text>
++        <Text style={text}><strong>Portes:</strong> {shippingTotal != null ? formatPrice(shippingTotal) : 'Incluído / a confirmar na entrega'}</Text>
++        {prazoEntrega ? <Text style={text}><strong>Prazo de entrega:</strong> {prazoEntrega}</Text> : null}
++        <Text style={totalText}><strong>Total: {formatPrice(total)}</strong></Text>
++        {notes ? (
++          <>
++            <Hr style={hr} />
++            <Text style={text}><strong>Notas:</strong> {notes}</Text>
++          </>
++        ) : null}
++        <Hr style={hr} />
++        <Text style={footer}>
++          Qualquer dúvida, responda a este email ou contacte-nos. Obrigado pela preferência — VRCF.
++        </Text>
++      </Container>
++    </Body>
++  </Html>
++)
++
++export const template = {
++  component: QuoteFinalCustomerEmail,
++  subject: (d: Record<string, any>) =>
++    `O seu orçamento ${(d?.quoteNumber || '').toString()} está pronto`,
++  displayName: 'Orçamento final (cliente)',
++  previewData: {
++    customerName: 'João Silva',
++    quoteNumber: 'ORC-2026-0042',
++    items: [
++      { name: 'Câmara IP', quantity: 2, unitPrice: 89.9, lineTotal: 179.8 },
++      { name: 'Switch 8 portas', quantity: 1, unitPrice: 45, lineTotal: 45 },
++    ],
++    subtotal: 224.8,
++    shippingTotal: 12.45,
++    prazoEntrega: '3-5 dias úteis',
++    total: 237.25,
++    notes: 'Pagamento por transferência bancária.',
++  },
++} satisfies TemplateEntry
++
++const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
++const container = { padding: '24px', maxWidth: '600px' }
++const h1 = { fontSize: '22px', color: '#1a1a2e', borderBottom: '2px solid #22c55e', paddingBottom: '10px', margin: '0 0 20px' }
++const h2 = { fontSize: '18px', color: '#1a1a2e', margin: '20px 0 12px' }
++const text = { fontSize: '14px', color: '#333', lineHeight: '1.5', margin: '0 0 8px' }
++const totalText = { fontSize: '16px', color: '#1a1a2e', margin: '12px 0 0' }
++const itemRow = { background: '#f7f7f9', padding: '10px 14px', borderRadius: '6px', margin: '0 0 8px' }
++const itemText = { fontSize: '14px', color: '#1a1a2e', margin: '0' }
++const itemMeta = { fontSize: '12px', color: '#666', margin: '4px 0 0' }
++const hr = { borderColor: '#eee', margin: '24px 0' }
++const footer = { fontSize: '12px', color: '#999', margin: '0' }
+diff --git a/supabase/functions/_shared/transactional-email-templates/quote-request-admin.tsx b/supabase/functions/_shared/transactional-email-templates/quote-request-admin.tsx
+index 28ae378..adb9948 100644
+--- a/supabase/functions/_shared/transactional-email-templates/quote-request-admin.tsx
++++ b/supabase/functions/_shared/transactional-email-templates/quote-request-admin.tsx
+@@ -17,6 +17,7 @@ interface Props {
+   customerPhone?: string
+   notes?: string
+   items?: QuoteItem[]
++  shippingEstimate?: number | null
+ }
+ 
+ const formatPrice = (p?: number | null) =>
+@@ -28,6 +29,7 @@ const QuoteRequestAdminEmail = ({
+   customerPhone = '',
+   notes = '',
+   items = [],
++  shippingEstimate = null,
+ }: Props) => (
+   <Html lang="pt" dir="ltr">
+     <Head />
+@@ -54,6 +56,9 @@ const QuoteRequestAdminEmail = ({
+             </Section>
+           ))}
+         </Section>
++        {shippingEstimate != null ? (
++          <Text style={text}><strong>Estimativa de portes (carrinho):</strong> {formatPrice(shippingEstimate)} — confirmar e gravar no orçamento final, na Gestão.</Text>
++        ) : null}
+         <Hr style={hr} />
+         <Text style={footer}>
+           Email gerado automaticamente pelo catálogo online VRCF.
+@@ -78,6 +83,7 @@ export const template = {
+       { name: 'Câmara IP', category: 'Segurança', quantity: 2, price: 89.9 },
+       { name: 'Switch 8 portas', category: 'Redes', quantity: 1, price: null },
+     ],
++    shippingEstimate: 12.45,
+   },
+ } satisfies TemplateEntry
+ 
+diff --git a/supabase/functions/_shared/transactional-email-templates/quote-request-customer.tsx b/supabase/functions/_shared/transactional-email-templates/quote-request-customer.tsx
+index 79df48a..a0fae84 100644
+--- a/supabase/functions/_shared/transactional-email-templates/quote-request-customer.tsx
++++ b/supabase/functions/_shared/transactional-email-templates/quote-request-customer.tsx
+@@ -33,7 +33,8 @@ const QuoteRequestCustomerEmail = ({
+         <Heading style={h1}>📋 Cópia do Seu Pedido de Orçamento</Heading>
+         <Text style={text}>Olá {customerName || 'cliente'},</Text>
+         <Text style={text}>
+-          Recebemos o seu pedido de orçamento. Entraremos em contacto brevemente.
++          Recebemos o seu pedido de orçamento. Vai receber em breve um segundo email com o
++          orçamento completo — produtos, portes e prazo de entrega confirmados.
+         </Text>
+         <Heading as="h2" style={h2}>Produtos Solicitados</Heading>
+         <Section>
+diff --git a/supabase/functions/_shared/transactional-email-templates/registry.ts b/supabase/functions/_shared/transactional-email-templates/registry.ts
+index fd8bea3..158252c 100644
+--- a/supabase/functions/_shared/transactional-email-templates/registry.ts
++++ b/supabase/functions/_shared/transactional-email-templates/registry.ts
+@@ -11,6 +11,7 @@ export interface TemplateEntry {
+ 
+ import { template as quoteRequestAdmin } from './quote-request-admin.tsx'
+ import { template as quoteRequestCustomer } from './quote-request-customer.tsx'
++import { template as quoteFinalCustomer } from './quote-final-customer.tsx'
+ import { template as suggestionAdmin } from './suggestion-admin.tsx'
+ import { template as suggestionCustomer } from './suggestion-customer.tsx'
+ import { template as rmaStatusUpdate } from './rma-status-update.tsx'
+@@ -18,6 +19,7 @@ import { template as rmaStatusUpdate } from './rma-status-update.tsx'
+ export const TEMPLATES: Record<string, TemplateEntry> = {
+   'quote-request-admin': quoteRequestAdmin,
+   'quote-request-customer': quoteRequestCustomer,
++  'quote-final-customer': quoteFinalCustomer,
+   'suggestion-admin': suggestionAdmin,
+   'suggestion-customer': suggestionCustomer,
+   'rma-status-update': rmaStatusUpdate,
+diff --git a/supabase/functions/send-quote-final/index.ts b/supabase/functions/send-quote-final/index.ts
+new file mode 100644
+index 0000000..9d93a5c
+--- /dev/null
++++ b/supabase/functions/send-quote-final/index.ts
+@@ -0,0 +1,97 @@
++import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
++import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
++
++const corsHeaders = {
++  "Access-Control-Allow-Origin": "*",
++  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
++};
++
++async function invokeTransactionalEmail(payload: Record<string, unknown>) {
++  const supabaseUrl = Deno.env.get("SUPABASE_URL");
++  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
++  if (!supabaseUrl || !serviceKey) throw new Error("Configuração de email incompleta");
++
++  const response = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
++    method: "POST",
++    headers: {
++      "Content-Type": "application/json",
++      apikey: serviceKey,
++      Authorization: `Bearer ${serviceKey}`,
++    },
++    body: JSON.stringify(payload),
++  });
++  if (!response.ok) {
++    const data = await response.json().catch(() => null);
++    throw new Error(data?.error ?? `Falha ao enviar email (${response.status})`);
++  }
++  return response.json().catch(() => null);
++}
++
++serve(async (req) => {
++  if (req.method === "OPTIONS") {
++    return new Response(null, { headers: corsHeaders });
++  }
++
++  try {
++    const { quoteId } = await req.json();
++    if (!quoteId) {
++      return new Response(JSON.stringify({ error: "quoteId obrigatório" }), {
++        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const supabase = createClient(
++      Deno.env.get("SUPABASE_URL")!,
++      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
++    );
++
++    const [{ data: quote, error: qErr }, { data: items, error: iErr }] = await Promise.all([
++      supabase.from("quotes").select("*").eq("id", quoteId).maybeSingle(),
++      supabase.from("quote_items").select("*").eq("quote_id", quoteId),
++    ]);
++    if (qErr || !quote) throw new Error("Orçamento não encontrado");
++    if (iErr) throw iErr;
++
++    if (!quote.customer_email) {
++      return new Response(JSON.stringify({ skipped: true, reason: "no customer email" }), {
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const subtotal = Number(quote.subtotal ?? 0);
++    const shippingTotal = quote.shipping_total != null ? Number(quote.shipping_total) : 0;
++    const total = quote.total != null ? Number(quote.total) : subtotal + shippingTotal;
++
++    await invokeTransactionalEmail({
++      templateName: "quote-final-customer",
++      recipientEmail: quote.customer_email,
++      idempotencyKey: `quote-final-${quoteId}-${Date.now()}`,
++      templateData: {
++        customerName: quote.customer_name ?? "",
++        quoteNumber: quote.quote_number ?? "",
++        items: (items ?? []).map((i: any) => ({
++          name: i.product_name_snapshot,
++          quantity: i.quantity,
++          unitPrice: i.unit_price,
++          lineTotal: i.line_total,
++        })),
++        subtotal,
++        shippingTotal: quote.shipping_total != null ? shippingTotal : null,
++        prazoEntrega: quote.prazo_entrega ?? "",
++        total,
++        notes: quote.notes ?? "",
++      },
++    });
++
++    await supabase.from("quotes").update({ sent_final_at: new Date().toISOString() }).eq("id", quoteId);
++
++    return new Response(JSON.stringify({ success: true }), {
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  } catch (error) {
++    console.error("[send-quote-final] error:", error);
++    return new Response(JSON.stringify({ error: (error as Error).message }), {
++      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++});
+diff --git a/supabase/functions/send-quote-request/index.ts b/supabase/functions/send-quote-request/index.ts
+index 98cc17d..0937127 100644
+--- a/supabase/functions/send-quote-request/index.ts
++++ b/supabase/functions/send-quote-request/index.ts
+@@ -41,7 +41,7 @@ serve(async (req) => {
+   }
+ 
+   try {
+-    const { customerName, customerEmail, customerPhone, notes, items, sendCopyToCustomer } = await req.json();
++    const { customerName, customerEmail, customerPhone, notes, items, sendCopyToCustomer, shippingEstimate } = await req.json();
+ 
+     if (!customerName || !customerEmail || !Array.isArray(items) || items.length === 0) {
+       return new Response(JSON.stringify({ error: "Campos obrigatórios em falta" }), {
+@@ -68,6 +68,7 @@ serve(async (req) => {
+         customerPhone: String(customerPhone ?? ""),
+         notes: notes ? String(notes) : "",
+         items: safeItems,
++        shippingEstimate: shippingEstimate != null ? Number(shippingEstimate) : null,
+       },
+     });
+ 
+diff --git a/supabase/migrations/20260620000000_portes_orcamento_final.sql b/supabase/migrations/20260620000000_portes_orcamento_final.sql
+new file mode 100644
+index 0000000..0e31cb3
+--- /dev/null
++++ b/supabase/migrations/20260620000000_portes_orcamento_final.sql
+@@ -0,0 +1,17 @@
++-- 1) shipping_config: restaurar leitura pública.
++-- Tinha sido restringida a staff numa migração de segurança anterior
++-- (20260616202148), mas o cliente quer ver a estimativa de portes logo
++-- no carrinho, antes de pedir orçamento — e está ciente de que isso
++-- também expõe os valores a quem visitar o site. Decisão de negócio.
++GRANT SELECT ON public.shipping_config TO anon;
++DROP POLICY IF EXISTS "Shipping config viewable by staff" ON public.shipping_config;
++CREATE POLICY "Shipping config viewable by everyone"
++  ON public.shipping_config FOR SELECT
++  USING (true);
++
++-- 2) quotes: campos para o orçamento final (portes + prazo de entrega),
++-- preenchidos/confirmados pela Gestão antes de enviar ao cliente.
++ALTER TABLE public.quotes
++  ADD COLUMN IF NOT EXISTS shipping_total NUMERIC(10,2),
++  ADD COLUMN IF NOT EXISTS prazo_entrega TEXT,
++  ADD COLUMN IF NOT EXISTS sent_final_at TIMESTAMPTZ;

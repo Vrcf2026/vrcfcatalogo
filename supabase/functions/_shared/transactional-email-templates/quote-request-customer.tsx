@@ -33,7 +33,8 @@ const QuoteRequestCustomerEmail = ({
         <Heading style={h1}>📋 Cópia do Seu Pedido de Orçamento</Heading>
         <Text style={text}>Olá {customerName || 'cliente'},</Text>
         <Text style={text}>
-          Recebemos o seu pedido de orçamento. Entraremos em contacto brevemente.
+          Recebemos o seu pedido de orçamento. Vai receber em breve um segundo email com o
+          orçamento completo — produtos, portes e prazo de entrega confirmados.
         </Text>
         <Heading as="h2" style={h2}>Produtos Solicitados</Heading>
         <Section>

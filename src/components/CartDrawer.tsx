@@ -6,26 +6,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CheckoutDialog } from "./CheckoutDialog";
-
-// Tabela DHL Portugal Continental (s/IVA) — custo real cobrado pela DHL
-const DHL_TABELA: [number, number][] = [
-  [1, 3.65], [3, 3.78], [5, 3.78], [10, 4.37], [20, 4.88],
-  [30, 5.20], [40, 6.22], [50, 7.59], [60, 9.08], [70, 10.59],
-  [80, 12.11], [90, 13.62], [100, 15.13], [125, 18.51], [150, 22.22],
-  [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
-];
-
-const MARGEM_PORTES = 0.15;
-
-function calcularPorteDHL(pesoKg: number): number | null {
-  let custoBase: number | null = null;
-  for (const [limite, preco] of DHL_TABELA) {
-    if (pesoKg <= limite) { custoBase = preco; break; }
-  }
-  if (pesoKg <= 0) custoBase = DHL_TABELA[0][1];
-  if (custoBase === null) return null;
-  return Math.round(custoBase * (1 + MARGEM_PORTES) * 100) / 100;
-}
+import { calcularPortesPorFornecedor, totalPortesComIva as somarPortesComIva } from "@/lib/calcularPortes";
 
 export function CartDrawer() {
   const { items, isOpen, setIsOpen, updateQuantity, removeItem, clearCart } = useCart();
@@ -44,7 +25,7 @@ export function CartDrawer() {
   const totalValueSemVat = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
   const totalValueComVat = totalValueSemVat * 1.23;
 
-  // Agrupar itens por fornecedor
+  // Agrupar itens por fornecedor (só para a label "X artigos" e o aviso de envio especial)
   const itensPorFornecedor = items.reduce((acc: Record<string, typeof items>, item) => {
     const f = (item as any).fornecedor || "manual";
     if (!acc[f]) acc[f] = [];
@@ -52,64 +33,17 @@ export function CartDrawer() {
     return acc;
   }, {});
 
-  // Calcular portes por fornecedor
-  const portesPorFornecedor: Array<{
-    fornecedor: string;
-    portesSemIva: number;
-    portesComIva: number;
-    descricao: string;
-    isDHL?: boolean;
-  }> = [];
-
   const temEnvioEspecial = items.some(i => (i as any).envio_especial);
 
-  for (const [fornecedor, itensF] of Object.entries(itensPorFornecedor)) {
-    if (fornecedor === "allto") {
-      // ALL.TO: cálculo por peso via tabela DHL
-      const pesoAllto = itensF.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
-      if (pesoAllto > 0) {
-        const porte = calcularPorteDHL(pesoAllto);
-        if (porte !== null) {
-          portesPorFornecedor.push({
-            fornecedor: "allto",
-            portesSemIva: porte,
-            portesComIva: porte * 1.23,
-            descricao: `${pesoAllto.toFixed(2)}kg · DHL`,
-            isDHL: true,
-          });
-        } else {
-          portesPorFornecedor.push({
-            fornecedor: "allto",
-            portesSemIva: 0,
-            portesComIva: 0,
-            descricao: "Peso >250kg — calculado no orçamento",
-          });
-        }
-      }
-    } else {
-      // Outros fornecedores: configuração da BD (preco_primeira_unidade + adicional)
-      const config = shippingConfigs.find((c: any) => c.fornecedor === fornecedor);
-      if (config && config.ativo) {
-        const totalItens = itensF.reduce((sum, i) => sum + i.quantity, 0);
-        const primeira = config.preco_primeira_unidade ?? 0;
-        const adicional = config.preco_unidade_adicional ?? 0;
-        const portesSemIva = totalItens > 0
-          ? primeira + Math.max(0, totalItens - 1) * adicional
-          : primeira;
-        portesPorFornecedor.push({
-          fornecedor,
-          portesSemIva,
-          portesComIva: portesSemIva * 1.23,
-          descricao: `${totalItens} artigo${totalItens !== 1 ? "s" : ""}`,
-        });
-      }
-    }
-  }
+  const portesPorFornecedor = calcularPortesPorFornecedor(
+    items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
+    shippingConfigs as any,
+  );
 
   const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
-  const totalPortesComIva = portesPorFornecedor.reduce((s, p) => s + p.portesComIva, 0);
+  const totalPortesComIva = somarPortesComIva(portesPorFornecedor);
   const temPortesCalculados = Object.keys(itensPorFornecedor).some(f =>
-    f !== "allto" && !shippingConfigs.find((c: any) => c.fornecedor === f && c.ativo)
+    f !== "allto" && !(shippingConfigs as any).find((c: any) => c.fornecedor === f && c.ativo)
   );
 
   return (
@@ -245,9 +179,13 @@ export function CartDrawer() {
                   {temPortesCalculados && (
                     <div className="flex items-start gap-1.5">
                       <Truck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
-                      <span>Portes de alguns produtos calculados no orçamento final.</span>
+                      <span>Portes de alguns produtos a confirmar — incluídos no orçamento final.</span>
                     </div>
                   )}
+                  <div className="flex items-start gap-1.5">
+                    <Clock className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+                    <span>Vai receber por email o orçamento completo, com produtos, portes e prazo de entrega confirmados.</span>
+                  </div>
                   {temEnvioEspecial && (
                     <div className="flex items-start gap-1.5">
                       <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />

@@ -41,7 +41,7 @@ serve(async (req) => {
   }
 
   try {
-    const { customerName, customerEmail, customerPhone, notes, items, sendCopyToCustomer } = await req.json();
+    const { customerName, customerEmail, customerPhone, notes, items, sendCopyToCustomer, shippingEstimate } = await req.json();
 
     if (!customerName || !customerEmail || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ error: "Campos obrigatórios em falta" }), {
@@ -68,6 +68,7 @@ serve(async (req) => {
         customerPhone: String(customerPhone ?? ""),
         notes: notes ? String(notes) : "",
         items: safeItems,
+        shippingEstimate: shippingEstimate != null ? Number(shippingEstimate) : null,
       },
     });
 

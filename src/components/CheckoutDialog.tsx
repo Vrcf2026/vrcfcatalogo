@@ -12,6 +12,8 @@ import { Loader2, Send, CheckCircle, Plus, Trash2 } from "lucide-react";
 import { trackEvent } from "@/lib/trackEvent";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
 
 interface CheckoutDialogProps {
   open: boolean;
@@ -37,6 +39,15 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [sendCopy, setSendCopy] = useState(true);
   const submitTimestamps = useRef<number[]>([]);
+
+  const { data: shippingConfigs = [] } = useQuery({
+    queryKey: ["shipping_config"],
+    queryFn: async () => {
+      const { data } = await supabase.from("shipping_config").select("*").eq("ativo", true);
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const MAX_SUBMITS = 3;
   const RATE_WINDOW_MS = 60_000; // 1 minute
@@ -111,6 +122,11 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         })),
       ];
 
+      const portesEstimados = totalPortesComIva(calcularPortesPorFornecedor(
+        items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
+        shippingConfigs as any,
+      ));
+
       const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
         body: {
           customerName: name.trim(),
@@ -119,6 +135,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
           notes: notes.trim(),
           items: quoteItems,
           sendCopyToCustomer: sendCopy,
+          shippingEstimate: portesEstimados,
         },
       });
       if (fnError) throw fnError;
@@ -128,13 +145,19 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       // Isto garante que TODOS os orçamentos aparecem na área de Gestão.
       try {
         const subtotal = items.reduce((s, i) => s + ((i.price ?? 0) * i.quantity), 0);
+        const portes = calcularPortesPorFornecedor(
+          items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
+          shippingConfigs as any,
+        );
+        const shippingTotal = totalPortesComIva(portes);
         const { data: quote, error: qErr } = await supabase
           .from("quotes")
           .insert({
             ...(user ? { user_id: user.id } : {}),
             status: "sent",
             subtotal,
-            total: subtotal,
+            total: subtotal + shippingTotal,
+            shipping_total: shippingTotal,
             notes: notes.trim() || null,
             customer_name: name.trim(),
             customer_email: email.trim(),
@@ -189,7 +212,8 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <CheckCircle className="h-16 w-16 text-green-500" />
             <h3 className="font-heading text-xl font-bold">Pedido Enviado!</h3>
             <p className="text-muted-foreground text-sm">
-              O seu pedido de orçamento foi enviado com sucesso. Entraremos em contacto brevemente.
+              O seu pedido de orçamento foi enviado com sucesso. Vai receber por email o orçamento
+              completo, com produtos, portes e prazo de entrega confirmados.
             </p>
           </div>
         </DialogContent>

@@ -17,6 +17,7 @@ interface Props {
   customerPhone?: string
   notes?: string
   items?: QuoteItem[]
+  shippingEstimate?: number | null
 }
 
 const formatPrice = (p?: number | null) =>
@@ -28,6 +29,7 @@ const QuoteRequestAdminEmail = ({
   customerPhone = '',
   notes = '',
   items = [],
+  shippingEstimate = null,
 }: Props) => (
   <Html lang="pt" dir="ltr">
     <Head />
@@ -54,6 +56,9 @@ const QuoteRequestAdminEmail = ({
             </Section>
           ))}
         </Section>
+        {shippingEstimate != null ? (
+          <Text style={text}><strong>Estimativa de portes (carrinho):</strong> {formatPrice(shippingEstimate)} — confirmar e gravar no orçamento final, na Gestão.</Text>
+        ) : null}
         <Hr style={hr} />
         <Text style={footer}>
           Email gerado automaticamente pelo catálogo online VRCF.
@@ -78,6 +83,7 @@ export const template = {
       { name: 'Câmara IP', category: 'Segurança', quantity: 2, price: 89.9 },
       { name: 'Switch 8 portas', category: 'Redes', quantity: 1, price: null },
     ],
+    shippingEstimate: 12.45,
   },
 } satisfies TemplateEntry
 

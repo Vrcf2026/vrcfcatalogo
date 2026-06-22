@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, FileText, Eye, Search } from "lucide-react";
+import { ArrowLeft, Loader2, FileText, Eye, Search, Truck, PackageX, Send, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
 
 const STATUS_OPTIONS = [
   { value: "pending",   label: "Pendente" },
@@ -31,6 +32,8 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
   completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
+
+const PRAZO_OPCOES = ["24-48h", "3-5 dias úteis", "5-10 dias úteis", "Sob consulta"];
 
 // ─── Lista de orçamentos ───────────────────────────────────────────────────
 
@@ -148,27 +151,43 @@ function OrcamentoDetalhe() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  const [sendingFinal, setSendingFinal] = useState(false);
   const [status, setStatus] = useState("");
   const [notes, setNotes] = useState("");
   const [total, setTotal] = useState("");
+  const [shippingTotal, setShippingTotal] = useState("");
+  const [prazoEntrega, setPrazoEntrega] = useState("");
 
   const { data, isLoading } = useQuery({
     queryKey: ["gestao-quote", id],
     queryFn: async () => {
-      const [q, items] = await Promise.all([
+      const [q, items, shipCfg] = await Promise.all([
         supabase.from("quotes").select("*,customer_profiles(*)").eq("id", id!).maybeSingle(),
-        supabase.from("quote_items").select("*").eq("quote_id", id!),
+        supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight)").eq("quote_id", id!),
+        supabase.from("shipping_config").select("*").eq("ativo", true),
       ]);
       if (q.error) throw q.error;
       if (q.data) {
         setStatus(q.data.status);
         setNotes(q.data.notes ?? "");
         setTotal(q.data.total != null ? String(q.data.total) : "");
+        setShippingTotal((q.data as any).shipping_total != null ? String((q.data as any).shipping_total) : "");
+        setPrazoEntrega((q.data as any).prazo_entrega ?? "");
       }
-      return { quote: q.data, items: items.data ?? [] };
+      return { quote: q.data, items: items.data ?? [], shippingConfigs: shipCfg.data ?? [] };
     },
     enabled: !!id,
   });
+
+  const portesSugeridos = data ? calcularPortesPorFornecedor(
+    data.items.map((it: any) => ({
+      fornecedor: it.products?.fornecedor,
+      quantity: it.quantity,
+      weight: it.products?.weight,
+    })),
+    data.shippingConfigs as any,
+  ) : [];
+  const sugestaoTotal = totalPortesComIva(portesSugeridos);
 
   const handleSave = async () => {
     if (!id) return;
@@ -177,13 +196,50 @@ function OrcamentoDetalhe() {
       status: status as any,
       notes: notes.trim() || null,
       total: total ? parseFloat(total.replace(",", ".")) : null,
-    }).eq("id", id);
+      shipping_total: shippingTotal ? parseFloat(shippingTotal.replace(",", ".")) : null,
+      prazo_entrega: prazoEntrega.trim() || null,
+    } as any).eq("id", id);
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Orçamento atualizado.");
     qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+    qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
     qc.invalidateQueries({ queryKey: ["gestao-stats"] });
     qc.invalidateQueries({ queryKey: ["gestao-recent-quotes"] });
+  };
+
+  const handleSendFinal = async () => {
+    if (!id) return;
+    if (!shippingTotal.trim() || !prazoEntrega.trim()) {
+      toast.error("Preenche portes e prazo de entrega antes de enviar o orçamento final.");
+      return;
+    }
+    setSendingFinal(true);
+    try {
+      // Garante que o que está no ecrã fica gravado antes de enviar.
+      await supabase.from("quotes").update({
+        status: status as any,
+        notes: notes.trim() || null,
+        total: total ? parseFloat(total.replace(",", ".")) : null,
+        shipping_total: parseFloat(shippingTotal.replace(",", ".")),
+        prazo_entrega: prazoEntrega.trim(),
+      } as any).eq("id", id);
+
+      const { data: result, error } = await supabase.functions.invoke("send-quote-final", { body: { quoteId: id } });
+      if (error) throw error;
+      if (result?.error) throw new Error(result.error);
+      if (result?.skipped) {
+        toast.warning("Orçamento gravado, mas o cliente não tem email associado — não foi possível enviar.");
+      } else {
+        toast.success("Orçamento final enviado ao cliente.");
+      }
+      qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
+      qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao enviar orçamento final.");
+    } finally {
+      setSendingFinal(false);
+    }
   };
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -191,6 +247,7 @@ function OrcamentoDetalhe() {
 
   const { quote, items } = data;
   const profile = (quote as any).customer_profiles;
+  const sentFinalAt = (quote as any).sent_final_at;
 
   return (
     <div className="space-y-4">
@@ -238,10 +295,18 @@ function OrcamentoDetalhe() {
                     <img src={it.product_image_snapshot} alt="" className="h-12 w-12 object-cover rounded bg-secondary flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{it.product_name_snapshot}</p>
+                    <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                      {it.product_name_snapshot}
+                      {it.products?.stock_status === "on_request" && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <PackageX className="h-2.5 w-2.5" /> Sem stock — confirmar c/ fornecedor
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">
                       Qtd: {it.quantity}
                       {it.unit_price != null && ` · ${Number(it.unit_price).toFixed(2).replace(".", ",")} €/un`}
+                      {it.products?.fornecedor && ` · ${it.products.fornecedor}`}
                     </p>
                   </div>
                   {it.line_total != null && Number(it.line_total) > 0 && (
@@ -274,12 +339,70 @@ function OrcamentoDetalhe() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs">Total (€)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={total}
+                    onChange={(e) => setTotal(e.target.value)}
+                    placeholder="0.00"
+                    className="h-9"
+                  />
+                  <Button
+                    type="button" variant="outline" size="sm" className="h-9 whitespace-nowrap text-xs"
+                    onClick={() => {
+                      const subtotalItens = items.reduce((s: number, it: any) => s + (Number(it.line_total) || 0), 0);
+                      const portes = shippingTotal ? parseFloat(shippingTotal.replace(",", ".")) || 0 : 0;
+                      setTotal((subtotalItens + portes).toFixed(2));
+                    }}
+                  >
+                    Recalcular
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Soma dos produtos + portes preenchidos acima.</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs flex items-center gap-1"><Truck className="h-3 w-3" /> Portes (€, c/ IVA)</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={shippingTotal}
+                    onChange={(e) => setShippingTotal(e.target.value)}
+                    placeholder="0.00"
+                    className="h-9"
+                  />
+                  {sugestaoTotal > 0 && (
+                    <Button
+                      type="button" variant="outline" size="sm" className="h-9 whitespace-nowrap text-xs"
+                      onClick={() => setShippingTotal(sugestaoTotal.toFixed(2))}
+                    >
+                      Sugestão: {sugestaoTotal.toFixed(2).replace(".", ",")} €
+                    </Button>
+                  )}
+                </div>
+                {portesSugeridos.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    {portesSugeridos.map(p => `${p.fornecedor}: ${p.portesComIva.toFixed(2).replace(".", ",")}€ (${p.descricao})`).join(" · ")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Prazo de entrega</Label>
                 <Input
-                  value={total}
-                  onChange={(e) => setTotal(e.target.value)}
-                  placeholder="0.00"
+                  value={prazoEntrega}
+                  onChange={(e) => setPrazoEntrega(e.target.value)}
+                  placeholder="ex: 3-5 dias úteis"
                   className="h-9"
                 />
+                <div className="flex flex-wrap gap-1.5">
+                  {PRAZO_OPCOES.map(opt => (
+                    <Button
+                      key={opt} type="button" variant="secondary" size="sm" className="h-7 text-[11px] px-2"
+                      onClick={() => setPrazoEntrega(opt)}
+                    >
+                      {opt}
+                    </Button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -287,8 +410,8 @@ function OrcamentoDetalhe() {
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  rows={5}
-                  placeholder="Observações, condições de pagamento, prazo de entrega..."
+                  rows={4}
+                  placeholder="Observações, condições de pagamento..."
                 />
               </div>
 
@@ -296,6 +419,19 @@ function OrcamentoDetalhe() {
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Guardar alterações
               </Button>
+
+              {quote.customer_email && (
+                <Button className="w-full" variant="default" onClick={handleSendFinal} disabled={sendingFinal}>
+                  {sendingFinal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  Enviar Orçamento Final
+                </Button>
+              )}
+              {sentFinalAt && (
+                <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-center">
+                  <CheckCircle2 className="h-3 w-3 text-green-600" />
+                  Enviado em {new Date(sentFinalAt).toLocaleString("pt-PT")}
+                </p>
+              )}
             </CardContent>
           </Card>
 
