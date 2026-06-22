@@ -197,7 +197,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Helmet>
-        <title>VRCF Showroom — Segurança, Redes, Escritório & IT | Montijo</title>
+        <title>VRCF Showroom — Segurança, Redes, Informática & Tecnologia | Montijo</title>
         <meta name="description" content="Catálogo VRCF: câmaras, alarmes, redes, computadores recondicionados. Peça orçamento online." />
       </Helmet>
 
@@ -296,7 +296,7 @@ const Index = () => {
             onClick={() => setActiveMundo("escritorio")}
             to="/escritorio"
             icon={Monitor}
-            label="Escritório & IT"
+            label="Informática & Tecnologia"
             count={escCount.data}
             color="blue"
           />
@@ -419,7 +419,7 @@ const Index = () => {
           </Link>
           <Link to="/escritorio" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
             <Monitor className="h-5 w-5" />
-            <span className="text-[9px] font-medium">Escritório</span>
+            <span className="text-[9px] font-medium">Informática</span>
           </Link>
           <Link to="/pesquisa" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
             <Search className="h-5 w-5" />

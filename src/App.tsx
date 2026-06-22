@@ -36,6 +36,7 @@ const GestaoDashboard = lazy(() => import("./pages/gestao/Dashboard.tsx"));
 const GestaoOrcamentos = lazy(() => import("./pages/gestao/Orcamentos.tsx"));
 const GestaoRMA = lazy(() => import("./pages/gestao/RMA.tsx"));
 const GestaoClientes = lazy(() => import("./pages/gestao/Clientes.tsx"));
+const PaginaOrcamento = lazy(() => import("./pages/PaginaOrcamento.tsx"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -89,6 +90,7 @@ const App = () => (
                     <Route path="rma" element={<ContaRMA />} />
                     <Route path="dados" element={<ContaDados />} />
                   </Route>
+                  <Route path="/orcamento" element={<PaginaOrcamento />} />
                   <Route path="/gestao" element={<Gestao />}>
                     <Route index element={<GestaoDashboard />} />
                     <Route path="orcamentos/*" element={<GestaoOrcamentos />} />

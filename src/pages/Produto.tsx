@@ -359,11 +359,11 @@ const Produto = () => {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5 text-primary" />
-                  <span>Entrega em <strong className="text-foreground">48h a 72h úteis</strong> após confirmação de pagamento</span>
+                  <span>Prazo de entrega confirmado no orçamento</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Info className="h-3.5 w-3.5 text-primary" />
-                  <span>Stock referente ao armazém online — pode diferir do stock em loja física</span>
+                  <span>Stock sujeito a disponibilidade</span>
                 </div>
               </>
             )}

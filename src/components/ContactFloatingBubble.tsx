@@ -113,14 +113,25 @@ const ContactFloatingBubble = () => {
                 <br />
                 Fale connosco — fazemos chegar até si.
               </p>
-              <Button
-                size="sm"
-                className="h-7 px-3 text-xs gap-1.5 w-full"
-                onClick={() => setDialogOpen(true)}
-              >
-                <Phone className="h-3 w-3" />
-                Contacte-nos
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 px-3 text-xs gap-1.5 flex-1"
+                  onClick={() => setDialogOpen(true)}
+                >
+                  <Phone className="h-3 w-3" />
+                  Contacte-nos
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-3 text-xs gap-1.5 flex-1 border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                  onClick={() => window.open(WHATSAPP_URL, "_blank", "noopener,noreferrer")}
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  WhatsApp
+                </Button>
+              </div>
             </div>
           </div>
         </div>

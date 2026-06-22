@@ -467,7 +467,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
         <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-1.5">
           <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${mundo === "seguranca" ? "bg-primary/10 border-primary/20 text-primary" : mundo === "economato" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-blue-500/10 border-blue-500/20 text-blue-500"}`}>
-            <Icon className="h-3 w-3" /> {mundo === "seguranca" ? "Segurança & Redes" : mundo === "economato" ? "Economato" : "Escritório & IT"}
+            <Icon className="h-3 w-3" /> {mundo === "seguranca" ? "Segurança & Redes" : mundo === "economato" ? "Economato" : "Informática & Tecnologia"}
           </div>
           <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
           <p className="text-muted-foreground text-xs sm:text-sm max-w-xl">{subtitle}</p>
@@ -671,11 +671,11 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
               <div className="mt-8 space-y-1 text-center">
                 {hasPrices && (
                   <p className="text-xs text-muted-foreground">
-                    Preços indicativos em Euro (€) com IVA incluído à taxa legal em vigor. Podem ser actualizados sem aviso prévio.
+                    Preços em Euro (€) com IVA incluído à taxa legal em vigor. Podem ser actualizados sem aviso prévio.
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Stock referente ao armazém online. Entrega em 48h a 72h úteis após confirmação de pagamento.
+                  Stock sujeito a disponibilidade. Prazo de entrega confirmado no orçamento final.
                 </p>
               </div>
             </>
