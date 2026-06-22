@@ -378,7 +378,7 @@ const Index = () => {
             { icon: "🛠️", title: "Instalação disponível", desc: "Serviço opcional, sob consulta" },
             { icon: "📋", title: "Orçamento gratuito", desc: "Resposta rápida e sem compromisso" },
             { icon: "🔧", title: "Suporte pós-venda", desc: "Acompanhamento contínuo" },
-            { icon: "📍", title: "Montijo & região", desc: "Atendimento presencial disponível" },
+            { icon: "📍", title: "Montijo & região", desc: "Rua Luís Calado Nunes 15, Loja B · Montijo" },
           ].map((t, i) => (
             <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border">
               <span className="text-xl shrink-0">{t.icon}</span>
