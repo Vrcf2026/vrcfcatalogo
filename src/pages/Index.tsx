@@ -5,7 +5,7 @@ import {
   ShieldCheck, Monitor, Search, ShoppingCart,
   ArrowRight, ChevronLeft, ChevronRight, Star, Package, Send, Zap,
   Wifi, Camera, Lock, Cpu, Printer, Tablet, ShoppingBag,
-  Clock, TrendingUp, History,
+  TrendingUp, History,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -176,7 +176,6 @@ const Index = () => {
   const ecoCount = useWorldCount("economato");
   const ecoCats = useCategories("economato");
   const featured = useFeaturedProducts();
-  const novidades = useNovidades();
   const maisVistos = useMaisVistos();
   const recentlyViewed = useRecentlyViewed();
 
@@ -316,7 +315,10 @@ const Index = () => {
       {cats.length > 0 && (
         <section className="px-3 pb-3 max-w-screen-xl mx-auto w-full">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Categorias</p>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+              <span className={`inline-block h-2 w-2 rounded-full ${activeMundo === "seguranca" ? "bg-primary" : activeMundo === "escritorio" ? "bg-blue-500" : "bg-green-600"}`} />
+              Categorias · {activeMundo === "seguranca" ? "Segurança & Redes" : activeMundo === "escritorio" ? "Informática & Tecnologia" : "Economato"}
+            </p>
             <Link to={worldPath} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
               Ver tudo <ArrowRight className="h-3 w-3" />
             </Link>
@@ -346,7 +348,7 @@ const Index = () => {
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <Star className="h-4 w-4 text-primary fill-primary" /> Em destaque
             </h2>
-            <Link to="/seguranca" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+            <Link to={worldPath} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
               Ver mais <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -395,7 +397,7 @@ const Index = () => {
           <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Marcas disponíveis</p>
           <div className="flex flex-wrap justify-center gap-2 max-w-screen-xl mx-auto">
             {brands.data.map((b: any) => (
-              <Link key={b.id} to={`/seguranca?marca=${b.id}`}
+              <Link key={b.id} to={`/pesquisa?marca=${encodeURIComponent(b.name)}`}
                 className="px-3.5 py-2 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground">
                 {b.name}
               </Link>
@@ -437,62 +439,7 @@ const Index = () => {
         </div>
       </nav>
 
-      {/* ── NOVIDADES ── */}
-      {novidades.data && novidades.data.length > 0 && (
-        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary" /> Novidades
-            </h2>
-            <Link to="/pesquisa" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
-              Ver mais <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {novidades.data.slice(0, 8).map((p: any) => (
-              <ProductCard
-                key={p.id}
-                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                description={p.short_description ?? p.description}
-                category={p.category} price={p.price}
-                imageUrl={p.image_url} images={[]}
-                familyName={null} brandName={p.brand || null}
-                featured={p.featured} stockStatus={p.stock_status}
-                minSaleQty={p.min_sale_qty ?? null}
-                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── MAIS VISTOS ── */}
-      {maisVistos.data && maisVistos.data.length > 0 && (
-        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {maisVistos.data.slice(0, 8).map((p: any) => (
-              <ProductCard
-                key={p.id}
-                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                description={p.short_description ?? p.description}
-                category={p.category} price={p.price}
-                imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
-                familyName={null} brandName={p.brand || null}
-                featured={false} stockStatus={p.stock_status}
-                minSaleQty={p.min_sale_qty ?? null}
-                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── VISTOS RECENTEMENTE ── */}
+      {/* ── VISTOS RECENTEMENTE (primeiro para utilizadores recorrentes) ── */}
       {recentlyViewed.length > 0 && (
         <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
           <div className="flex items-center justify-between mb-3">
@@ -517,6 +464,43 @@ const Index = () => {
           </div>
         </section>
       )}
+
+      {/* ── MAIS VISTOS — linha horizontal ── */}
+      {maisVistos.data && maisVistos.data.length > 0 && (
+        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
+            </h2>
+            <Link to="/pesquisa" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+              Ver todos <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            {maisVistos.data.slice(0, 6).map((p: any) => (
+              <div key={p.id} className="shrink-0 w-44">
+                <ProductCard
+                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                  description={p.short_description ?? p.description}
+                  category={p.category} price={p.price}
+                  imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
+                  familyName={null} brandName={p.brand || null}
+                  featured={false} stockStatus={p.stock_status}
+                  minSaleQty={p.min_sale_qty ?? null}
+                  onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── INCENTIVO CONTA — 1 linha discreta ── */}
+      <div className="px-3 pb-4 max-w-screen-xl mx-auto w-full text-center text-[11px] text-muted-foreground">
+        <Link to="/registo" className="hover:text-primary transition-colors">
+          Registe-se gratuitamente para acompanhar os seus orçamentos e histórico de encomendas →
+        </Link>
+      </div>
 
       {/* ── HOW IT WORKS (linha compacta) ── */}
       <section className="border-t border-border bg-muted/30 py-4 px-4">
