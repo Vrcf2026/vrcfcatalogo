@@ -145,32 +145,21 @@ export function CartDrawer() {
                   )}
                 </div>
 
-                {/* Portes por fornecedor */}
+                {/* Portes — só total para o cliente */}
                 {portesPorFornecedor.length > 0 && (
-                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
-                    <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                      <Truck className="h-3.5 w-3.5 text-primary" />
-                      Portes estimados
-                    </p>
-                    {portesPorFornecedor.map((p) => (
-                      <div key={p.fornecedor} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground capitalize">
-                          {p.fornecedor} <span className="text-[10px]">({p.descricao})</span>
-                        </span>
-                        <span className="font-semibold">
-                          {p.portesComIva > 0
-                            ? `${p.portesComIva.toFixed(2).replace(".", ",")} €`
-                            : "ver orçamento"}
-                        </span>
-                      </div>
-                    ))}
-                    {portesPorFornecedor.length > 1 && totalPortesComIva > 0 && (
-                      <div className="flex justify-between text-sm font-bold border-t border-primary/20 pt-1.5 mt-1.5">
-                        <span>Total portes c/ IVA:</span>
-                        <span className="text-primary">{totalPortesComIva.toFixed(2).replace(".", ",")} €</span>
-                      </div>
-                    )}
-                    <p className="text-[10px] text-muted-foreground">Portugal Continental · valores indicativos</p>
+                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        <Truck className="h-3.5 w-3.5 text-primary" />
+                        Portes estimados
+                      </p>
+                      <span className="text-sm font-bold text-primary">
+                        {totalPortesComIva > 0
+                          ? `${totalPortesComIva.toFixed(2).replace(".", ",")} €`
+                          : "ver orçamento"}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">Portugal Continental · valores indicativos, confirmados no orçamento final</p>
                   </div>
                 )}
 
