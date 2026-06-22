@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Users, Search, FileText, Wrench, Phone, UserX, Link as LinkIcon } from "lucide-react";
+import { Loader2, Users, Search, FileText, Wrench, Phone, UserX } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", sent: "Enviado", in_review: "Em análise",

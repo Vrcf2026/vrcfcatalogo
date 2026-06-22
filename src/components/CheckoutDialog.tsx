@@ -223,72 +223,69 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[92vh] p-0 gap-0">
+        {/* Header fixo */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
           <DialogTitle>Pedir Orçamento</DialogTitle>
           <DialogDescription>
             Preencha os seus dados para receber um orçamento personalizado.
           </DialogDescription>
         </DialogHeader>
 
-        {!user && (
-          <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
-            <Link to="/login" className="text-primary font-medium hover:underline">Inicie sessão</Link>
-            {" ou "}
-            <Link to="/registo" className="text-primary font-medium hover:underline">crie conta</Link>
-            {" para guardar este orçamento no seu histórico."}
-          </div>
-        )}
+        {/* Zona scrollável */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4">
+          {!user && (
+            <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+              <Link to="/login" className="text-primary font-medium hover:underline">Inicie sessão</Link>
+              {" ou "}
+              <Link to="/registo" className="text-primary font-medium hover:underline">crie conta</Link>
+              {" para guardar este orçamento no seu histórico."}
+            </div>
+          )}
 
+          {/* Resumo de produtos */}
+          {items.length > 0 && (
+            <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1.5 max-h-36 overflow-y-auto">
+              {items.map((item) => (
+                <div key={item.id} className="flex justify-between text-sm gap-2">
+                  <span className="text-foreground truncate">{item.quantity}x {item.name}</span>
+                  {item.price != null && (
+                    <span className="text-muted-foreground flex-shrink-0">{(item.price * item.quantity * 1.23).toFixed(2).replace(".", ",")} €</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
-
-        {/* Items summary */}
-        {items.length > 0 && (
-          <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2 max-h-40 overflow-y-auto">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span className="text-foreground">{item.quantity}x {item.name}</span>
-                {item.price != null && (
-                  <span className="text-muted-foreground">{(item.price * item.quantity).toFixed(2).replace(".", ",")} €</span>
-                )}
+          {/* Produtos adicionais */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Produtos adicionais (texto livre)</Label>
+              <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={addCustomItem}>
+                <Plus className="h-3 w-3" /> Adicionar
+              </Button>
+            </div>
+            {customItems.map((ci) => (
+              <div key={ci.id} className="flex gap-2 items-start">
+                <Input
+                  placeholder="Descreva o produto..."
+                  value={ci.description}
+                  onChange={(e) => updateCustomItem(ci.id, "description", e.target.value)}
+                  className="flex-1" maxLength={200}
+                />
+                <Input
+                  type="number" min={1} value={ci.quantity}
+                  onChange={(e) => updateCustomItem(ci.id, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-16 text-center"
+                />
+                <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-destructive flex-shrink-0" onClick={() => removeCustomItem(ci.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
-        )}
 
-        {/* Custom items section */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm font-medium">Produtos adicionais (texto livre)</Label>
-            <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={addCustomItem}>
-              <Plus className="h-3 w-3" />
-              Adicionar
-            </Button>
-          </div>
-          {customItems.map((ci) => (
-            <div key={ci.id} className="flex gap-2 items-start">
-              <Input
-                placeholder="Descreva o produto..."
-                value={ci.description}
-                onChange={(e) => updateCustomItem(ci.id, "description", e.target.value)}
-                className="flex-1"
-                maxLength={200}
-              />
-              <Input
-                type="number"
-                min={1}
-                value={ci.quantity}
-                onChange={(e) => updateCustomItem(ci.id, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-16 text-center"
-              />
-              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-destructive flex-shrink-0" onClick={() => removeCustomItem(ci.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Dados de contacto */}
           <div className="space-y-2">
             <Label htmlFor="name">Nome *</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="O seu nome" required maxLength={100} />
@@ -306,37 +303,33 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Informações adicionais..." maxLength={1000} rows={3} />
           </div>
           <div className="flex items-start space-x-2">
-            <Checkbox
-              id="sendCopy"
-              checked={sendCopy}
-              onCheckedChange={(checked) => setSendCopy(checked === true)}
-            />
+            <Checkbox id="sendCopy" checked={sendCopy} onCheckedChange={(checked) => setSendCopy(checked === true)} />
             <label htmlFor="sendCopy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
               Enviar uma cópia do pedido para o meu email
             </label>
           </div>
           <div className="flex items-start space-x-2">
-            <Checkbox
-              id="terms"
-              checked={acceptedTerms}
-              onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
-            />
+            <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(checked) => setAcceptedTerms(checked === true)} />
             <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
               Li e aceito os{" "}
-              <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">
-                Termos e Condições
-              </a>{" "}
-              e a{" "}
-              <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">
-                Política de Privacidade
-              </a>.
+              <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">Termos e Condições</a>
+              {" "}e a{" "}
+              <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">Política de Privacidade</a>.
             </label>
           </div>
-          <Button type="submit" className="w-full gap-2" size="lg" disabled={loading || !acceptedTerms}>
+        </div>
+
+        {/* Botão fixo no fundo — sempre visível */}
+        <div className="flex-shrink-0 px-6 py-4 border-t border-border bg-background">
+          <Button
+            type="button" className="w-full gap-2" size="lg"
+            disabled={loading || !acceptedTerms || !name.trim() || !email.trim() || !phone.trim()}
+            onClick={handleSubmit as any}
+          >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             Enviar Pedido de Orçamento
           </Button>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

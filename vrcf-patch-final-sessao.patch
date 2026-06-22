@@ -1,0 +1,614 @@
+diff --git a/src/components/CartDrawer.tsx b/src/components/CartDrawer.tsx
+index 28ca437..e2aa061 100644
+--- a/src/components/CartDrawer.tsx
++++ b/src/components/CartDrawer.tsx
+@@ -71,7 +71,7 @@ export function CartDrawer() {
+                 </Button>
+               </div>
+ 
+-              <div className="flex-1 overflow-y-auto space-y-2.5 py-1">
++              <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-1">
+                 {items.map((item) => (
+                   <div key={item.id} className="flex gap-3 p-3 rounded-xl border border-border bg-card">
+                     {item.imageUrl ? (
+@@ -91,9 +91,6 @@ export function CartDrawer() {
+                           {(item.price * 1.23).toFixed(2).replace(".", ",")} € c/IVA/un.
+                         </p>
+                       )}
+-                      {(item as any).weight > 0 && (
+-                        <p className="text-[10px] text-muted-foreground">{(item as any).weight} kg/un.</p>
+-                      )}
+                       {(item as any).minSaleQty > 1 && (
+                         <p className="text-[10px] text-muted-foreground">Embalagem de {(item as any).minSaleQty} unidades</p>
+                       )}
+@@ -116,7 +113,7 @@ export function CartDrawer() {
+                 ))}
+               </div>
+ 
+-              <div className="border-t border-border pt-4 space-y-3">
++              <div className="flex-shrink-0 border-t border-border pt-4 space-y-3">
+                 {/* Totais */}
+                 <div className="space-y-1.5">
+                   <div className="flex justify-between text-sm">
+diff --git a/src/components/CheckoutDialog.tsx b/src/components/CheckoutDialog.tsx
+index 55d6d18..28beddf 100644
+--- a/src/components/CheckoutDialog.tsx
++++ b/src/components/CheckoutDialog.tsx
+@@ -223,72 +223,69 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+-        <DialogHeader>
++      <DialogContent className="sm:max-w-lg flex flex-col max-h-[92vh] p-0 gap-0">
++        {/* Header fixo */}
++        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
+           <DialogTitle>Pedir Orçamento</DialogTitle>
+           <DialogDescription>
+             Preencha os seus dados para receber um orçamento personalizado.
+           </DialogDescription>
+         </DialogHeader>
+ 
+-        {!user && (
+-          <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+-            <Link to="/login" className="text-primary font-medium hover:underline">Inicie sessão</Link>
+-            {" ou "}
+-            <Link to="/registo" className="text-primary font-medium hover:underline">crie conta</Link>
+-            {" para guardar este orçamento no seu histórico."}
+-          </div>
+-        )}
+-
++        {/* Zona scrollável */}
++        <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4">
++          {!user && (
++            <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
++              <Link to="/login" className="text-primary font-medium hover:underline">Inicie sessão</Link>
++              {" ou "}
++              <Link to="/registo" className="text-primary font-medium hover:underline">crie conta</Link>
++              {" para guardar este orçamento no seu histórico."}
++            </div>
++          )}
+ 
++          {/* Resumo de produtos */}
++          {items.length > 0 && (
++            <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1.5 max-h-36 overflow-y-auto">
++              {items.map((item) => (
++                <div key={item.id} className="flex justify-between text-sm gap-2">
++                  <span className="text-foreground truncate">{item.quantity}x {item.name}</span>
++                  {item.price != null && (
++                    <span className="text-muted-foreground flex-shrink-0">{(item.price * item.quantity * 1.23).toFixed(2).replace(".", ",")} €</span>
++                  )}
++                </div>
++              ))}
++            </div>
++          )}
+ 
+-        {/* Items summary */}
+-        {items.length > 0 && (
+-          <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2 max-h-40 overflow-y-auto">
+-            {items.map((item) => (
+-              <div key={item.id} className="flex justify-between text-sm">
+-                <span className="text-foreground">{item.quantity}x {item.name}</span>
+-                {item.price != null && (
+-                  <span className="text-muted-foreground">{(item.price * item.quantity).toFixed(2).replace(".", ",")} €</span>
+-                )}
++          {/* Produtos adicionais */}
++          <div className="space-y-3">
++            <div className="flex items-center justify-between">
++              <Label className="text-sm font-medium">Produtos adicionais (texto livre)</Label>
++              <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={addCustomItem}>
++                <Plus className="h-3 w-3" /> Adicionar
++              </Button>
++            </div>
++            {customItems.map((ci) => (
++              <div key={ci.id} className="flex gap-2 items-start">
++                <Input
++                  placeholder="Descreva o produto..."
++                  value={ci.description}
++                  onChange={(e) => updateCustomItem(ci.id, "description", e.target.value)}
++                  className="flex-1" maxLength={200}
++                />
++                <Input
++                  type="number" min={1} value={ci.quantity}
++                  onChange={(e) => updateCustomItem(ci.id, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
++                  className="w-16 text-center"
++                />
++                <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-destructive flex-shrink-0" onClick={() => removeCustomItem(ci.id)}>
++                  <Trash2 className="h-4 w-4" />
++                </Button>
+               </div>
+             ))}
+           </div>
+-        )}
+-
+-        {/* Custom items section */}
+-        <div className="space-y-3">
+-          <div className="flex items-center justify-between">
+-            <Label className="text-sm font-medium">Produtos adicionais (texto livre)</Label>
+-            <Button type="button" variant="outline" size="sm" className="gap-1 text-xs" onClick={addCustomItem}>
+-              <Plus className="h-3 w-3" />
+-              Adicionar
+-            </Button>
+-          </div>
+-          {customItems.map((ci) => (
+-            <div key={ci.id} className="flex gap-2 items-start">
+-              <Input
+-                placeholder="Descreva o produto..."
+-                value={ci.description}
+-                onChange={(e) => updateCustomItem(ci.id, "description", e.target.value)}
+-                className="flex-1"
+-                maxLength={200}
+-              />
+-              <Input
+-                type="number"
+-                min={1}
+-                value={ci.quantity}
+-                onChange={(e) => updateCustomItem(ci.id, "quantity", Math.max(1, parseInt(e.target.value) || 1))}
+-                className="w-16 text-center"
+-              />
+-              <Button type="button" variant="ghost" size="icon" className="h-10 w-10 text-destructive flex-shrink-0" onClick={() => removeCustomItem(ci.id)}>
+-                <Trash2 className="h-4 w-4" />
+-              </Button>
+-            </div>
+-          ))}
+-        </div>
+ 
+-        <form onSubmit={handleSubmit} className="space-y-4">
++          {/* Dados de contacto */}
+           <div className="space-y-2">
+             <Label htmlFor="name">Nome *</Label>
+             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="O seu nome" required maxLength={100} />
+@@ -306,37 +303,33 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
+             <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Informações adicionais..." maxLength={1000} rows={3} />
+           </div>
+           <div className="flex items-start space-x-2">
+-            <Checkbox
+-              id="sendCopy"
+-              checked={sendCopy}
+-              onCheckedChange={(checked) => setSendCopy(checked === true)}
+-            />
++            <Checkbox id="sendCopy" checked={sendCopy} onCheckedChange={(checked) => setSendCopy(checked === true)} />
+             <label htmlFor="sendCopy" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+               Enviar uma cópia do pedido para o meu email
+             </label>
+           </div>
+           <div className="flex items-start space-x-2">
+-            <Checkbox
+-              id="terms"
+-              checked={acceptedTerms}
+-              onCheckedChange={(checked) => setAcceptedTerms(checked === true)}
+-            />
++            <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={(checked) => setAcceptedTerms(checked === true)} />
+             <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
+               Li e aceito os{" "}
+-              <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">
+-                Termos e Condições
+-              </a>{" "}
+-              e a{" "}
+-              <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">
+-                Política de Privacidade
+-              </a>.
++              <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">Termos e Condições</a>
++              {" "}e a{" "}
++              <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">Política de Privacidade</a>.
+             </label>
+           </div>
+-          <Button type="submit" className="w-full gap-2" size="lg" disabled={loading || !acceptedTerms}>
++        </div>
++
++        {/* Botão fixo no fundo — sempre visível */}
++        <div className="flex-shrink-0 px-6 py-4 border-t border-border bg-background">
++          <Button
++            type="button" className="w-full gap-2" size="lg"
++            disabled={loading || !acceptedTerms || !name.trim() || !email.trim() || !phone.trim()}
++            onClick={handleSubmit as any}
++          >
+             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+             Enviar Pedido de Orçamento
+           </Button>
+-        </form>
++        </div>
+       </DialogContent>
+     </Dialog>
+   );
+diff --git a/src/components/ShippingConfig.tsx b/src/components/ShippingConfig.tsx
+index b8c5a4d..522cdea 100644
+--- a/src/components/ShippingConfig.tsx
++++ b/src/components/ShippingConfig.tsx
+@@ -7,7 +7,83 @@ import { Label } from "@/components/ui/label";
+ import { Switch } from "@/components/ui/switch";
+ import { Badge } from "@/components/ui/badge";
+ import { toast } from "sonner";
+-import { Loader2, Save, Truck } from "lucide-react";
++import { Loader2, Save, Truck, Package, Calculator } from "lucide-react";
++import { calcularPorteDHL } from "@/lib/calcularPortes";
++
++// Tabela DHL para exibição — espelha os valores de calcularPortes.ts
++const DHL_TABELA_DISPLAY: [number, number][] = [
++  [1, 3.65], [3, 3.78], [5, 3.78], [10, 4.37], [20, 4.88],
++  [30, 5.20], [40, 6.22], [50, 7.59], [60, 9.08], [70, 10.59],
++  [80, 12.11], [90, 13.62], [100, 15.13], [125, 18.51], [150, 22.22],
++  [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
++];
++
++function AllTOPortesPanel() {
++  const [pesoSim, setPesoSim] = useState("");
++  const pesoNum = parseFloat(pesoSim.replace(",", ".")) || 0;
++  const simulado = pesoNum > 0 ? calcularPorteDHL(pesoNum) : null;
++
++  return (
++    <div className="border rounded-lg p-4 space-y-4">
++      <div className="flex items-center gap-2">
++        <Badge variant="outline">allto</Badge>
++        <span className="text-xs text-muted-foreground">Cálculo DHL por peso — tabela fixa (margem 15% sobre custo base)</span>
++      </div>
++
++      {/* Simulador */}
++      <div className="bg-muted/40 rounded-lg p-3 space-y-2">
++        <p className="text-xs font-semibold flex items-center gap-1.5"><Calculator className="h-3.5 w-3.5" /> Simulador de peso</p>
++        <div className="flex items-center gap-2">
++          <Input
++            type="number" step="0.1" min="0" placeholder="kg"
++            value={pesoSim} onChange={(e) => setPesoSim(e.target.value)}
++            className="h-8 w-28 text-sm"
++          />
++          <span className="text-sm text-muted-foreground">kg →</span>
++          {simulado != null ? (
++            <span className="text-sm font-bold text-primary">
++              {simulado.toFixed(2).replace(".", ",")} € s/IVA · {(simulado * 1.23).toFixed(2).replace(".", ",")} € c/IVA
++            </span>
++          ) : pesoNum > 250 ? (
++            <span className="text-sm text-destructive">Peso &gt;250kg — contactar DHL</span>
++          ) : (
++            <span className="text-sm text-muted-foreground">introduz o peso</span>
++          )}
++        </div>
++      </div>
++
++      {/* Tabela */}
++      <div className="overflow-x-auto">
++        <p className="text-xs font-semibold mb-2 flex items-center gap-1.5"><Package className="h-3.5 w-3.5" /> Tabela de escalões (Portugal Continental)</p>
++        <table className="w-full text-xs border-collapse">
++          <thead>
++            <tr className="border-b border-border">
++              <th className="text-left py-1 pr-4 text-muted-foreground font-medium">Até (kg)</th>
++              <th className="text-right py-1 pr-4 text-muted-foreground font-medium">Custo base s/IVA</th>
++              <th className="text-right py-1 pr-4 text-muted-foreground font-medium">Com margem 15%</th>
++              <th className="text-right py-1 text-muted-foreground font-medium">Cliente c/IVA</th>
++            </tr>
++          </thead>
++          <tbody>
++            {DHL_TABELA_DISPLAY.map(([limite, base]) => {
++              const comMargem = Math.round(base * 1.15 * 100) / 100;
++              const comIva = Math.round(comMargem * 1.23 * 100) / 100;
++              return (
++                <tr key={limite} className="border-b border-border/40 hover:bg-muted/30">
++                  <td className="py-1 pr-4 font-mono">{limite}</td>
++                  <td className="py-1 pr-4 text-right text-muted-foreground">{base.toFixed(2)} €</td>
++                  <td className="py-1 pr-4 text-right">{comMargem.toFixed(2)} €</td>
++                  <td className="py-1 text-right font-semibold text-primary">{comIva.toFixed(2)} €</td>
++                </tr>
++              );
++            })}
++          </tbody>
++        </table>
++        <p className="text-[10px] text-muted-foreground mt-2">Para alterar estes valores, editar <code>src/lib/calcularPortes.ts</code> (DHL_TABELA + MARGEM_PORTES).</p>
++      </div>
++    </div>
++  );
++}
+ 
+ export function ShippingConfig() {
+   const [saving, setSaving] = useState<string | null>(null);
+@@ -55,6 +131,7 @@ export function ShippingConfig() {
+           {configs.map((config: any) => (
+             <ConfigRow key={config.id} config={config} saving={saving === config.id} onSave={handleSave} />
+           ))}
++          <AllTOPortesPanel />
+         </div>
+       )}
+     </div>
+diff --git a/src/pages/Index.tsx b/src/pages/Index.tsx
+index cbcdcd2..34a6b90 100644
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -352,17 +352,17 @@ const Index = () => {
+           </div>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+             {featured.data.slice(0, 6).map((p: any) => (
+-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+-                <ProductCard
+-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+-                  description={p.short_description ?? p.description}
+-                  category={p.category} price={p.price}
+-                  imageUrl={p.image_url} images={[]}
+-                  familyName={null} brandName={p.brand || null}
+-                  featured={p.featured} stockStatus={p.stock_status}
+-                  minSaleQty={p.min_sale_qty ?? null}
+-                />
+-              </Link>
++              <ProductCard
++                key={p.id}
++                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                description={p.short_description ?? p.description}
++                category={p.category} price={p.price}
++                imageUrl={p.image_url} images={[]}
++                familyName={null} brandName={p.brand || null}
++                featured={p.featured} stockStatus={p.stock_status}
++                minSaleQty={p.min_sale_qty ?? null}
++                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
++              />
+             ))}
+           </div>
+         </section>
+@@ -450,17 +450,17 @@ const Index = () => {
+           </div>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+             {novidades.data.slice(0, 8).map((p: any) => (
+-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+-                <ProductCard
+-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+-                  description={p.short_description ?? p.description}
+-                  category={p.category} price={p.price}
+-                  imageUrl={p.image_url} images={[]}
+-                  familyName={null} brandName={p.brand || null}
+-                  featured={p.featured} stockStatus={p.stock_status}
+-                  minSaleQty={p.min_sale_qty ?? null}
+-                />
+-              </Link>
++              <ProductCard
++                key={p.id}
++                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                description={p.short_description ?? p.description}
++                category={p.category} price={p.price}
++                imageUrl={p.image_url} images={[]}
++                familyName={null} brandName={p.brand || null}
++                featured={p.featured} stockStatus={p.stock_status}
++                minSaleQty={p.min_sale_qty ?? null}
++                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
++              />
+             ))}
+           </div>
+         </section>
+@@ -476,17 +476,17 @@ const Index = () => {
+           </div>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+             {maisVistos.data.slice(0, 8).map((p: any) => (
+-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+-                <ProductCard
+-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+-                  description={p.short_description ?? p.description}
+-                  category={p.category} price={p.price}
+-                  imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
+-                  familyName={null} brandName={p.brand || null}
+-                  featured={false} stockStatus={p.stock_status}
+-                  minSaleQty={p.min_sale_qty ?? null}
+-                />
+-              </Link>
++              <ProductCard
++                key={p.id}
++                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                description={p.short_description ?? p.description}
++                category={p.category} price={p.price}
++                imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
++                familyName={null} brandName={p.brand || null}
++                featured={false} stockStatus={p.stock_status}
++                minSaleQty={p.min_sale_qty ?? null}
++                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
++              />
+             ))}
+           </div>
+         </section>
+@@ -502,17 +502,17 @@ const Index = () => {
+           </div>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+             {recentlyViewed.slice(0, 4).map((p: any) => (
+-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
+-                <ProductCard
+-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+-                  description={p.short_description ?? null}
+-                  category={p.category} price={p.price}
+-                  imageUrl={p.image_url} images={[]}
+-                  familyName={null} brandName={p.brand || null}
+-                  featured={false} stockStatus={p.stock_status}
+-                  minSaleQty={p.min_sale_qty ?? null}
+-                />
+-              </Link>
++              <ProductCard
++                key={p.id}
++                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
++                description={p.short_description ?? null}
++                category={p.category} price={p.price}
++                imageUrl={p.image_url} images={[]}
++                familyName={null} brandName={p.brand || null}
++                featured={false} stockStatus={p.stock_status}
++                minSaleQty={p.min_sale_qty ?? null}
++                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
++              />
+             ))}
+           </div>
+         </section>
+diff --git a/src/pages/WorldCatalog.tsx b/src/pages/WorldCatalog.tsx
+index be66f9f..604361f 100644
+--- a/src/pages/WorldCatalog.tsx
++++ b/src/pages/WorldCatalog.tsx
+@@ -633,24 +633,24 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
+             <>
+               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                 {products.map((product: any) => (
+-                  <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
+-                    <ProductCard
+-                      id={product.id} name={product.name} sku={product.sku} slug={product.slug}
+-                      description={product.short_description ?? product.description}
+-                      category={product.category} price={product.price}
+-                      imageUrl={product.image_url} images={[]}
+-                      familyName={product.family_id ? familyMap[product.family_id] || null : null}
+-                      brandName={product.brand || null}
+-                      featured={product.featured}
+-                      stockStatus={product.stock_status}
+-                      sobEncomenda={product.sob_encomenda}
+-                      weight={product.weight ?? null}
+-                      fornecedor={product.fornecedor ?? null}
+-                      envioEspecial={product.envio_especial ?? false}
+-                      teclado={(product.especificacoes as any)?.teclado ?? null}
+-                      minSaleQty={product.min_sale_qty ?? null}
+-                    />
+-                  </Link>
++                  <ProductCard
++                    key={product.id}
++                    id={product.id} name={product.name} sku={product.sku} slug={product.slug}
++                    description={product.short_description ?? product.description}
++                    category={product.category} price={product.price}
++                    imageUrl={product.image_url} images={[]}
++                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
++                    brandName={product.brand || null}
++                    featured={product.featured}
++                    stockStatus={product.stock_status}
++                    sobEncomenda={product.sob_encomenda}
++                    weight={product.weight ?? null}
++                    fornecedor={product.fornecedor ?? null}
++                    envioEspecial={product.envio_especial ?? false}
++                    teclado={(product.especificacoes as any)?.teclado ?? null}
++                    minSaleQty={product.min_sale_qty ?? null}
++                    onClick={() => navigate(`/produto/${product.slug ?? product.id}`)}
++                  />
+                 ))}
+               </div>
+ 
+diff --git a/src/pages/gestao/Clientes.tsx b/src/pages/gestao/Clientes.tsx
+index 989736b..0eced3a 100644
+--- a/src/pages/gestao/Clientes.tsx
++++ b/src/pages/gestao/Clientes.tsx
+@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+-import { Loader2, Users, Search, FileText, Wrench, Phone, UserX, Link as LinkIcon } from "lucide-react";
++import { Loader2, Users, Search, FileText, Wrench, Phone, UserX } from "lucide-react";
+ 
+ const STATUS_LABEL: Record<string, string> = {
+   pending: "Pendente", sent: "Enviado", in_review: "Em análise",
+diff --git a/src/pages/gestao/Orcamentos.tsx b/src/pages/gestao/Orcamentos.tsx
+index 71e5454..57f91d3 100644
+--- a/src/pages/gestao/Orcamentos.tsx
++++ b/src/pages/gestao/Orcamentos.tsx
+@@ -13,9 +13,14 @@ import { ArrowLeft, Loader2, FileText, Eye, Search, Truck, PackageX, Send, Check
+ import { toast } from "sonner";
+ import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
+ 
++// Ordem de urgência para a lista: pendentes/sent primeiro, depois por data
++const URGENCIA: Record<string, number> = {
++  pending: 0, sent: 1, in_review: 2, accepted: 3,
++  rejected: 4, completed: 5, cancelled: 6,
++};
++
+ const STATUS_OPTIONS = [
+-  { value: "pending",   label: "Pendente" },
+-  { value: "sent",      label: "Enviado" },
++  { value: "sent",      label: "Enviado — por responder" },
+   { value: "in_review", label: "Em análise" },
+   { value: "accepted",  label: "Aceite" },
+   { value: "rejected",  label: "Rejeitado" },
+@@ -56,17 +61,24 @@ function OrcamentosList() {
+     staleTime: 30 * 1000,
+   });
+ 
+-  const filtered = (data ?? []).filter((q: any) => {
+-    if (!search.trim()) return true;
+-    const s = search.toLowerCase();
+-    return (
+-      q.quote_number?.toLowerCase().includes(s) ||
+-      q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
+-      q.customer_profiles?.company?.toLowerCase().includes(s) ||
+-      q.customer_name?.toLowerCase().includes(s) ||
+-      q.customer_email?.toLowerCase().includes(s)
+-    );
+-  });
++  const filtered = (data ?? [])
++    .filter((q: any) => {
++      if (!search.trim()) return true;
++      const s = search.toLowerCase();
++      return (
++        q.quote_number?.toLowerCase().includes(s) ||
++        q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
++        q.customer_profiles?.company?.toLowerCase().includes(s) ||
++        q.customer_name?.toLowerCase().includes(s) ||
++        q.customer_email?.toLowerCase().includes(s)
++      );
++    })
++    .sort((a: any, b: any) => {
++      const ua = URGENCIA[a.status] ?? 99;
++      const ub = URGENCIA[b.status] ?? 99;
++      if (ua !== ub) return ua - ub;
++      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
++    });
+ 
+   return (
+     <div className="space-y-4">
+@@ -173,6 +185,14 @@ function OrcamentoDetalhe() {
+         setTotal(q.data.total != null ? String(q.data.total) : "");
+         setShippingTotal((q.data as any).shipping_total != null ? String((q.data as any).shipping_total) : "");
+         setPrazoEntrega((q.data as any).prazo_entrega ?? "");
++
++        // Auto-avançar estado: se está "sent" (por responder), marca como "in_review"
++        // ao abrir — sinaliza que está a ser tratado, aparece correctamente no Resumo.
++        if (q.data.status === "sent") {
++          supabase.from("quotes").update({ status: "in_review" as any }).eq("id", id!).then(() => {
++            setStatus("in_review");
++          });
++        }
+       }
+       return { quote: q.data, items: items.data ?? [], shippingConfigs: shipCfg.data ?? [] };
+     },
+@@ -231,6 +251,9 @@ function OrcamentoDetalhe() {
+       if (result?.skipped) {
+         toast.warning("Orçamento gravado, mas o cliente não tem email associado — não foi possível enviar.");
+       } else {
++        // Auto-avançar para "accepted" — o orçamento final foi enviado, está na mão do cliente.
++        await supabase.from("quotes").update({ status: "accepted" as any }).eq("id", id!);
++        setStatus("accepted");
+         toast.success("Orçamento final enviado ao cliente.");
+       }
+       qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
+diff --git a/supabase/migrations/20260622000001_fix_top_products_rpc.sql b/supabase/migrations/20260622000001_fix_top_products_rpc.sql
+new file mode 100644
+index 0000000..54f9a9e
+--- /dev/null
++++ b/supabase/migrations/20260622000001_fix_top_products_rpc.sql
+@@ -0,0 +1,36 @@
++-- Correcção: get_top_products_with_context não incluía o campo price,
++-- causando "Preço sob consulta" em todos os produtos da secção "Mais Vistos".
++-- Acrescentamos também slug, sku e weight que o ProductCard também usa.
++
++CREATE OR REPLACE FUNCTION public.get_top_products_with_context(
++  p_event_type text DEFAULT 'click',
++  p_since timestamptz DEFAULT NULL,
++  p_limit int DEFAULT 10
++)
++RETURNS TABLE (
++  product_id uuid, name text, category text,
++  brand text, mundo text, image_url text,
++  stock_status text, price numeric, slug text,
++  sku text, weight numeric, count bigint
++)
++LANGUAGE sql
++STABLE
++SECURITY DEFINER
++SET search_path = public
++AS $$
++  SELECT
++    p.id, p.name, p.category, p.brand, p.mundo, p.image_url,
++    p.stock_status, p.price, p.slug, p.sku, p.weight,
++    count(*) AS count
++  FROM product_analytics a
++  JOIN products p ON p.id = a.product_id
++  WHERE a.event_type = p_event_type
++    AND (p_since IS NULL OR a.created_at >= p_since)
++    AND p.include_in_catalog = true
++  GROUP BY p.id, p.name, p.category, p.brand, p.mundo, p.image_url,
++           p.stock_status, p.price, p.slug, p.sku, p.weight
++  ORDER BY count DESC
++  LIMIT p_limit;
++$$;
++
++GRANT EXECUTE ON FUNCTION public.get_top_products_with_context TO anon, authenticated;

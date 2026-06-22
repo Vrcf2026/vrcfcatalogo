@@ -13,9 +13,14 @@ import { ArrowLeft, Loader2, FileText, Eye, Search, Truck, PackageX, Send, Check
 import { toast } from "sonner";
 import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
 
+// Ordem de urgência para a lista: pendentes/sent primeiro, depois por data
+const URGENCIA: Record<string, number> = {
+  pending: 0, sent: 1, in_review: 2, accepted: 3,
+  rejected: 4, completed: 5, cancelled: 6,
+};
+
 const STATUS_OPTIONS = [
-  { value: "pending",   label: "Pendente" },
-  { value: "sent",      label: "Enviado" },
+  { value: "sent",      label: "Enviado — por responder" },
   { value: "in_review", label: "Em análise" },
   { value: "accepted",  label: "Aceite" },
   { value: "rejected",  label: "Rejeitado" },
@@ -56,17 +61,24 @@ function OrcamentosList() {
     staleTime: 30 * 1000,
   });
 
-  const filtered = (data ?? []).filter((q: any) => {
-    if (!search.trim()) return true;
-    const s = search.toLowerCase();
-    return (
-      q.quote_number?.toLowerCase().includes(s) ||
-      q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
-      q.customer_profiles?.company?.toLowerCase().includes(s) ||
-      q.customer_name?.toLowerCase().includes(s) ||
-      q.customer_email?.toLowerCase().includes(s)
-    );
-  });
+  const filtered = (data ?? [])
+    .filter((q: any) => {
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return (
+        q.quote_number?.toLowerCase().includes(s) ||
+        q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
+        q.customer_profiles?.company?.toLowerCase().includes(s) ||
+        q.customer_name?.toLowerCase().includes(s) ||
+        q.customer_email?.toLowerCase().includes(s)
+      );
+    })
+    .sort((a: any, b: any) => {
+      const ua = URGENCIA[a.status] ?? 99;
+      const ub = URGENCIA[b.status] ?? 99;
+      if (ua !== ub) return ua - ub;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   return (
     <div className="space-y-4">
@@ -173,6 +185,14 @@ function OrcamentoDetalhe() {
         setTotal(q.data.total != null ? String(q.data.total) : "");
         setShippingTotal((q.data as any).shipping_total != null ? String((q.data as any).shipping_total) : "");
         setPrazoEntrega((q.data as any).prazo_entrega ?? "");
+
+        // Auto-avançar estado: se está "sent" (por responder), marca como "in_review"
+        // ao abrir — sinaliza que está a ser tratado, aparece correctamente no Resumo.
+        if (q.data.status === "sent") {
+          supabase.from("quotes").update({ status: "in_review" as any }).eq("id", id!).then(() => {
+            setStatus("in_review");
+          });
+        }
       }
       return { quote: q.data, items: items.data ?? [], shippingConfigs: shipCfg.data ?? [] };
     },
@@ -231,6 +251,9 @@ function OrcamentoDetalhe() {
       if (result?.skipped) {
         toast.warning("Orçamento gravado, mas o cliente não tem email associado — não foi possível enviar.");
       } else {
+        // Auto-avançar para "accepted" — o orçamento final foi enviado, está na mão do cliente.
+        await supabase.from("quotes").update({ status: "accepted" as any }).eq("id", id!);
+        setStatus("accepted");
         toast.success("Orçamento final enviado ao cliente.");
       }
       qc.invalidateQueries({ queryKey: ["gestao-quote", id] });

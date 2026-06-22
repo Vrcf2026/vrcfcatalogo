@@ -71,7 +71,7 @@ export function CartDrawer() {
                 </Button>
               </div>
 
-              <div className="flex-1 overflow-y-auto space-y-2.5 py-1">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-1">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-3 p-3 rounded-xl border border-border bg-card">
                     {item.imageUrl ? (
@@ -90,9 +90,6 @@ export function CartDrawer() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {(item.price * 1.23).toFixed(2).replace(".", ",")} € c/IVA/un.
                         </p>
-                      )}
-                      {(item as any).weight > 0 && (
-                        <p className="text-[10px] text-muted-foreground">{(item as any).weight} kg/un.</p>
                       )}
                       {(item as any).minSaleQty > 1 && (
                         <p className="text-[10px] text-muted-foreground">Embalagem de {(item as any).minSaleQty} unidades</p>
@@ -116,7 +113,7 @@ export function CartDrawer() {
                 ))}
               </div>
 
-              <div className="border-t border-border pt-4 space-y-3">
+              <div className="flex-shrink-0 border-t border-border pt-4 space-y-3">
                 {/* Totais */}
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-sm">

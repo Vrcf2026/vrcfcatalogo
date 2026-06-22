@@ -633,24 +633,24 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                 {products.map((product: any) => (
-                  <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
-                    <ProductCard
-                      id={product.id} name={product.name} sku={product.sku} slug={product.slug}
-                      description={product.short_description ?? product.description}
-                      category={product.category} price={product.price}
-                      imageUrl={product.image_url} images={[]}
-                      familyName={product.family_id ? familyMap[product.family_id] || null : null}
-                      brandName={product.brand || null}
-                      featured={product.featured}
-                      stockStatus={product.stock_status}
-                      sobEncomenda={product.sob_encomenda}
-                      weight={product.weight ?? null}
-                      fornecedor={product.fornecedor ?? null}
-                      envioEspecial={product.envio_especial ?? false}
-                      teclado={(product.especificacoes as any)?.teclado ?? null}
-                      minSaleQty={product.min_sale_qty ?? null}
-                    />
-                  </Link>
+                  <ProductCard
+                    key={product.id}
+                    id={product.id} name={product.name} sku={product.sku} slug={product.slug}
+                    description={product.short_description ?? product.description}
+                    category={product.category} price={product.price}
+                    imageUrl={product.image_url} images={[]}
+                    familyName={product.family_id ? familyMap[product.family_id] || null : null}
+                    brandName={product.brand || null}
+                    featured={product.featured}
+                    stockStatus={product.stock_status}
+                    sobEncomenda={product.sob_encomenda}
+                    weight={product.weight ?? null}
+                    fornecedor={product.fornecedor ?? null}
+                    envioEspecial={product.envio_especial ?? false}
+                    teclado={(product.especificacoes as any)?.teclado ?? null}
+                    minSaleQty={product.min_sale_qty ?? null}
+                    onClick={() => navigate(`/produto/${product.slug ?? product.id}`)}
+                  />
                 ))}
               </div>
 

@@ -352,17 +352,17 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {featured.data.slice(0, 6).map((p: any) => (
-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
-                <ProductCard
-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                  description={p.short_description ?? p.description}
-                  category={p.category} price={p.price}
-                  imageUrl={p.image_url} images={[]}
-                  familyName={null} brandName={p.brand || null}
-                  featured={p.featured} stockStatus={p.stock_status}
-                  minSaleQty={p.min_sale_qty ?? null}
-                />
-              </Link>
+              <ProductCard
+                key={p.id}
+                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                description={p.short_description ?? p.description}
+                category={p.category} price={p.price}
+                imageUrl={p.image_url} images={[]}
+                familyName={null} brandName={p.brand || null}
+                featured={p.featured} stockStatus={p.stock_status}
+                minSaleQty={p.min_sale_qty ?? null}
+                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
+              />
             ))}
           </div>
         </section>
@@ -450,17 +450,17 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {novidades.data.slice(0, 8).map((p: any) => (
-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
-                <ProductCard
-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                  description={p.short_description ?? p.description}
-                  category={p.category} price={p.price}
-                  imageUrl={p.image_url} images={[]}
-                  familyName={null} brandName={p.brand || null}
-                  featured={p.featured} stockStatus={p.stock_status}
-                  minSaleQty={p.min_sale_qty ?? null}
-                />
-              </Link>
+              <ProductCard
+                key={p.id}
+                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                description={p.short_description ?? p.description}
+                category={p.category} price={p.price}
+                imageUrl={p.image_url} images={[]}
+                familyName={null} brandName={p.brand || null}
+                featured={p.featured} stockStatus={p.stock_status}
+                minSaleQty={p.min_sale_qty ?? null}
+                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
+              />
             ))}
           </div>
         </section>
@@ -476,17 +476,17 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {maisVistos.data.slice(0, 8).map((p: any) => (
-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
-                <ProductCard
-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                  description={p.short_description ?? p.description}
-                  category={p.category} price={p.price}
-                  imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
-                  familyName={null} brandName={p.brand || null}
-                  featured={false} stockStatus={p.stock_status}
-                  minSaleQty={p.min_sale_qty ?? null}
-                />
-              </Link>
+              <ProductCard
+                key={p.id}
+                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                description={p.short_description ?? p.description}
+                category={p.category} price={p.price}
+                imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
+                familyName={null} brandName={p.brand || null}
+                featured={false} stockStatus={p.stock_status}
+                minSaleQty={p.min_sale_qty ?? null}
+                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
+              />
             ))}
           </div>
         </section>
@@ -502,17 +502,17 @@ const Index = () => {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {recentlyViewed.slice(0, 4).map((p: any) => (
-              <Link key={p.id} to={`/produto/${p.slug ?? p.id}`} className="contents">
-                <ProductCard
-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                  description={p.short_description ?? null}
-                  category={p.category} price={p.price}
-                  imageUrl={p.image_url} images={[]}
-                  familyName={null} brandName={p.brand || null}
-                  featured={false} stockStatus={p.stock_status}
-                  minSaleQty={p.min_sale_qty ?? null}
-                />
-              </Link>
+              <ProductCard
+                key={p.id}
+                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                description={p.short_description ?? null}
+                category={p.category} price={p.price}
+                imageUrl={p.image_url} images={[]}
+                familyName={null} brandName={p.brand || null}
+                featured={false} stockStatus={p.stock_status}
+                minSaleQty={p.min_sale_qty ?? null}
+                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
+              />
             ))}
           </div>
         </section>
