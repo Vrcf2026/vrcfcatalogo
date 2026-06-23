@@ -52,12 +52,9 @@ const BrandsStrip = ({ mundo }: BrandsStripProps) => {
   return (
     <section
       className="border-y border-border/50 bg-muted/30 py-6 overflow-hidden"
-      aria-label="Marcas que trabalhamos"
+      aria-label="Marcas disponíveis"
     >
       <div className="container mx-auto px-4">
-        <p className="text-center text-xs uppercase tracking-widest text-muted-foreground mb-4">
-          Marcas que trabalhamos — clique para filtrar
-        </p>
         <div
           className="relative group"
           onMouseEnter={() => setIsPaused(true)}
