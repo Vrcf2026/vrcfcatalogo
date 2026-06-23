@@ -303,37 +303,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
   }));
 
-  // ── FACETS com cross-filtering ────────────────────────────────────────────
-  // Cada secção recalcula os seus counts aplicando os filtros das OUTRAS
-  // secções — mas nunca o seu próprio. Assim os números são sempre exactos:
-  // "HP: 47" quando Intel i5 está seleccionado = há 47 portáteis HP Intel i5.
-  //
-  // Quando não há filtros activos, as 3 queries são idênticas (rápidas e em cache).
-
-  const facetBase = () => supabase.from("products")
-    .eq("mundo", mundo)
-    .eq("include_in_catalog", true)
-    .eq("category", categoryFilter);
-
-  const addSearch = (q: any) =>
-    search ? q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`) : q;
-
-  const addStock = (q: any) => {
-    if (stockFilter === "in_stock") return q.in("stock_status", ["high", "low"]);
-    if (stockFilter === "low")      return q.eq("stock_status", "low");
-    if (stockFilter === "out")      return q.in("stock_status", ["out", "on_request"]);
-    return q;
-  };
-
-  // Contagens de família: aplica brand + type + stock, mas NÃO familyFilter
-  const { data: familyFacetData = [] } = useQuery({
-    queryKey: ["facets-family", mundo, categoryFilter, search, typeFilter, brandFilter, stockFilter],
+  // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
+  const facetsQuery = useQuery({
+    queryKey: ["facets", mundo, categoryFilter, search],
     queryFn: async () => {
-      if (categoryFilter === "all") return [];
-      let q = facetBase().select("family_id").range(0, 9999);
-      if (typeFilter.length > 0)  q = q.in("type_id", typeFilter);
-      if (brandFilter.length > 0) q = q.in("brand_id", brandFilter);
-      q = addStock(addSearch(q));
+      if (categoryFilter === "all") return [] as any[];
+      let q = supabase.from("products")
+        .select("family_id, type_id, brand_id, brand")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .eq("category", categoryFilter)
+        .range(0, 9999);
+      if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];
@@ -342,59 +323,20 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     enabled: categoryFilter !== "all",
   });
 
-  // Contagens de marca: aplica family + type + stock, mas NÃO brandFilter
-  const { data: brandFacetData = [] } = useQuery({
-    queryKey: ["facets-brand", mundo, categoryFilter, search, familyFilter, typeFilter, stockFilter],
-    queryFn: async () => {
-      if (categoryFilter === "all") return [];
-      let q = facetBase().select("brand_id, brand").range(0, 9999);
-      if (familyFilter.length > 0) q = q.in("family_id", familyFilter);
-      if (typeFilter.length > 0)   q = q.in("type_id", typeFilter);
-      q = addStock(addSearch(q));
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
-    staleTime: 2 * 60 * 1000,
-    enabled: categoryFilter !== "all",
-  });
-
-  // Contagens de tipo: aplica family + brand + stock, mas NÃO typeFilter
-  const { data: typeFacetData = [] } = useQuery({
-    queryKey: ["facets-type", mundo, categoryFilter, search, familyFilter, brandFilter, stockFilter],
-    queryFn: async () => {
-      if (categoryFilter === "all") return [];
-      let q = facetBase().select("type_id").range(0, 9999);
-      if (familyFilter.length > 0) q = q.in("family_id", familyFilter);
-      if (brandFilter.length > 0)  q = q.in("brand_id", brandFilter);
-      q = addStock(addSearch(q));
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
-    },
-    staleTime: 2 * 60 * 1000,
-    enabled: categoryFilter !== "all",
-  });
+  const facetRows: any[] = (facetsQuery.data ?? []) as any[];
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
   const brandIdByName = Object.fromEntries(brands.map((b: any) => [b.name, b.id]));
 
   const familyCount = new Map<string, number>();
-  for (const r of familyFacetData as any[]) {
-    if (r.family_id) familyCount.set(r.family_id, (familyCount.get(r.family_id) ?? 0) + 1);
-  }
-
   const typeCount = new Map<string, number>();
-  for (const r of typeFacetData as any[]) {
-    if (r.type_id) typeCount.set(r.type_id, (typeCount.get(r.type_id) ?? 0) + 1);
-  }
-
   const brandCount = new Map<string, number>();
-  for (const r of brandFacetData as any[]) {
+  for (const r of facetRows) {
+    if (r.family_id) familyCount.set(r.family_id, (familyCount.get(r.family_id) ?? 0) + 1);
+    if (r.type_id)   typeCount.set(r.type_id,     (typeCount.get(r.type_id)   ?? 0) + 1);
     const bId = r.brand_id ?? brandIdByName[r.brand];
     if (bId) brandCount.set(bId, (brandCount.get(bId) ?? 0) + 1);
   }
-
 
   const familyOptions = families
     .filter((f: any) => f.category === categoryFilter)
