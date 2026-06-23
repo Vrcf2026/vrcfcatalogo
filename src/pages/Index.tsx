@@ -229,41 +229,6 @@ const Index = () => {
       </section>
 
 
-      {/* ── BANNERS (adicional, abaixo do título) ── */}
-      {banners.data && banners.data.length > 0 && (
-        <section className="px-3 py-3 max-w-[1600px] mx-auto w-full">
-          <div className="relative overflow-hidden bg-black w-full aspect-[4/1]">
-          {banners.data.map((b: any, i: number) => (
-            <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
-              {b.link
-                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : "auto"} decoding="async" className="w-full h-full object-cover" /></Link>
-                : <img src={b.image_url} alt={b.titulo || ""} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : "auto"} decoding="async" className="w-full h-full object-cover" />
-              }
-            </div>
-          ))}
-
-          {banners.data.length > 1 && (
-            <>
-              <button onClick={() => setBannerIdx(i => (i - 1 + banners.data!.length) % banners.data!.length)}
-                className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button onClick={() => setBannerIdx(i => (i + 1) % banners.data!.length)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
-                <ChevronRight className="h-4 w-4" />
-              </button>
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                {banners.data.map((_: any, i: number) => (
-                  <button key={i} onClick={() => setBannerIdx(i)}
-                    className={`h-1 rounded-full transition-all ${i === bannerIdx ? "w-5 bg-white" : "w-1 bg-white/50"}`} />
-                ))}
-              </div>
-            </>
-          )}
-          </div>
-        </section>
-      )}
-
       {/* ── WORLD SELECTOR ── */}
       <section className="px-3 pt-4 pb-2 max-w-[1600px] mx-auto w-full">
         <div className="grid grid-cols-3 gap-3">
@@ -315,14 +280,48 @@ const Index = () => {
               const Icon = meta.icon;
               return (
                 <Link key={c.id} to={`${worldPath}?categoria=${encodeURIComponent(c.name)}`}
-                  className="shrink-0 flex flex-col items-center gap-1.5 p-2.5 w-[76px] h-[76px] rounded-2xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all">
-                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center ${meta.bg}`}>
-                    <Icon className={`h-4 w-4 ${meta.color}`} />
+                  className="shrink-0 flex flex-col items-center gap-1.5 p-3 w-[88px] h-[88px] rounded-2xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all">
+                  <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${meta.bg}`}>
+                    <Icon className={`h-5 w-5 ${meta.color}`} />
                   </div>
                   <span className="text-[9px] font-semibold text-foreground text-center leading-tight line-clamp-2">{c.name}</span>
                 </Link>
               );
             })}
+          </div>
+        </section>
+      )}
+
+      {/* ── BANNERS ── */}
+      {banners.data && banners.data.length > 0 && (
+        <section className="px-3 py-3 max-w-[1600px] mx-auto w-full">
+          <div className="relative overflow-hidden bg-black w-full" style={{ height: "clamp(160px, 25vw, 280px)" }}>
+          {banners.data.map((b: any, i: number) => (
+            <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
+              {b.link
+                ? <Link to={b.link}><img src={b.image_url} alt={b.titulo || ""} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : "auto"} decoding="async" className="w-full h-full object-cover" /></Link>
+                : <img src={b.image_url} alt={b.titulo || ""} loading={i === 0 ? "eager" : "lazy"} fetchPriority={i === 0 ? "high" : "auto"} decoding="async" className="w-full h-full object-cover" />
+              }
+            </div>
+          ))}
+          {banners.data.length > 1 && (
+            <>
+              <button onClick={() => setBannerIdx(i => (i - 1 + banners.data!.length) % banners.data!.length)}
+                className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button onClick={() => setBannerIdx(i => (i + 1) % banners.data!.length)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                {banners.data.map((_: any, i: number) => (
+                  <button key={i} onClick={() => setBannerIdx(i)}
+                    className={`h-1 rounded-full transition-all ${i === bannerIdx ? "w-5 bg-white" : "w-1 bg-white/50"}`} />
+                ))}
+              </div>
+            </>
+          )}
           </div>
         </section>
       )}
@@ -356,26 +355,6 @@ const Index = () => {
         </section>
       )}
 
-
-      {/* ── TRUST STRIP ── */}
-      <section className="border-t border-border py-5 px-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[1600px] mx-auto">
-          {[
-            { icon: "🛠️", title: "Instalação disponível", desc: "Serviço opcional, sob consulta" },
-            { icon: "📋", title: "Orçamento gratuito", desc: "Resposta rápida e sem compromisso" },
-            { icon: "🔧", title: "Suporte pós-venda", desc: "Acompanhamento contínuo" },
-            { icon: "📍", title: "Montijo & região", desc: "Rua Luís Calado Nunes 15, Loja B · Montijo" },
-          ].map((t, i) => (
-            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border">
-              <span className="text-xl shrink-0">{t.icon}</span>
-              <div>
-                <p className="text-xs font-bold text-foreground leading-tight">{t.title}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{t.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* ── BRANDS ── */}
       {brands.data && brands.data.length > 0 && (
@@ -484,6 +463,26 @@ const Index = () => {
           Registe-se gratuitamente para acompanhar os seus orçamentos e histórico de encomendas →
         </Link>
       </div>
+
+      {/* ── TRUST STRIP ── */}
+      <section className="border-t border-border py-5 px-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[1600px] mx-auto">
+          {[
+            { icon: "🛠️", title: "Instalação disponível", desc: "Serviço opcional, sob consulta" },
+            { icon: "📋", title: "Orçamento gratuito", desc: "Resposta rápida e sem compromisso" },
+            { icon: "🔧", title: "Suporte pós-venda", desc: "Acompanhamento contínuo" },
+            { icon: "📍", title: "Montijo & região", desc: "Rua Luís Calado Nunes 15, Loja B · Montijo" },
+          ].map((t, i) => (
+            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border">
+              <span className="text-xl shrink-0">{t.icon}</span>
+              <div>
+                <p className="text-xs font-bold text-foreground leading-tight">{t.title}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{t.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* ── HOW IT WORKS (linha compacta) ── */}
       <section className="border-t border-border bg-muted/30 py-4 px-4">
