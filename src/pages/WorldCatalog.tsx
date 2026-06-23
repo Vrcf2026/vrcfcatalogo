@@ -636,6 +636,39 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                   <button onClick={() => setCategory("all")} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
                 </Badge>
               )}
+              {familyFilter.map(id => {
+                const f = families.find((x: any) => x.id === id);
+                return f ? (
+                  <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs bg-primary/10 text-primary border-primary/20">
+                    {f.name}
+                    <button onClick={() => setFamilies(familyFilter.filter((x: string) => x !== id))} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                  </Badge>
+                ) : null;
+              })}
+              {typeFilter.map(id => {
+                const t = types.find((x: any) => x.id === id);
+                return t ? (
+                  <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+                    {t.name}
+                    <button onClick={() => setTypes(typeFilter.filter((x: string) => x !== id))} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                  </Badge>
+                ) : null;
+              })}
+              {brandFilter.map(id => {
+                const b = brands.find((x: any) => x.id === id);
+                return b ? (
+                  <Badge key={id} variant="secondary" className="gap-1 pr-1 text-xs">
+                    {b.name}
+                    <button onClick={() => setBrands(brandFilter.filter((x: string) => x !== id))} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                  </Badge>
+                ) : null;
+              })}
+              {stockFilter !== "all" && (
+                <Badge variant="secondary" className="gap-1 pr-1 text-xs">
+                  {stockFilter === "in_stock" ? "Em stock" : stockFilter === "low" ? "Últimas unidades" : "Por encomenda"}
+                  <button onClick={() => setStockFilter("all")} className="ml-1 hover:text-destructive"><X className="h-3 w-3" /></button>
+                </Badge>
+              )}
               {Object.entries(techFilters).map(([k, v]) => (
                 <Badge key={k} variant="secondary" className="gap-1 pr-1 text-xs">
                   {k.replace(/_/g, " ")}: {Array.isArray(v) ? v.join(", ") : v}
