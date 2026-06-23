@@ -39,7 +39,7 @@ export default function Gestao() {
 
       <div className="min-h-screen bg-background flex flex-col">
         <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-30">
-          <div className="max-w-screen-xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
               <img src={vrcfLogo} alt="VRCF" className="h-8 w-auto" />
               <span className="font-heading font-bold hidden sm:inline text-sm text-muted-foreground">
@@ -57,7 +57,7 @@ export default function Gestao() {
           </div>
         </header>
 
-        <div className="flex-1 max-w-screen-xl w-full mx-auto px-4 py-6 grid md:grid-cols-[220px_1fr] gap-6">
+        <div className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-6 grid md:grid-cols-[220px_1fr] gap-6">
           <aside>
             <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
               {tabs.map((t) => (
