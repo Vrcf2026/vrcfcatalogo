@@ -15,10 +15,10 @@ export interface CategoryMeta {
 // Paletas por mundo — bg-100 + text-700 (mais vivas que bg-50, sem ser agressivas)
 // O ícone diferencia a categoria; a cor identifica o mundo.
 const W = {
-  orange: { color: "text-orange-700", bg: "bg-orange-100 dark:bg-orange-900/40" },
-  blue:   { color: "text-blue-700",   bg: "bg-blue-100 dark:bg-blue-900/40"   },
-  green:  { color: "text-green-700",  bg: "bg-green-100 dark:bg-green-900/40" },
-  slate:  { color: "text-slate-600",  bg: "bg-slate-100 dark:bg-slate-800/40" },
+  orange: { color: "text-orange-700", bg: "bg-orange-200 dark:bg-orange-900/40" },
+  blue:   { color: "text-blue-700",   bg: "bg-blue-200 dark:bg-blue-900/40"   },
+  green:  { color: "text-green-700",  bg: "bg-green-200 dark:bg-green-900/40" },
+  slate:  { color: "text-slate-600",  bg: "bg-slate-200 dark:bg-slate-800/40" },
 };
 
 export const categoryMetaMap: Record<string, CategoryMeta> = {
