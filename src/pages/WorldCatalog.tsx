@@ -71,8 +71,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Guard para evitar que o useEffect da URL sobrescreva filtros que acabaram
+  // de ser actualizados pelo próprio código (race condition entre setState e setSearchParams).
+  const internalUpdateRef = useRef(false);
+
   // Sincronizar filtros vindos da URL (categoria, familia, tipo, marca)
+  // Só actua quando a mudança da URL veio de fora (navegação, link externo, botão Back)
+  // — não quando o próprio código actualizou a URL via setSearchParams.
   useEffect(() => {
+    if (internalUpdateRef.current) {
+      internalUpdateRef.current = false;
+      return;
+    }
     const categoria = searchParams.get("categoria") ?? "all";
     const familiaArr = parseCsv(searchParams.get("familia"));
     const tipoArr = parseCsv(searchParams.get("tipo"));
@@ -364,6 +374,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     setCategoryFilter(name); setFamilyFilter([]); setTypeFilter([]); setPage(1);
     if (name === "all") searchParams.delete("categoria"); else searchParams.set("categoria", name);
     searchParams.delete("familia"); searchParams.delete("tipo");
+    internalUpdateRef.current = true;
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -378,6 +389,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       : typeFilter;
     setTypeFilter(nextTypes);
     setPage(1);
+    internalUpdateRef.current = true;
     if (ids.length === 0) searchParams.delete("familia"); else searchParams.set("familia", csv(ids));
     if (nextTypes.length === 0) searchParams.delete("tipo"); else searchParams.set("tipo", csv(nextTypes));
     setSearchParams(searchParams, { replace: true });
@@ -385,12 +397,14 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
   const setTypes = (ids: string[]) => {
     setTypeFilter(ids); setPage(1);
+    internalUpdateRef.current = true;
     if (ids.length === 0) searchParams.delete("tipo"); else searchParams.set("tipo", csv(ids));
     setSearchParams(searchParams, { replace: true });
   };
 
   const setBrands = (ids: string[]) => {
     setBrandFilter(ids); setPage(1);
+    internalUpdateRef.current = true;
     if (ids.length === 0) searchParams.delete("marca"); else searchParams.set("marca", csv(ids));
     setSearchParams(searchParams, { replace: true });
   };
@@ -399,6 +413,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     setCategoryFilter("all"); setFamilyFilter([]); setTypeFilter([]); setBrandFilter([]);
     setTechFilters({}); setStockFilter("all"); setSearch(""); setSearchInput(""); setPage(1);
     searchParams.delete("categoria"); searchParams.delete("marca"); searchParams.delete("familia"); searchParams.delete("tipo");
+    internalUpdateRef.current = true;
     setSearchParams(searchParams, { replace: true });
   };
 
@@ -544,7 +559,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         {/* Sidebar filtros — desktop (só aparece após escolher uma categoria) */}
         {categoryFilter !== "all" && (
           <aside className="hidden lg:block w-64 shrink-0 pt-4">
-            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5">
+            <div className="sticky top-20 rounded-2xl border border-border bg-card p-5 max-h-[calc(100vh-6rem)] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-bold">Filtrar</h2>
                 {activeFiltersCount > 0 && (
