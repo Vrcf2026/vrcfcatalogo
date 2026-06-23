@@ -512,27 +512,46 @@ const Index = () => {
 const HERO_SLIDES = [
   {
     color: "text-orange-500",
-    bg: "from-orange-500/8 to-orange-500/0",
+    bg: "from-orange-500/10 via-orange-500/5 to-background",
     badge: "bg-orange-500/10 border-orange-500/20 text-orange-600",
     label: "Segurança & Redes",
-    title: "Câmaras, alarmes e redes",
     desc: "Soluções de videovigilância, controlo de acessos e infraestrutura de rede para empresas.",
+    iconColor: "text-orange-500",
+    // Ícones: câmara, cadeado, wifi, shield
+    bgIcons: [
+      { Icon: Camera,     size: 96, top: "8%",  right: "6%",  opacity: 0.10, rotate: -12 },
+      { Icon: Lock,       size: 64, top: "55%", right: "18%", opacity: 0.07, rotate: 8  },
+      { Icon: Wifi,       size: 52, top: "20%", right: "22%", opacity: 0.06, rotate: 0  },
+      { Icon: ShieldCheck,size: 40, top: "70%", right: "5%",  opacity: 0.05, rotate: 15 },
+    ],
   },
   {
     color: "text-blue-500",
-    bg: "from-blue-500/8 to-blue-500/0",
+    bg: "from-blue-500/10 via-blue-500/5 to-background",
     badge: "bg-blue-500/10 border-blue-500/20 text-blue-600",
     label: "Informática & Tecnologia",
-    title: "IT recondicionado e novo",
     desc: "Portáteis, desktops, periféricos e software. Equipamento certificado para a sua empresa.",
+    iconColor: "text-blue-500",
+    bgIcons: [
+      { Icon: Monitor,    size: 96, top: "8%",  right: "5%",  opacity: 0.10, rotate: -6  },
+      { Icon: Cpu,        size: 64, top: "55%", right: "20%", opacity: 0.07, rotate: 12  },
+      { Icon: Printer,    size: 52, top: "18%", right: "22%", opacity: 0.06, rotate: -4  },
+      { Icon: Tablet,     size: 40, top: "72%", right: "6%",  opacity: 0.05, rotate: -10 },
+    ],
   },
   {
     color: "text-green-600",
-    bg: "from-green-600/8 to-green-600/0",
+    bg: "from-green-600/10 via-green-600/5 to-background",
     badge: "bg-green-600/10 border-green-600/20 text-green-700",
     label: "Economato",
-    title: "Material de escritório e consumíveis",
     desc: "Papel, toners, mobiliário e tudo o que o seu escritório precisa no dia-a-dia.",
+    iconColor: "text-green-600",
+    bgIcons: [
+      { Icon: Package,    size: 96, top: "8%",  right: "5%",  opacity: 0.10, rotate: 8   },
+      { Icon: Printer,    size: 64, top: "55%", right: "20%", opacity: 0.07, rotate: -8  },
+      { Icon: ShoppingBag,size: 52, top: "18%", right: "22%", opacity: 0.06, rotate: 5   },
+      { Icon: Star,       size: 36, top: "74%", right: "7%",  opacity: 0.05, rotate: 20  },
+    ],
   },
 ];
 
@@ -554,30 +573,54 @@ function HeroRotativo() {
   const s = HERO_SLIDES[idx];
 
   return (
-    <section className={`relative overflow-hidden bg-gradient-to-br ${s.bg} border-b border-border py-5 px-4 transition-all duration-500`}>
+    <section className={`relative overflow-hidden border-b border-border py-6 px-4 bg-gradient-to-r ${s.bg} transition-all duration-500`}>
+      {/* Padrão de pontos subtil */}
       <div aria-hidden className="absolute inset-0 opacity-[0.025]"
         style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+
+      {/* Ícones de fundo — lado direito */}
+      <div aria-hidden className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}>
+        {s.bgIcons.map(({ Icon, size, top, right, opacity, rotate }, i) => (
+          <Icon
+            key={i}
+            className={`absolute ${s.iconColor}`}
+            style={{
+              width: size, height: size,
+              top, right,
+              opacity,
+              transform: `rotate(${rotate}deg)`,
+              strokeWidth: 1,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Conteúdo */}
       <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-2">
-        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-semibold transition-all duration-300 ${s.badge} ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+        <div
+          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-semibold ${s.badge} ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
           style={{ transition: "opacity 300ms, transform 300ms" }}>
           <Zap className="h-3 w-3" />
           Catálogo Online VRCF · Montijo
         </div>
         <h1
-          className={`font-heading text-xl sm:text-2xl font-bold tracking-tight transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
+          className={`font-heading text-xl sm:text-2xl font-bold tracking-tight ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
           style={{ transition: "opacity 300ms ease, transform 300ms ease" }}>
           <span className={s.color}>{s.label}</span>
         </h1>
         <p
-          className={`text-muted-foreground text-xs sm:text-sm max-w-md transition-all duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+          className={`text-muted-foreground text-xs sm:text-sm max-w-md ${visible ? "opacity-100" : "opacity-0"}`}
           style={{ transition: "opacity 300ms ease" }}>
           {s.desc}
         </p>
         {/* Indicadores */}
         <div className="flex gap-1.5 mt-1">
           {HERO_SLIDES.map((_, i) => (
-            <button key={i} onClick={() => { setVisible(false); setTimeout(() => { setIdx(i); setVisible(true); }, 300); }}
-              className={`h-1.5 rounded-full transition-all duration-300 ${i === idx ? `w-5 ${i === 0 ? "bg-orange-500" : i === 1 ? "bg-blue-500" : "bg-green-600"}` : "w-1.5 bg-border"}`} />
+            <button
+              key={i}
+              onClick={() => { setVisible(false); setTimeout(() => { setIdx(i); setVisible(true); }, 300); }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === idx ? `w-5 ${i === 0 ? "bg-orange-500" : i === 1 ? "bg-blue-500" : "bg-green-600"}` : "w-1.5 bg-border"}`}
+            />
           ))}
         </div>
       </div>
@@ -668,3 +711,4 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
 }
 
 export default Index;
+
