@@ -231,7 +231,8 @@ const Index = () => {
 
       {/* ── BANNERS (adicional, abaixo do título) ── */}
       {banners.data && banners.data.length > 0 && (
-        <div className="relative overflow-hidden bg-black w-full aspect-[4/1] max-h-[360px]">
+        <section className="px-3 py-3 max-w-[1600px] mx-auto w-full">
+          <div className="relative overflow-hidden bg-black w-full aspect-[4/1]">
           {banners.data.map((b: any, i: number) => (
             <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
               {b.link
@@ -259,7 +260,8 @@ const Index = () => {
               </div>
             </>
           )}
-        </div>
+          </div>
+        </section>
       )}
 
       {/* ── WORLD SELECTOR ── */}
