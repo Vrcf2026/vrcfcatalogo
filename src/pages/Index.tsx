@@ -213,20 +213,8 @@ const Index = () => {
         </div>
       </header>
 
-      {/* ── HERO COMPACTO (pesquisa já está no header) ── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/40 border-b border-border py-4 px-4">
-        <div aria-hidden className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
-        <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-1.5">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold">
-            <Zap className="h-3 w-3" /> Catálogo Online VRCF · Montijo
-          </div>
-          <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">
-            Tecnologia & Segurança
-          </h1>
-          <p className="text-muted-foreground text-xs sm:text-sm">Câmaras, alarmes, redes e IT recondicionado. Peça orçamento online.</p>
-        </div>
-      </section>
+      {/* ── HERO COMPACTO ── */}
+      <HeroRotativo />
 
 
       {/* ── WORLD SELECTOR ── */}
@@ -520,32 +508,161 @@ const Index = () => {
 
 // ── WORLD BUTTON ──────────────────────────────────────────────────────────────
 
+// ── HERO ROTATIVO ─────────────────────────────────────────────────────────────
+const HERO_SLIDES = [
+  {
+    color: "text-orange-500",
+    bg: "from-orange-500/8 to-orange-500/0",
+    badge: "bg-orange-500/10 border-orange-500/20 text-orange-600",
+    label: "Segurança & Redes",
+    title: "Câmaras, alarmes e redes",
+    desc: "Soluções de videovigilância, controlo de acessos e infraestrutura de rede para empresas.",
+  },
+  {
+    color: "text-blue-500",
+    bg: "from-blue-500/8 to-blue-500/0",
+    badge: "bg-blue-500/10 border-blue-500/20 text-blue-600",
+    label: "Informática & Tecnologia",
+    title: "IT recondicionado e novo",
+    desc: "Portáteis, desktops, periféricos e software. Equipamento certificado para a sua empresa.",
+  },
+  {
+    color: "text-green-600",
+    bg: "from-green-600/8 to-green-600/0",
+    badge: "bg-green-600/10 border-green-600/20 text-green-700",
+    label: "Economato",
+    title: "Material de escritório e consumíveis",
+    desc: "Papel, toners, mobiliário e tudo o que o seu escritório precisa no dia-a-dia.",
+  },
+];
+
+function HeroRotativo() {
+  const [idx, setIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setIdx(i => (i + 1) % HERO_SLIDES.length);
+        setVisible(true);
+      }, 300);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
+
+  const s = HERO_SLIDES[idx];
+
+  return (
+    <section className={`relative overflow-hidden bg-gradient-to-br ${s.bg} border-b border-border py-5 px-4 transition-all duration-500`}>
+      <div aria-hidden className="absolute inset-0 opacity-[0.025]"
+        style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
+      <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-2">
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-semibold transition-all duration-300 ${s.badge} ${visible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+          style={{ transition: "opacity 300ms, transform 300ms" }}>
+          <Zap className="h-3 w-3" />
+          Catálogo Online VRCF · Montijo
+        </div>
+        <h1
+          className={`font-heading text-xl sm:text-2xl font-bold tracking-tight transition-all duration-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
+          style={{ transition: "opacity 300ms ease, transform 300ms ease" }}>
+          <span className={s.color}>{s.label}</span>
+        </h1>
+        <p
+          className={`text-muted-foreground text-xs sm:text-sm max-w-md transition-all duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+          style={{ transition: "opacity 300ms ease" }}>
+          {s.desc}
+        </p>
+        {/* Indicadores */}
+        <div className="flex gap-1.5 mt-1">
+          {HERO_SLIDES.map((_, i) => (
+            <button key={i} onClick={() => { setVisible(false); setTimeout(() => { setIdx(i); setVisible(true); }, 300); }}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === idx ? `w-5 ${i === 0 ? "bg-orange-500" : i === 1 ? "bg-blue-500" : "bg-green-600"}` : "w-1.5 bg-border"}`} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── WORLD BUTTON ──────────────────────────────────────────────────────────────
+
 function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
   active: boolean; onClick: () => void; to: string;
   icon: any; label: string; count?: number; color: "orange" | "blue" | "green";
 }) {
   const cm = {
-    orange: { active: "border-primary bg-primary/20 shadow-primary/20 shadow-lg", icon: "bg-primary/25 text-primary", link: "text-primary", dot: "bg-primary" },
-    blue:   { active: "border-blue-500 bg-blue-500/20 shadow-blue-500/20 shadow-lg", icon: "bg-blue-500/25 text-blue-600", link: "text-blue-600", dot: "bg-blue-500" },
-    green:  { active: "border-green-600 bg-green-600/20 shadow-green-600/20 shadow-lg", icon: "bg-green-600/25 text-green-700", link: "text-green-700", dot: "bg-green-600" },
+    orange: {
+      gradient: "from-orange-500 to-orange-600",
+      shadow: "shadow-orange-500/40",
+      glow: "hover:shadow-orange-500/30",
+      iconBg: "bg-white/20",
+      inactive: "border-orange-200 dark:border-orange-900/40 hover:border-orange-300",
+      inactiveIcon: "bg-orange-50 dark:bg-orange-950/40 text-orange-500",
+      inactiveText: "text-orange-600 dark:text-orange-400",
+    },
+    blue: {
+      gradient: "from-blue-500 to-blue-600",
+      shadow: "shadow-blue-500/40",
+      glow: "hover:shadow-blue-500/30",
+      iconBg: "bg-white/20",
+      inactive: "border-blue-200 dark:border-blue-900/40 hover:border-blue-300",
+      inactiveIcon: "bg-blue-50 dark:bg-blue-950/40 text-blue-500",
+      inactiveText: "text-blue-600 dark:text-blue-400",
+    },
+    green: {
+      gradient: "from-green-500 to-green-700",
+      shadow: "shadow-green-600/40",
+      glow: "hover:shadow-green-600/30",
+      iconBg: "bg-white/20",
+      inactive: "border-green-200 dark:border-green-900/40 hover:border-green-300",
+      inactiveIcon: "bg-green-50 dark:bg-green-950/40 text-green-600",
+      inactiveText: "text-green-700 dark:text-green-400",
+    },
   }[color];
+
+  if (active) {
+    return (
+      <div
+        onClick={onClick}
+        className={`relative rounded-2xl cursor-pointer overflow-hidden bg-gradient-to-br ${cm.gradient} shadow-lg ${cm.shadow} transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${cm.glow} select-none`}>
+        {/* Brilho no canto superior */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-white/30" />
+        <div className="absolute top-0 left-0 w-1/2 h-full bg-white/5" />
+        <div className="p-4 relative">
+          <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl mb-3 ${cm.iconBg} backdrop-blur-sm`}>
+            <Icon className="h-6 w-6 text-white" />
+          </div>
+          <p className="font-bold text-sm text-white leading-tight">{label}</p>
+          {count != null && (
+            <p className="text-[10px] text-white/70 mt-0.5">{count.toLocaleString()} produtos</p>
+          )}
+          <Link to={to} onClick={e => e.stopPropagation()}
+            className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-white/90 hover:text-white transition-colors">
+            Explorar <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`relative rounded-2xl border-2 transition-all overflow-hidden cursor-pointer ${active ? cm.active : "border-border bg-card hover:border-muted-foreground/30"}`} onClick={onClick}>
+    <div
+      onClick={onClick}
+      className={`relative rounded-2xl border-2 cursor-pointer overflow-hidden bg-card transition-all duration-200 hover:scale-[1.01] hover:shadow-md select-none ${cm.inactive}`}>
       <div className="p-4">
-        <div className={`inline-flex h-10 w-10 items-center justify-center rounded-xl mb-3 ${cm.icon}`}>
-          <Icon className="h-5 w-5" />
+        <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl mb-3 ${cm.inactiveIcon}`}>
+          <Icon className="h-6 w-6" />
         </div>
         <p className="font-bold text-sm text-foreground leading-tight">{label}</p>
         {count != null && (
-          <p className="text-[10px] text-muted-foreground mt-1">{count.toLocaleString()} produtos</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">{count.toLocaleString()} produtos</p>
         )}
-        <Link to={to}
-          onClick={e => e.stopPropagation()}
-          className={`mt-3 inline-flex items-center gap-1 text-[11px] font-bold transition-colors ${cm.link}`}>
+        <Link to={to} onClick={e => e.stopPropagation()}
+          className={`mt-3 inline-flex items-center gap-1 text-[11px] font-bold transition-colors ${cm.inactiveText}`}>
           Explorar <ArrowRight className="h-3 w-3" />
         </Link>
       </div>
-      {active && <div className={`absolute top-2 right-2 h-2 w-2 rounded-full ${cm.dot}`} />}
     </div>
   );
 }
