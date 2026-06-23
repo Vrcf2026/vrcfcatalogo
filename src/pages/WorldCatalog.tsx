@@ -319,8 +319,9 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     search ? q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`) : q;
 
   const addStock = (q: any) => {
-    if (stockFilter === "in_stock") return q.in("stock_status", ["high", "medium", "low"]);
-    if (stockFilter === "out_stock") return q.in("stock_status", ["on_request", "unknown"]);
+    if (stockFilter === "in_stock") return q.in("stock_status", ["high", "low"]);
+    if (stockFilter === "low")      return q.eq("stock_status", "low");
+    if (stockFilter === "out")      return q.in("stock_status", ["out", "on_request"]);
     return q;
   };
 
@@ -339,7 +340,6 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     },
     staleTime: 2 * 60 * 1000,
     enabled: categoryFilter !== "all",
-    placeholderData: keepPreviousData,
   });
 
   // Contagens de marca: aplica family + type + stock, mas NÃO brandFilter
@@ -357,7 +357,6 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     },
     staleTime: 2 * 60 * 1000,
     enabled: categoryFilter !== "all",
-    placeholderData: keepPreviousData,
   });
 
   // Contagens de tipo: aplica family + brand + stock, mas NÃO typeFilter
@@ -375,7 +374,6 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     },
     staleTime: 2 * 60 * 1000,
     enabled: categoryFilter !== "all",
-    placeholderData: keepPreviousData,
   });
 
   const familyMap = Object.fromEntries(families.map((f: any) => [f.id, f.name]));
