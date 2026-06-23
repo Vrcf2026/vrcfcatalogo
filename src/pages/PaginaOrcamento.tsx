@@ -45,6 +45,26 @@ export default function PaginaOrcamento() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Buscar stock actual + slug para cada produto do carrinho.
+  // Feito aqui (não no CartContext) para garantir dados frescos — o stock
+  // pode ter mudado desde que o item foi adicionado.
+  const itemIds = items.map(i => i.id);
+  const { data: produtosInfo = [] } = useQuery({
+    queryKey: ["orcamento-produtos-info", itemIds.join(",")],
+    queryFn: async () => {
+      if (!itemIds.length) return [];
+      const { data } = await supabase
+        .from("products")
+        .select("id, slug, stock_status")
+        .in("id", itemIds);
+      return data ?? [];
+    },
+    enabled: itemIds.length > 0,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const produtoMap = Object.fromEntries(produtosInfo.map((p: any) => [p.id, p]));
+
   // Pré-preencher dados do perfil se autenticado
   useEffect(() => {
     if (!user) return;
@@ -220,7 +240,18 @@ export default function PaginaOrcamento() {
               </button>
             </div>
             <div className="divide-y divide-border">
-              {items.map(item => (
+              {items.map(item => {
+                const info = produtoMap[item.id];
+                const slug = info?.slug;
+                const stockStatus = info?.stock_status;
+                const stockBadge = stockStatus === "on_request"
+                  ? { label: "Por encomenda", cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" }
+                  : stockStatus === "low"
+                  ? { label: "Últimas unidades", cls: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" }
+                  : (stockStatus === "unknown" || !stockStatus)
+                  ? { label: "Disponibilidade a confirmar", cls: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400" }
+                  : null;
+                return (
                 <div key={item.id} className="flex gap-3 p-4">
                   {item.imageUrl ? (
                     <img
@@ -233,9 +264,26 @@ export default function PaginaOrcamento() {
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm leading-snug line-clamp-2">{item.name}</p>
+                    {slug ? (
+                      <Link
+                        to={`/produto/${slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-sm leading-snug line-clamp-2 hover:text-primary hover:underline transition-colors"
+                      >
+                        {item.name}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-sm leading-snug line-clamp-2">{item.name}</p>
+                    )}
                     {item.category && (
                       <span className="text-[10px] uppercase tracking-wider text-primary font-bold">{item.category}</span>
+                    )}
+                    {stockBadge && (
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full mt-1 mr-1 ${stockBadge.cls}`}>
+                        {stockStatus === "on_request" && <Clock className="h-2.5 w-2.5" />}
+                        {stockBadge.label}
+                      </span>
                     )}
                     {item.price != null && (
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -276,7 +324,8 @@ export default function PaginaOrcamento() {
                     </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
