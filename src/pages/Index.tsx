@@ -188,7 +188,7 @@ const Index = () => {
 
       {/* ── HEADER ── */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-        <div className="flex items-center gap-2 px-3 py-2 max-w-screen-xl mx-auto">
+        <div className="flex items-center gap-2 px-3 py-2 max-w-[1600px] mx-auto">
           <Link to="/" className="shrink-0">
             <img src={vrcfLogo} alt="VRCF" className="h-8 sm:h-10 w-auto" />
           </Link>
@@ -263,7 +263,7 @@ const Index = () => {
       )}
 
       {/* ── WORLD SELECTOR ── */}
-      <section className="px-3 pt-4 pb-2 max-w-screen-xl mx-auto w-full">
+      <section className="px-3 pt-4 pb-2 max-w-[1600px] mx-auto w-full">
         <div className="grid grid-cols-3 gap-3">
           <WorldBtn
             active={activeMundo === "seguranca"}
@@ -297,7 +297,7 @@ const Index = () => {
 
       {/* ── CATEGORIES STRIP ── */}
       {cats.length > 0 && (
-        <section className="px-3 pb-3 max-w-screen-xl mx-auto w-full">
+        <section className="px-3 pb-3 max-w-[1600px] mx-auto w-full">
           <div className="flex items-center justify-between mb-2">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
               <span className={`inline-block h-2 w-2 rounded-full ${activeMundo === "seguranca" ? "bg-primary" : activeMundo === "escritorio" ? "bg-blue-500" : "bg-green-600"}`} />
@@ -327,7 +327,7 @@ const Index = () => {
 
       {/* ── FEATURED PRODUCTS ── */}
       {featured.data && featured.data.length > 0 && (
-        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+        <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <Star className="h-4 w-4 text-primary fill-primary" /> Em destaque
@@ -357,7 +357,7 @@ const Index = () => {
 
       {/* ── TRUST STRIP ── */}
       <section className="border-t border-border py-5 px-4">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-screen-xl mx-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[1600px] mx-auto">
           {[
             { icon: "🛠️", title: "Instalação disponível", desc: "Serviço opcional, sob consulta" },
             { icon: "📋", title: "Orçamento gratuito", desc: "Resposta rápida e sem compromisso" },
@@ -379,7 +379,7 @@ const Index = () => {
       {brands.data && brands.data.length > 0 && (
         <section className="border-t border-border bg-muted/30 py-5 px-3">
           <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Marcas disponíveis</p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-screen-xl mx-auto">
+          <div className="flex flex-wrap justify-center gap-2 max-w-[1600px] mx-auto">
             {brands.data.map((b: any) => (
               <Link key={b.id} to={`/pesquisa?marca=${encodeURIComponent(b.name)}`}
                 className="px-3.5 py-2 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground">
@@ -425,7 +425,7 @@ const Index = () => {
 
       {/* ── VISTOS RECENTEMENTE (primeiro para utilizadores recorrentes) ── */}
       {recentlyViewed.length > 0 && (
-        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+        <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <History className="h-4 w-4 text-muted-foreground" /> Vistos Recentemente
@@ -451,7 +451,7 @@ const Index = () => {
 
       {/* ── MAIS VISTOS — linha horizontal ── */}
       {maisVistos.data && maisVistos.data.length > 0 && (
-        <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+        <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
           <div className="flex items-center mb-3">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
@@ -477,7 +477,7 @@ const Index = () => {
       )}
 
       {/* ── INCENTIVO CONTA — 1 linha discreta ── */}
-      <div className="px-3 pb-4 max-w-screen-xl mx-auto w-full text-center text-[11px] text-muted-foreground">
+      <div className="px-3 pb-4 max-w-[1600px] mx-auto w-full text-center text-[11px] text-muted-foreground">
         <Link to="/registo" className="hover:text-primary transition-colors">
           Registe-se gratuitamente para acompanhar os seus orçamentos e histórico de encomendas →
         </Link>
@@ -485,7 +485,7 @@ const Index = () => {
 
       {/* ── HOW IT WORKS (linha compacta) ── */}
       <section className="border-t border-border bg-muted/30 py-4 px-4">
-        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs">
+        <div className="max-w-[1600px] mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-xs">
           <span className="font-semibold text-foreground">Como funciona:</span>
           {[
             { n: "1", icon: Search, t: "Explore" },
