@@ -525,9 +525,9 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
   icon: any; label: string; count?: number; color: "orange" | "blue" | "green";
 }) {
   const cm = {
-    orange: { active: "border-primary bg-primary/[0.08] shadow-primary/15 shadow-md", icon: "bg-primary/15 text-primary", link: "text-primary", dot: "bg-primary" },
-    blue:   { active: "border-blue-500 bg-blue-500/[0.08] shadow-blue-500/15 shadow-md", icon: "bg-blue-500/15 text-blue-500", link: "text-blue-500", dot: "bg-blue-500" },
-    green:  { active: "border-green-600 bg-green-600/[0.08] shadow-green-600/15 shadow-md", icon: "bg-green-600/15 text-green-600", link: "text-green-600", dot: "bg-green-600" },
+    orange: { active: "border-primary bg-primary/20 shadow-primary/20 shadow-lg", icon: "bg-primary/25 text-primary", link: "text-primary", dot: "bg-primary" },
+    blue:   { active: "border-blue-500 bg-blue-500/20 shadow-blue-500/20 shadow-lg", icon: "bg-blue-500/25 text-blue-600", link: "text-blue-600", dot: "bg-blue-500" },
+    green:  { active: "border-green-600 bg-green-600/20 shadow-green-600/20 shadow-lg", icon: "bg-green-600/25 text-green-700", link: "text-green-700", dot: "bg-green-600" },
   }[color];
   return (
     <div className={`relative rounded-2xl border-2 transition-all overflow-hidden cursor-pointer ${active ? cm.active : "border-border bg-card hover:border-muted-foreground/30"}`} onClick={onClick}>
