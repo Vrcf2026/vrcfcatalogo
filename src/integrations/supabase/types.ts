@@ -807,8 +807,11 @@ export type Database = {
           customer_tax_id: string | null
           id: string
           notes: string | null
+          prazo_entrega: string | null
           quote_number: string
+          sent_final_at: string | null
           shipping_address: string | null
+          shipping_total: number | null
           status: Database["public"]["Enums"]["quote_status"]
           subtotal: number
           total: number
@@ -825,8 +828,11 @@ export type Database = {
           customer_tax_id?: string | null
           id?: string
           notes?: string | null
+          prazo_entrega?: string | null
           quote_number?: string
+          sent_final_at?: string | null
           shipping_address?: string | null
+          shipping_total?: number | null
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
           total?: number
@@ -843,8 +849,11 @@ export type Database = {
           customer_tax_id?: string | null
           id?: string
           notes?: string | null
+          prazo_entrega?: string | null
           quote_number?: string
+          sent_final_at?: string | null
           shipping_address?: string | null
+          shipping_total?: number | null
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
           total?: number
@@ -1110,8 +1119,12 @@ export type Database = {
           image_url: string
           mundo: string
           name: string
+          price: number
           product_id: string
+          sku: string
+          slug: string
           stock_status: string
+          weight: number
         }[]
       }
       get_users_with_roles: {
