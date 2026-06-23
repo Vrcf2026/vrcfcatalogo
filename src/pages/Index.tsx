@@ -7,7 +7,6 @@ import {
   Wifi, Camera, Lock, Cpu, Printer, Tablet, ShoppingBag,
   TrendingUp, History,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
@@ -94,21 +93,6 @@ const useBanners = () =>
   });
 
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
-
-// Hook: Novidades (últimos produtos importados, qualquer mundo)
-const useNovidades = () =>
-  useQuery({
-    queryKey: ["hp-novidades"],
-    queryFn: async () => {
-      const { data } = await supabase.from("products").select(
-        "id,name,slug,price,image_url,stock_status,category,brand,mundo,min_sale_qty,short_description,sku"
-      ).eq("include_in_catalog", true)
-        .order("created_at", { ascending: false })
-        .limit(8);
-      return data ?? [];
-    },
-    staleTime: 5 * 60 * 1000,
-  });
 
 // Hook: Mais Vistos (via analytics de cliques)
 const useMaisVistos = () =>
