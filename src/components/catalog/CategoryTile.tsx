@@ -17,8 +17,8 @@ export function CategoryTile({ active, onClick, icon: Icon, color, bg, label }: 
           : "border-border hover:border-primary/40 bg-card"
       }`}
     >
-      <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${bg}`}>
-        <Icon className={`h-4.5 w-4.5 ${color}`} />
+      <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${bg}`}>
+        <Icon className={`h-5 w-5 ${color}`} />
       </div>
       <span className="text-[10px] sm:text-[11px] font-semibold text-foreground text-center leading-tight line-clamp-2">
         {label}
