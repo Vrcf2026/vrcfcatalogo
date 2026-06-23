@@ -331,11 +331,21 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const familyCount = new Map<string, number>();
   const typeCount = new Map<string, number>();
   const brandCount = new Map<string, number>();
+
+  // Para o cascade das marcas: só contar marcas cujos produtos pertencem
+  // às famílias visíveis/seleccionadas — nunca mostrar marca sem produtos.
+  const activeFamilyIds = familyFilter.length > 0
+    ? new Set(familyFilter)
+    : null; // null = todas as famílias
+
   for (const r of facetRows) {
     if (r.family_id) familyCount.set(r.family_id, (familyCount.get(r.family_id) ?? 0) + 1);
-    if (r.type_id)   typeCount.set(r.type_id,     (typeCount.get(r.type_id)   ?? 0) + 1);
-    const bId = r.brand_id ?? brandIdByName[r.brand];
-    if (bId) brandCount.set(bId, (brandCount.get(bId) ?? 0) + 1);
+    if (r.type_id)   typeCount.set(r.type_id, (typeCount.get(r.type_id) ?? 0) + 1);
+    // Só conta a marca se o produto pertence a uma família activa (ou se não há filtro de família)
+    if (!activeFamilyIds || activeFamilyIds.has(r.family_id)) {
+      const bId = r.brand_id ?? brandIdByName[r.brand];
+      if (bId) brandCount.set(bId, (brandCount.get(bId) ?? 0) + 1);
+    }
   }
 
   const familyOptions = families
@@ -344,15 +354,18 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     .filter((o: any) => o.count > 0 || familyFilter.includes(o.id))
     .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
 
+  // Tipos: só mostrar tipos que têm produtos nas famílias activas
   const allowedFamilyIds = familyFilter.length > 0
     ? new Set(familyFilter)
     : new Set(familyOptions.map((o: any) => o.id));
+
   const typeOptions = types
     .filter((t: any) => allowedFamilyIds.has(t.family_id))
     .map((t: any) => ({ id: t.id, name: t.name, count: typeCount.get(t.id) ?? 0 }))
     .filter((o: any) => o.count > 0 || typeFilter.includes(o.id))
     .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
 
+  // Marcas: só mostrar marcas com count > 0 (brandCount já foi filtrado pela família activa)
   const brandOptions = brands
     .map((b: any) => ({ id: b.id, name: b.name, count: brandCount.get(b.id) ?? 0 }))
     .filter((o: any) => o.count > 0 || brandFilter.includes(o.id))
