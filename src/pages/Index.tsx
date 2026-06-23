@@ -231,7 +231,7 @@ const Index = () => {
 
       {/* ── BANNERS (adicional, abaixo do título) ── */}
       {banners.data && banners.data.length > 0 && (
-        <div className="relative overflow-hidden bg-black min-h-[110px]" style={{ aspectRatio: "1200 / 300" }}>
+        <div className="relative overflow-hidden bg-black min-h-[110px]" style={{ aspectRatio: "1200 / 300", maxHeight: "clamp(220px, 28vw, 340px)" }}>
           {banners.data.map((b: any, i: number) => (
             <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
               {b.link
