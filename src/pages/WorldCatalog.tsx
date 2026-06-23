@@ -489,12 +489,16 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         </div>
       </header>
 
-      {/* Hero compacto */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background to-muted/40 border-b border-border py-4 px-4">
+      {/* Hero compacto — cor do mundo como âncora visual */}
+      <section className={`relative overflow-hidden border-b border-border py-5 px-4 ${
+        mundo === "seguranca"  ? "bg-gradient-to-br from-orange-50 via-orange-50/60 to-background dark:from-orange-950/30 dark:via-orange-950/10 dark:to-background" :
+        mundo === "economato"  ? "bg-gradient-to-br from-green-50 via-green-50/60 to-background dark:from-green-950/30 dark:via-green-950/10 dark:to-background" :
+                                 "bg-gradient-to-br from-blue-50 via-blue-50/60 to-background dark:from-blue-950/30 dark:via-blue-950/10 dark:to-background"
+      }`}>
         <div aria-hidden className="absolute inset-0 opacity-[0.03]"
           style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
         <div className="relative max-w-2xl mx-auto text-center flex flex-col items-center gap-1.5">
-          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${mundo === "seguranca" ? "bg-primary/10 border-primary/20 text-primary" : mundo === "economato" ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-blue-500/10 border-blue-500/20 text-blue-500"}`}>
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[11px] font-semibold ${mundo === "seguranca" ? "bg-primary/15 border-primary/30 text-primary" : mundo === "economato" ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600" : "bg-blue-500/15 border-blue-500/30 text-blue-600"}`}>
             <Icon className="h-3 w-3" /> {mundo === "seguranca" ? "Segurança & Redes" : mundo === "economato" ? "Economato" : "Informática & Tecnologia"}
           </div>
           <h1 className="font-heading text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
@@ -502,10 +506,38 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         </div>
       </section>
 
-      {/* Banners deste mundo (ou transversais, mundo="todos") */}
+      {/* Categories strip — antes do banner para orientar imediatamente */}
+      {categories.length > 0 && (
+        <section className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Categorias</p>
+            <div className="hidden sm:flex gap-1">
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+          <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth">
+            <CategoryTile active={categoryFilter === "all"} onClick={() => setCategory("all")}
+              icon={LayoutGrid} color="text-primary" bg="bg-primary/10" label="Todos" />
+            {categories.map((cat: any) => {
+              const meta = getCategoryMeta(cat.name);
+              return (
+                <CategoryTile key={cat.id} active={categoryFilter === cat.name} onClick={() => setCategory(cat.name)}
+                  icon={meta.icon} color={meta.color} bg={meta.bg} label={cat.name} />
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Banner — depois das categorias */}
       {banners.length > 0 && (
         <section className="px-3 py-3 max-w-[1600px] mx-auto w-full">
-          <div className="relative overflow-hidden bg-black w-full aspect-[4/1]">
+          <div className="relative overflow-hidden bg-black w-full" style={{ height: "clamp(160px, 25vw, 280px)" }}>
           {banners.map((b: any, i: number) => (
             <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
               {b.link
@@ -532,34 +564,6 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
               </div>
             </>
           )}
-          </div>
-        </section>
-      )}
-
-      {/* Categories strip */}
-      {categories.length > 0 && (
-        <section className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Categorias</p>
-            <div className="hidden sm:flex gap-1">
-              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </div>
-          <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth">
-            <CategoryTile active={categoryFilter === "all"} onClick={() => setCategory("all")}
-              icon={LayoutGrid} color="text-primary" bg="bg-primary/10" label="Todos" />
-            {categories.map((cat: any) => {
-              const meta = getCategoryMeta(cat.name);
-              return (
-                <CategoryTile key={cat.id} active={categoryFilter === cat.name} onClick={() => setCategory(cat.name)}
-                  icon={meta.icon} color={meta.color} bg={meta.bg} label={cat.name} />
-              );
-            })}
           </div>
         </section>
       )}
