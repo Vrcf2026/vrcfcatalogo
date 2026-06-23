@@ -468,13 +468,10 @@ const Index = () => {
       {/* ── MAIS VISTOS — linha horizontal ── */}
       {maisVistos.data && maisVistos.data.length > 0 && (
         <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center mb-3">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
             </h2>
-            <Link to="/pesquisa" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
-              Ver todos <ArrowRight className="h-3 w-3" />
-            </Link>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {maisVistos.data.slice(0, 6).map((p: any) => (

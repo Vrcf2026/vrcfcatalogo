@@ -1,0 +1,405 @@
+diff --git a/scripts/visiotech_import.py b/scripts/visiotech_import.py
+index d8c46ce..c16fde8 100644
+--- a/scripts/visiotech_import.py
++++ b/scripts/visiotech_import.py
+@@ -469,6 +469,25 @@ def supabase_upsert(produtos: list, fornecedor: str = "visiotech"):
+     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
+     total = len(produtos)
+     inseridos = 0
++
++    # ── Deduplicação de slugs antes de enviar ──────────────────────────────
++    # Se dois produtos do mesmo lote gerarem o mesmo slug (marca+sku normalizados
++    # podem colidir), o upsert rebenta com duplicate key em products_slug_key e
++    # bloqueia o lote inteiro. Aqui garantimos unicidade dentro do lote acrescentando
++    # sufixo numérico aos slugs duplicados (ex: "hikvision-ds-2cd" → "hikvision-ds-2cd-2").
++    slugs_vistos: dict[str, int] = {}
++    for p in produtos:
++        slug_original = p.get("slug", "")
++        if not slug_original:
++            continue
++        if slug_original in slugs_vistos:
++            slugs_vistos[slug_original] += 1
++            p["slug"] = f"{slug_original}-{slugs_vistos[slug_original]}"
++            print(f"  ⚠ Slug duplicado no lote: {slug_original!r} → {p['slug']!r} (SKU {p.get('sku','')})")
++        else:
++            slugs_vistos[slug_original] = 1
++    # ──────────────────────────────────────────────────────────────────────
++
+     for i in range(0, total, 200):
+         batch = produtos[i:i+200]
+         resp = requests.post(IMPORT_URL, headers=headers,
+diff --git a/src/pages/Admin.tsx b/src/pages/Admin.tsx
+index 2a3a00d..ca15771 100644
+--- a/src/pages/Admin.tsx
++++ b/src/pages/Admin.tsx
+@@ -99,12 +99,6 @@ const Admin = () => {
+             </div>
+           </div>
+           <div className="flex items-center gap-2">
+-            <ManageCategoriesDialog categories={dbCategories} />
+-            <ManageFamiliesDialog families={families} categories={categoryNames} />
+-            <ManageBrandsDialog brands={brands} />
+-            <ManageTypesDialog types={types} families={families as any} />
+-            <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
+-            <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
+             <DarkModeToggle />
+             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
+               <LogOut className="h-4 w-4" />
+@@ -133,6 +127,14 @@ const Admin = () => {
+           </TabsList>
+ 
+           <TabsContent value="produtos" className="mt-4">
++            <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-border">
++              <ManageCategoriesDialog categories={dbCategories} />
++              <ManageFamiliesDialog families={families} categories={categoryNames} />
++              <ManageBrandsDialog brands={brands} />
++              <ManageTypesDialog types={types} families={families as any} />
++              <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
++              <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
++            </div>
+             <Suspense fallback={<TabFallback />}>
+               <AdminProductsTab
+                 families={families}
+diff --git a/src/pages/Index.tsx b/src/pages/Index.tsx
+index e692a5b..97ede0c 100644
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -468,13 +468,10 @@ const Index = () => {
+       {/* ── MAIS VISTOS — linha horizontal ── */}
+       {maisVistos.data && maisVistos.data.length > 0 && (
+         <section className="px-3 pb-5 max-w-screen-xl mx-auto w-full">
+-          <div className="flex items-center justify-between mb-3">
++          <div className="flex items-center mb-3">
+             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+               <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
+             </h2>
+-            <Link to="/pesquisa" className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+-              Ver todos <ArrowRight className="h-3 w-3" />
+-            </Link>
+           </div>
+           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+             {maisVistos.data.slice(0, 6).map((p: any) => (
+diff --git a/src/pages/Pesquisa.tsx b/src/pages/Pesquisa.tsx
+index caae0ce..e804225 100644
+--- a/src/pages/Pesquisa.tsx
++++ b/src/pages/Pesquisa.tsx
+@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
+ import { Link, useSearchParams, useNavigate } from "react-router-dom";
+ import { useEffect, useState, useMemo } from "react";
+ import { Helmet } from "react-helmet-async";
+-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag } from "lucide-react";
++import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { supabase } from "@/integrations/supabase/client";
+@@ -200,20 +200,21 @@ const Pesquisa = () => {
+             </p>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+               {products.map((product: any) => (
+-                <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
+-                  <ProductCard
+-                    id={product.id}
+-                    name={product.name}
+-                    description={product.short_description ?? product.description}
+-                    category={product.category}
+-                    price={product.price}
+-                    imageUrl={product.image_url}
+-                    images={[]}
+-                    familyName={null}
+-                    featured={product.featured}
+-                    minSaleQty={product.min_sale_qty ?? null}
+-                  />
+-                </Link>
++                <ProductCard
++                  key={product.id}
++                  id={product.id}
++                  name={product.name}
++                  description={product.short_description ?? product.description}
++                  category={product.category}
++                  price={product.price}
++                  imageUrl={product.image_url}
++                  images={[]}
++                  familyName={null}
++                  featured={product.featured}
++                  stockStatus={product.stock_status}
++                  minSaleQty={product.min_sale_qty ?? null}
++                  onClick={() => navigate(`/produto/${product.slug ?? product.id}`)}
++                />
+               ))}
+             </div>
+             {totalPages > 1 && (
+@@ -229,10 +230,23 @@ const Pesquisa = () => {
+             )}
+           </>
+         ) : (
+-          <div className="text-center py-20">
++          <div className="text-center py-16 space-y-4">
+             <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
+-            <h3 className="mt-4 font-heading text-lg font-semibold">Sem resultados para "{search}"</h3>
+-            <p className="mt-1 text-sm text-muted-foreground">Tente outras palavras-chave ou referência.</p>
++            <h3 className="font-heading text-lg font-semibold">Sem resultados para "{search}"</h3>
++            <p className="text-sm text-muted-foreground">Tente outras palavras-chave ou referência SKU.</p>
++            <div className="mt-6 inline-flex flex-col items-center gap-3 p-5 rounded-2xl border border-border bg-card max-w-sm mx-auto">
++              <p className="text-sm font-medium">Não encontrou o que procura?</p>
++              <p className="text-xs text-muted-foreground text-center">Podemos tratar de encontrar o produto por si. Fale connosco directamente.</p>
++              <a
++                href={`https://wa.me/351911564243?text=Ol%C3%A1%20VRCF%2C%20n%C3%A3o%20encontrei%20o%20produto%3A%20${encodeURIComponent(search)}`}
++                target="_blank"
++                rel="noopener noreferrer"
++                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
++              >
++                <MessageCircle className="h-4 w-4" />
++                Falar por WhatsApp
++              </a>
++            </div>
+           </div>
+         )}
+       </section>
+diff --git a/src/pages/gestao/Orcamentos.tsx b/src/pages/gestao/Orcamentos.tsx
+index 57f91d3..c0b5dbf 100644
+--- a/src/pages/gestao/Orcamentos.tsx
++++ b/src/pages/gestao/Orcamentos.tsx
+@@ -212,6 +212,10 @@ function OrcamentoDetalhe() {
+   const handleSave = async () => {
+     if (!id) return;
+     setSaving(true);
++
++    // Guardar o estado anterior para saber se mudou
++    const estadoAnterior = data?.quote?.status;
++
+     const { error } = await supabase.from("quotes").update({
+       status: status as any,
+       notes: notes.trim() || null,
+@@ -222,6 +226,22 @@ function OrcamentoDetalhe() {
+     setSaving(false);
+     if (error) { toast.error(error.message); return; }
+     toast.success("Orçamento atualizado.");
++
++    // Notificar cliente se o estado mudou para um estado relevante.
++    // (accepted é tratado pelo send-quote-final; in_review é transição interna)
++    if (status !== estadoAnterior && ["rejected", "cancelled", "completed"].includes(status)) {
++      supabase.functions
++        .invoke("send-quote-status-update", { body: { quoteId: id, newStatus: status } })
++        .then(({ error: emailErr }) => {
++          if (emailErr) {
++            console.warn("[Orçamento] email notification failed:", emailErr);
++            toast.warning("Estado guardado, mas falhou o envio do email ao cliente.");
++          } else {
++            toast.info("Cliente notificado por email.");
++          }
++        });
++    }
++
+     qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+     qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
+     qc.invalidateQueries({ queryKey: ["gestao-stats"] });
+diff --git a/supabase/functions/_shared/transactional-email-templates/quote-status-update.tsx b/supabase/functions/_shared/transactional-email-templates/quote-status-update.tsx
+new file mode 100644
+index 0000000..6706e6d
+--- /dev/null
++++ b/supabase/functions/_shared/transactional-email-templates/quote-status-update.tsx
+@@ -0,0 +1,81 @@
++import * as React from 'npm:react@18.3.1'
++import {
++  Body, Container, Head, Heading, Html, Preview, Section, Text, Hr,
++} from 'npm:@react-email/components@0.0.22'
++import type { TemplateEntry } from './registry.ts'
++
++interface Props {
++  customerName?: string
++  quoteNumber?: string
++  statusLabel?: string
++  notes?: string
++}
++
++const STATUS_COLOR: Record<string, string> = {
++  in_review:  '#f59e0b',
++  accepted:   '#16a34a',
++  rejected:   '#dc2626',
++  cancelled:  '#6b7280',
++  completed:  '#16a34a',
++}
++
++const QuoteStatusUpdateEmail = ({
++  customerName = '',
++  quoteNumber = '',
++  statusLabel = 'Atualizado',
++  notes = '',
++}: Props) => (
++  <Html lang="pt" dir="ltr">
++    <Head />
++    <Preview>Atualização do seu pedido de orçamento {quoteNumber} - VRCF</Preview>
++    <Body style={main}>
++      <Container style={container}>
++        <Heading style={h1}>📋 Atualização do seu Orçamento</Heading>
++        <Text style={text}>Olá {customerName || 'cliente'},</Text>
++        <Text style={text}>
++          O estado do seu pedido de orçamento <strong>{quoteNumber}</strong> foi atualizado.
++        </Text>
++        <Section style={badgeBox}>
++          <Text style={badge}>{statusLabel}</Text>
++        </Section>
++        {notes ? (
++          <>
++            <Heading as="h3" style={h3}>Nota da equipa</Heading>
++            <Text style={text}>{notes}</Text>
++          </>
++        ) : null}
++        <Hr style={hr} />
++        <Text style={text}>
++          Para qualquer dúvida, contacte-nos por email ou WhatsApp.
++        </Text>
++        <Hr style={hr} />
++        <Text style={footer}>VRCF - VALTER ROBERTO CRUZ FRANCISCO UNI. LDA</Text>
++        <Text style={footer}>📞 +351 911 564 243 · ✉️ geral@vrcf.pt</Text>
++        <Text style={footer}>📍 Rua Luis Calado Nunes 15 LJB, 2870-350 Montijo</Text>
++      </Container>
++    </Body>
++  </Html>
++)
++
++export const template = {
++  component: QuoteStatusUpdateEmail,
++  subject: (d: Record<string, any>) =>
++    `Atualização do orçamento ${(d?.quoteNumber || '').toString()} - VRCF`,
++  displayName: 'Atualização de estado de orçamento (cliente)',
++  previewData: {
++    customerName: 'João Silva',
++    quoteNumber: 'ORC-2026-0042',
++    statusLabel: 'Aceite',
++    notes: 'Orçamento aprovado. Aguardamos confirmação de encomenda.',
++  },
++} satisfies TemplateEntry
++
++const main  = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
++const container = { padding: '24px', maxWidth: '600px' }
++const h1 = { fontSize: '22px', color: '#1a1a2e', borderBottom: '2px solid #f97316', paddingBottom: '10px', margin: '0 0 20px' }
++const h3 = { fontSize: '15px', color: '#1a1a2e', margin: '20px 0 8px' }
++const text = { fontSize: '14px', color: '#333', lineHeight: '1.5', margin: '0 0 12px' }
++const badgeBox = { textAlign: 'center' as const, margin: '20px 0' }
++const badge = { display: 'inline-block', padding: '8px 20px', borderRadius: '20px', background: '#f97316', color: '#fff', fontWeight: 'bold', fontSize: '14px', margin: '0' }
++const hr = { borderColor: '#eee', margin: '20px 0' }
++const footer = { fontSize: '11px', color: '#999', margin: '4px 0' }
+diff --git a/supabase/functions/_shared/transactional-email-templates/registry.ts b/supabase/functions/_shared/transactional-email-templates/registry.ts
+index 158252c..482705d 100644
+--- a/supabase/functions/_shared/transactional-email-templates/registry.ts
++++ b/supabase/functions/_shared/transactional-email-templates/registry.ts
+@@ -12,6 +12,7 @@ export interface TemplateEntry {
+ import { template as quoteRequestAdmin } from './quote-request-admin.tsx'
+ import { template as quoteRequestCustomer } from './quote-request-customer.tsx'
+ import { template as quoteFinalCustomer } from './quote-final-customer.tsx'
++import { template as quoteStatusUpdate } from './quote-status-update.tsx'
+ import { template as suggestionAdmin } from './suggestion-admin.tsx'
+ import { template as suggestionCustomer } from './suggestion-customer.tsx'
+ import { template as rmaStatusUpdate } from './rma-status-update.tsx'
+@@ -20,6 +21,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
+   'quote-request-admin': quoteRequestAdmin,
+   'quote-request-customer': quoteRequestCustomer,
+   'quote-final-customer': quoteFinalCustomer,
++  'quote-status-update': quoteStatusUpdate,
+   'suggestion-admin': suggestionAdmin,
+   'suggestion-customer': suggestionCustomer,
+   'rma-status-update': rmaStatusUpdate,
+diff --git a/supabase/functions/send-quote-status-update/index.ts b/supabase/functions/send-quote-status-update/index.ts
+new file mode 100644
+index 0000000..dadf7c5
+--- /dev/null
++++ b/supabase/functions/send-quote-status-update/index.ts
+@@ -0,0 +1,97 @@
++import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
++import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
++
++const corsHeaders = {
++  "Access-Control-Allow-Origin": "*",
++  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
++};
++
++// Estados que justificam notificar o cliente.
++// "in_review" não notifica — é uma transição interna.
++// "accepted" também não — o "send-quote-final" já envia o orçamento completo.
++const NOTIFY_STATUSES: Record<string, string> = {
++  rejected:  "Rejeitado",
++  cancelled: "Cancelado",
++  completed: "Concluído",
++};
++
++async function invokeTransactionalEmail(payload: Record<string, unknown>) {
++  const supabaseUrl = Deno.env.get("SUPABASE_URL");
++  const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
++  if (!supabaseUrl || !serviceKey) throw new Error("Configuração de email incompleta");
++
++  const response = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
++    method: "POST",
++    headers: {
++      "Content-Type": "application/json",
++      apikey: serviceKey,
++      Authorization: `Bearer ${serviceKey}`,
++    },
++    body: JSON.stringify(payload),
++  });
++  if (!response.ok) {
++    const data = await response.json().catch(() => null);
++    throw new Error(data?.error ?? `Falha ao enviar email (${response.status})`);
++  }
++  return response.json().catch(() => null);
++}
++
++serve(async (req) => {
++  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
++
++  try {
++    const { quoteId, newStatus } = await req.json();
++    if (!quoteId || !newStatus) {
++      return new Response(JSON.stringify({ error: "quoteId e newStatus obrigatórios" }), {
++        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const statusLabel = NOTIFY_STATUSES[newStatus];
++    if (!statusLabel) {
++      // Estado não requer notificação — retorna sem erro.
++      return new Response(JSON.stringify({ skipped: true, reason: `Status "${newStatus}" não notifica cliente` }), {
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    const supabase = createClient(
++      Deno.env.get("SUPABASE_URL")!,
++      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
++    );
++
++    const { data: quote, error } = await supabase
++      .from("quotes")
++      .select("quote_number, customer_name, customer_email, notes")
++      .eq("id", quoteId)
++      .maybeSingle();
++
++    if (error || !quote) throw new Error("Orçamento não encontrado");
++    if (!quote.customer_email) {
++      return new Response(JSON.stringify({ skipped: true, reason: "sem email do cliente" }), {
++        headers: { ...corsHeaders, "Content-Type": "application/json" },
++      });
++    }
++
++    await invokeTransactionalEmail({
++      templateName: "quote-status-update",
++      recipientEmail: quote.customer_email,
++      idempotencyKey: `quote-status-${quoteId}-${newStatus}-${Date.now()}`,
++      templateData: {
++        customerName: quote.customer_name ?? "",
++        quoteNumber:  quote.quote_number  ?? "",
++        statusLabel,
++        notes: quote.notes ?? "",
++      },
++    });
++
++    return new Response(JSON.stringify({ success: true }), {
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  } catch (e: any) {
++    console.error("[send-quote-status-update] error:", e);
++    return new Response(JSON.stringify({ error: String(e?.message ?? e) }), {
++      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
++    });
++  }
++});

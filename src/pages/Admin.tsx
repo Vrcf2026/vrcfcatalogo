@@ -99,12 +99,6 @@ const Admin = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ManageCategoriesDialog categories={dbCategories} />
-            <ManageFamiliesDialog families={families} categories={categoryNames} />
-            <ManageBrandsDialog brands={brands} />
-            <ManageTypesDialog types={types} families={families as any} />
-            <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
-            <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
             <DarkModeToggle />
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair">
               <LogOut className="h-4 w-4" />
@@ -133,6 +127,14 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="produtos" className="mt-4">
+            <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-border">
+              <ManageCategoriesDialog categories={dbCategories} />
+              <ManageFamiliesDialog families={families} categories={categoryNames} />
+              <ManageBrandsDialog brands={brands} />
+              <ManageTypesDialog types={types} families={families as any} />
+              <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
+              <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
+            </div>
             <Suspense fallback={<TabFallback />}>
               <AdminProductsTab
                 families={families}

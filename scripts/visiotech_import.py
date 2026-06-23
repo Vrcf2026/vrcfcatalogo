@@ -469,6 +469,25 @@ def supabase_upsert(produtos: list, fornecedor: str = "visiotech"):
     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
     total = len(produtos)
     inseridos = 0
+
+    # ── Deduplicação de slugs antes de enviar ──────────────────────────────
+    # Se dois produtos do mesmo lote gerarem o mesmo slug (marca+sku normalizados
+    # podem colidir), o upsert rebenta com duplicate key em products_slug_key e
+    # bloqueia o lote inteiro. Aqui garantimos unicidade dentro do lote acrescentando
+    # sufixo numérico aos slugs duplicados (ex: "hikvision-ds-2cd" → "hikvision-ds-2cd-2").
+    slugs_vistos: dict[str, int] = {}
+    for p in produtos:
+        slug_original = p.get("slug", "")
+        if not slug_original:
+            continue
+        if slug_original in slugs_vistos:
+            slugs_vistos[slug_original] += 1
+            p["slug"] = f"{slug_original}-{slugs_vistos[slug_original]}"
+            print(f"  ⚠ Slug duplicado no lote: {slug_original!r} → {p['slug']!r} (SKU {p.get('sku','')})")
+        else:
+            slugs_vistos[slug_original] = 1
+    # ──────────────────────────────────────────────────────────────────────
+
     for i in range(0, total, 200):
         batch = produtos[i:i+200]
         resp = requests.post(IMPORT_URL, headers=headers,

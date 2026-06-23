@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag } from "lucide-react";
+import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -200,20 +200,21 @@ const Pesquisa = () => {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {products.map((product: any) => (
-                <Link key={product.id} to={`/produto/${product.slug ?? product.id}`} className="contents">
-                  <ProductCard
-                    id={product.id}
-                    name={product.name}
-                    description={product.short_description ?? product.description}
-                    category={product.category}
-                    price={product.price}
-                    imageUrl={product.image_url}
-                    images={[]}
-                    familyName={null}
-                    featured={product.featured}
-                    minSaleQty={product.min_sale_qty ?? null}
-                  />
-                </Link>
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  description={product.short_description ?? product.description}
+                  category={product.category}
+                  price={product.price}
+                  imageUrl={product.image_url}
+                  images={[]}
+                  familyName={null}
+                  featured={product.featured}
+                  stockStatus={product.stock_status}
+                  minSaleQty={product.min_sale_qty ?? null}
+                  onClick={() => navigate(`/produto/${product.slug ?? product.id}`)}
+                />
               ))}
             </div>
             {totalPages > 1 && (
@@ -229,10 +230,23 @@ const Pesquisa = () => {
             )}
           </>
         ) : (
-          <div className="text-center py-20">
+          <div className="text-center py-16 space-y-4">
             <Package className="h-16 w-16 mx-auto text-muted-foreground/40" />
-            <h3 className="mt-4 font-heading text-lg font-semibold">Sem resultados para "{search}"</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Tente outras palavras-chave ou referência.</p>
+            <h3 className="font-heading text-lg font-semibold">Sem resultados para "{search}"</h3>
+            <p className="text-sm text-muted-foreground">Tente outras palavras-chave ou referência SKU.</p>
+            <div className="mt-6 inline-flex flex-col items-center gap-3 p-5 rounded-2xl border border-border bg-card max-w-sm mx-auto">
+              <p className="text-sm font-medium">Não encontrou o que procura?</p>
+              <p className="text-xs text-muted-foreground text-center">Podemos tratar de encontrar o produto por si. Fale connosco directamente.</p>
+              <a
+                href={`https://wa.me/351911564243?text=Ol%C3%A1%20VRCF%2C%20n%C3%A3o%20encontrei%20o%20produto%3A%20${encodeURIComponent(search)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-green-500 text-white text-sm font-semibold hover:bg-green-600 transition-colors"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Falar por WhatsApp
+              </a>
+            </div>
           </div>
         )}
       </section>

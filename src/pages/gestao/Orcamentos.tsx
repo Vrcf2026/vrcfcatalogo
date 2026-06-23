@@ -212,6 +212,10 @@ function OrcamentoDetalhe() {
   const handleSave = async () => {
     if (!id) return;
     setSaving(true);
+
+    // Guardar o estado anterior para saber se mudou
+    const estadoAnterior = data?.quote?.status;
+
     const { error } = await supabase.from("quotes").update({
       status: status as any,
       notes: notes.trim() || null,
@@ -222,6 +226,22 @@ function OrcamentoDetalhe() {
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Orçamento atualizado.");
+
+    // Notificar cliente se o estado mudou para um estado relevante.
+    // (accepted é tratado pelo send-quote-final; in_review é transição interna)
+    if (status !== estadoAnterior && ["rejected", "cancelled", "completed"].includes(status)) {
+      supabase.functions
+        .invoke("send-quote-status-update", { body: { quoteId: id, newStatus: status } })
+        .then(({ error: emailErr }) => {
+          if (emailErr) {
+            console.warn("[Orçamento] email notification failed:", emailErr);
+            toast.warning("Estado guardado, mas falhou o envio do email ao cliente.");
+          } else {
+            toast.info("Cliente notificado por email.");
+          }
+        });
+    }
+
     qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
     qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
     qc.invalidateQueries({ queryKey: ["gestao-stats"] });
