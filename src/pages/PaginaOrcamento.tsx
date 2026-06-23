@@ -401,7 +401,16 @@ export default function PaginaOrcamento() {
             </div>
 
             {/* Portes */}
-            {portes.length > 0 && (
+            {temEnvioEspecial ? (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 p-3 space-y-1">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400">
+                  <Truck className="h-3.5 w-3.5 shrink-0" /> Portes
+                </div>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                  Um ou mais produtos têm condições especiais de envio. O valor dos portes será calculado e incluído no orçamento final.
+                </p>
+              </div>
+            ) : portes.length > 0 ? (
               <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1.5">
                 <div className="flex justify-between items-center text-sm">
                   <span className="flex items-center gap-1.5 font-medium">
@@ -413,11 +422,15 @@ export default function PaginaOrcamento() {
                 </div>
                 <p className="text-[10px] text-muted-foreground">Portugal Continental · confirmados no orçamento final</p>
               </div>
-            )}
+            ) : null}
 
             <div className="border-t border-border pt-3 flex justify-between font-bold text-base">
               <span>Total estimado</span>
-              <span className="text-primary">{totalGeral.toFixed(2).replace(".", ",")} €</span>
+              <span className="text-primary">
+                {temEnvioEspecial
+                  ? `${subtotalComIva.toFixed(2).replace(".", ",")} € + portes`
+                  : totalGeral.toFixed(2).replace(".", ",")} €
+              </span>
             </div>
 
             {/* Notas */}
@@ -426,12 +439,6 @@ export default function PaginaOrcamento() {
                 <Clock className="h-3 w-3 mt-0.5 shrink-0 text-primary" />
                 <span>Receberá por email o orçamento completo com portes e prazo de entrega confirmados.</span>
               </div>
-              {temEnvioEspecial && (
-                <div className="flex items-start gap-1.5">
-                  <Info className="h-3 w-3 mt-0.5 shrink-0 text-amber-500" />
-                  <span>Um ou mais produtos têm condições especiais de envio.</span>
-                </div>
-              )}
               <div className="flex items-start gap-1.5">
                 <Info className="h-3 w-3 mt-0.5 shrink-0" />
                 <span>Stock sujeito a disponibilidade.</span>
