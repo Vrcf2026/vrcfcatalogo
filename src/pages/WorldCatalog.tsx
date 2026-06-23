@@ -497,16 +497,16 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                                    "bg-gradient-to-b from-blue-50/80 to-transparent dark:from-blue-950/20"
         }`}>
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${
                 mundo === "seguranca" ? "bg-primary/15 text-primary" :
                 mundo === "economato" ? "bg-green-600/15 text-green-700" :
                 "bg-blue-500/15 text-blue-700"
               }`}>
                 <Icon className="h-3 w-3" />
-                {mundo === "seguranca" ? "Segurança & Redes" : mundo === "economato" ? "Economato" : "Informática & Tecnologia"}
+                {title}
               </div>
-              <h1 className="font-heading text-base font-bold text-foreground hidden sm:block">{title}</h1>
+              <p className="text-[11px] text-muted-foreground hidden sm:block">{subtitle}</p>
             </div>
             <div className="hidden sm:flex gap-1">
               <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
