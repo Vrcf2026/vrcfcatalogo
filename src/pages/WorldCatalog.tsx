@@ -270,6 +270,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     },
     placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
+    retry: 2,
   });
 
   const products = productsQuery.data?.data ?? [];
@@ -329,6 +330,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       return data ?? [];
     },
     staleTime: 2 * 60 * 1000,
+    retry: 2,
     enabled: categoryFilter !== "all",
   });
 
