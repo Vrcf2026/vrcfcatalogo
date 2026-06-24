@@ -18,6 +18,7 @@ import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { addToRecentlyViewed } from "@/pages/Index";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { StockAlertButton } from "@/components/StockAlertButton";
+import { QueryError } from "@/components/QueryError";
 import { QuantitySelector } from "@/components/QuantitySelector";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
@@ -38,15 +39,18 @@ const Produto = () => {
   const [imgIdx, setImgIdx] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading, isError, refetch } = useQuery({
     queryKey: ["product-slug", slug],
     queryFn: async () => {
-      const { data: bySlug } = await supabase.from("products").select("*").eq("slug", slug!).maybeSingle();
+      const { data: bySlug, error: e1 } = await supabase.from("products").select("*").eq("slug", slug!).maybeSingle();
+      if (e1) throw e1;
       if (bySlug) return bySlug;
-      const { data: byId } = await supabase.from("products").select("*").eq("id", slug!).maybeSingle();
+      const { data: byId, error: e2 } = await supabase.from("products").select("*").eq("id", slug!).maybeSingle();
+      if (e2) throw e2;
       return byId;
     },
     enabled: !!slug,
+    retry: 2,
   });
 
   const { data: dbImages = [] } = useQuery({
@@ -109,6 +113,13 @@ const Produto = () => {
   }, [product?.id]);
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isError) return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-sm w-full">
+        <QueryError message="Não foi possível carregar o produto. Verifique a sua ligação." onRetry={() => refetch()} />
+      </div>
+    </div>
+  );
   if (!product) return <Navigate to="/404" replace />;
 
   // Imagens — db images + imagens_extra do produto

@@ -307,11 +307,11 @@ const Index = () => {
           ))}
           {banners.data.length > 1 && (
             <>
-              <button onClick={() => setBannerIdx(i => (i - 1 + banners.data!.length) % banners.data!.length)}
+              <button onClick={() => setBannerIdx(i => (i - 1 + banners.data.length) % banners.data.length)}
                 className="absolute left-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <button onClick={() => setBannerIdx(i => (i + 1) % banners.data!.length)}
+              <button onClick={() => setBannerIdx(i => (i + 1) % banners.data.length)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-black/50 text-white flex items-center justify-center">
                 <ChevronRight className="h-4 w-4" />
               </button>
