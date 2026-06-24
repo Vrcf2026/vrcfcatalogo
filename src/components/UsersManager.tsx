@@ -29,7 +29,7 @@ export function UsersManager() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [invitePassword, setInvitePassword] = useState("");
   const [inviteFullName, setInviteFullName] = useState("");
-  const [inviteRole, setInviteRole] = useState<AppRole | "">("");
+  const [inviteRole, setInviteRole] = useState<AppRole | "none">("none");
   const [inviting, setInviting] = useState(false);
   const [addingRole, setAddingRole] = useState<{ userId: string; role: AppRole } | null>(null);
 
@@ -98,7 +98,7 @@ export function UsersManager() {
           email: inviteEmail.trim(),
           password: invitePassword,
           fullName: inviteFullName.trim() || undefined,
-          role: inviteRole || undefined,
+          role: inviteRole !== "none" ? inviteRole : undefined,
         },
       });
       if (error) throw error;
@@ -106,10 +106,10 @@ export function UsersManager() {
       if (data?.warning) {
         toast.warning(data.warning);
       } else {
-        toast.success(`Utilizador ${inviteEmail} criado.${inviteRole ? ` Role "${ROLE_META[inviteRole as AppRole].label}" atribuído.` : ""} A conta já pode ser usada para login.`);
+        toast.success(`Utilizador ${inviteEmail} criado.${inviteRole !== "none" ? ` Role "${ROLE_META[inviteRole as AppRole].label}" atribuído.` : ""} A conta já pode ser usada para login.`);
       }
       setInviteOpen(false);
-      setInviteEmail(""); setInvitePassword(""); setInviteFullName(""); setInviteRole("");
+      setInviteEmail(""); setInvitePassword(""); setInviteFullName(""); setInviteRole("none");
       qc.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (err: any) {
       toast.error(err.message ?? "Erro ao criar utilizador.");
@@ -267,12 +267,12 @@ export function UsersManager() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Role (opcional)</Label>
-              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole | "none")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Sem role especial (cliente)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem role (cliente normal)</SelectItem>
+                  <SelectItem value="none">Sem role (cliente normal)</SelectItem>
                   <SelectItem value="gestor">Gestor — acesso à área comercial</SelectItem>
                   <SelectItem value="admin">Admin — acesso ao catálogo e gestão</SelectItem>
                   <SelectItem value="super_admin">Super Admin — acesso total</SelectItem>

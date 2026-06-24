@@ -46,9 +46,9 @@ function applyProductFilters(query: any, f: ProductFilters, opts?: {
   }
   if (f.fornecedorFilter !== "all") query = query.eq("fornecedor", f.fornecedorFilter);
   if (f.mundoFilter !== "all") query = query.eq("mundo", f.mundoFilter);
-  if (f.stockFilter === "out") query = query.eq("stock_status", "out");
+  if (f.stockFilter === "out") query = query.in("stock_status", ["out", "on_request"]);
   if (f.stockFilter === "low") query = query.eq("stock_status", "low");
-  if (f.stockFilter === "in") query = query.neq("stock_status", "out");
+  if (f.stockFilter === "in")  query = query.not("stock_status", "in", '("out","on_request")');
   if (f.search.trim()) {
     const q = f.search.trim();
     query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%,description.ilike.%${q}%`);

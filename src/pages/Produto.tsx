@@ -28,6 +28,7 @@ const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }
   high:       { label: "Em stock",           color: "bg-emerald-500/12 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
   low:        { label: "Últimas unidades",   color: "bg-amber-500/12 text-amber-700 border-amber-500/30",    dot: "bg-amber-500" },
   out:        { label: "Sob encomenda",       color: "bg-blue-500/12 text-blue-700 border-blue-500/30",       dot: "bg-blue-500" },
+  on_request: { label: "Sob encomenda",       color: "bg-blue-500/12 text-blue-700 border-blue-500/30",       dot: "bg-blue-500" },
 };
 
 // Tradução de chaves de specs para português legível
@@ -339,7 +340,7 @@ const Produto = () => {
                 <Truck className="h-3.5 w-3.5" /> Envio especial
               </div>
             )}
-            {product.stock_status === "out" && (
+            {(product.stock_status === "out" || product.stock_status === "on_request") && (
               <StockAlertButton productId={product.id} productName={product.name} />
             )}
           </div>
@@ -495,7 +496,7 @@ const Produto = () => {
       {related.length > 0 && (
         <section className="container mx-auto px-4 pb-12 max-w-4xl">
           <h2 className="font-heading text-lg font-bold mb-4">
-            {product.stock_status === "out" ? "Alternativas disponíveis" : "Produtos relacionados"}
+            {(product.stock_status === "out" || product.stock_status === "on_request") ? "Alternativas disponíveis" : "Produtos relacionados"}
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {related.map((r: any) => {
@@ -517,7 +518,7 @@ const Produto = () => {
                         ? <span className="text-xs font-bold">{rPriceVat.toFixed(2).replace(".", ",")} €</span>
                         : <span className="text-[10px] text-muted-foreground italic">Sob consulta</span>
                       }
-                      {r.stock_status === "out"
+                      {(r.stock_status === "out" || r.stock_status === "on_request")
                         ? <span className="text-[10px] text-blue-600">Enc.</span>
                         : <span className="text-[10px] text-emerald-600">✓ Stock</span>
                       }

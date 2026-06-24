@@ -177,7 +177,8 @@ const Index = () => {
 
   useEffect(() => {
     if (!banners.data || banners.data.length <= 1) return;
-    timerRef.current = setInterval(() => setBannerIdx(i => (i + 1) % banners.data!.length), 5000);
+    const len = banners.data.length;
+    timerRef.current = setInterval(() => setBannerIdx(i => (i + 1) % len), 5000);
     return () => clearInterval(timerRef.current);
   }, [banners.data]);
 

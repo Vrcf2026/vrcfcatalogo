@@ -210,8 +210,14 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           p_order_asc: order.asc,
         });
         if (error) throw error;
-        const rows = (data ?? []).map((r: any) => r.row_data);
-        const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
+        let rows = (data ?? []).map((r: any) => r.row_data);
+        // A RPC não suporta filtro de stock — aplicar client-side
+        if (stockFilter !== "all") {
+          if (stockFilter === "in_stock") rows = rows.filter((r: any) => r.stock_status === "high" || r.stock_status === "low");
+          else if (stockFilter === "low")  rows = rows.filter((r: any) => r.stock_status === "low");
+          else if (stockFilter === "out")  rows = rows.filter((r: any) => r.stock_status === "out" || r.stock_status === "on_request");
+        }
+        const count = stockFilter !== "all" ? rows.length : (data && data.length > 0 ? Number(data[0].total_count) : 0);
         return { data: rows, count };
       }
 

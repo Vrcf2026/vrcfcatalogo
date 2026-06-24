@@ -63,7 +63,7 @@ function RankingList({ items, emptyText }: {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-sm font-medium truncate">{item.name}</p>
-              {item.stock_status === "out" && (
+              {(item.stock_status === "out" || item.stock_status === "on_request") && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
                   sem stock
                 </span>
@@ -163,7 +163,7 @@ export function AdminDashboard(_props = {}) {
         Promise.all(FORNECEDORES_DASH.map(async (f) => {
           const [tot, semStock] = await Promise.all([
             countOf((q) => q.eq("fornecedor", f)),
-            countOf((q) => q.eq("fornecedor", f).eq("stock_status", "out")),
+            countOf((q) => q.eq("fornecedor", f).in("stock_status", ["out", "on_request"])),
           ]);
           return [f, { total: tot, comStock: tot - semStock, semStock }] as const;
         })),

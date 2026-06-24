@@ -95,7 +95,7 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               <Zap className="h-2.5 w-2.5" /> Últimas unidades
             </span>
           )}
-          {sobEncomenda && stockStatus === "out" && (
+          {sobEncomenda && (stockStatus === "out" || stockStatus === "on_request") && (
             <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium">
               Sob encomenda
             </span>
