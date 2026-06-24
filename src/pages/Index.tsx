@@ -360,15 +360,31 @@ const Index = () => {
 
       {/* ── BRANDS ── */}
       {brands.data && brands.data.length > 0 && (
-        <section className="border-t border-border bg-muted/30 py-5 px-3">
-          <p className="text-center text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">Marcas disponíveis</p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-[1600px] mx-auto">
-            {brands.data.map((b: any) => (
-              <Link key={b.id} to={`/pesquisa?marca=${encodeURIComponent(b.name)}`}
-                className="px-3.5 py-2 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all text-xs font-semibold text-muted-foreground hover:text-foreground">
-                {b.name}
-              </Link>
-            ))}
+        <section className="border-t border-border/40 bg-background py-4 px-4">
+          <div className="max-w-[1600px] mx-auto">
+            <div className="flex flex-wrap justify-center gap-3">
+              {brands.data.map((b: any) => (
+                <Link
+                  key={b.id}
+                  to={`/pesquisa?marca=${encodeURIComponent(b.name)}`}
+                  title={b.name}
+                  className="flex items-center justify-center h-12 w-28 rounded-xl border border-border/60 bg-white dark:bg-card hover:border-border hover:shadow-md transition-all duration-200 hover:scale-105 px-3"
+                >
+                  {b.logo_url ? (
+                    <img
+                      src={b.logo_url}
+                      alt={b.name}
+                      className="h-7 w-auto max-w-full object-contain opacity-80 hover:opacity-100 transition-opacity"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <span className="font-heading text-[11px] font-bold text-foreground/70 whitespace-nowrap text-center">
+                      {b.name}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
       )}
