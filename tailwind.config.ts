@@ -4,6 +4,36 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // Garante que classes construídas dinamicamente (objetos JS, template strings)
+  // são sempre incluídas no bundle CSS — sem isto o Tailwind JIT não as deteta.
+  safelist: [
+    // WorldBtn — gradientes ativos
+    "from-world-seg", "to-world-seg-dark",
+    "from-world-esc", "to-world-esc-dark",
+    "from-world-eco", "to-world-eco-dark",
+    // WorldBtn — sombras
+    "world-btn-seg-shadow", "world-btn-esc-shadow", "world-btn-eco-shadow",
+    // WorldBtn — inativo borders
+    "border-world-seg/25", "hover:border-world-seg/50",
+    "border-world-esc/25", "hover:border-world-esc/50",
+    "border-world-eco/25", "hover:border-world-eco/50",
+    // WorldBtn — ícone inativo
+    "bg-world-seg/8", "text-world-seg",
+    "bg-world-esc/8", "text-world-esc",
+    "bg-world-eco/8", "text-world-eco",
+    // Hero rotativo — badges e fundos
+    "bg-world-seg/10", "border-world-seg/20",
+    "bg-world-esc/10", "border-world-esc/20",
+    "bg-world-eco/10", "border-world-eco/20",
+    "from-world-seg/10", "via-world-seg/4",
+    "from-world-esc/10", "via-world-esc/4",
+    "from-world-eco/10", "via-world-eco/4",
+    // Indicadores hero
+    "bg-world-seg", "bg-world-esc", "bg-world-eco",
+    // WorldCatalog — category strip
+    "from-world-seg/6", "from-world-esc/6", "from-world-eco/6",
+    "bg-world-seg/15", "bg-world-esc/15", "bg-world-eco/15",
+  ],
   theme: {
     container: {
       center: true,
