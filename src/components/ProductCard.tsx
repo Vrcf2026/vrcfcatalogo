@@ -1,5 +1,5 @@
 import { useState, forwardRef } from "react";
-import { ImageOff, ShoppingCart, Star, Zap } from "lucide-react";
+import { ImageOff, Star, Zap } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/trackEvent";
@@ -80,7 +80,8 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
     return (
       <div ref={ref}
         className={`group relative flex flex-col bg-card rounded-2xl border overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/30 ${featured && !isAdmin ? "border-primary/40 shadow-primary/10 shadow-sm" : "border-border"}`}
-        onClick={() => { if (isAdmin) onEdit?.(); else { trackEvent(id, "click"); onClick?.(); } }}>
+        onClick={() => { if (isAdmin) onEdit?.(); else { trackEvent(id, "click"); onClick?.(); } }}
+        onMouseLeave={() => setShowSelector(false)}>
 
         {/* Badges */}
         <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1.5">
@@ -114,27 +115,19 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               <ImageOff className="h-10 w-10" />
             </div>
           )}
-          {/* Quick add overlay — seletor de quantidade */}
+          {/* Quick add overlay — seletor de quantidade direto no hover */}
           {!isAdmin && (
             <div
               className={`absolute inset-x-0 bottom-0 transition-transform duration-200 p-2 ${showSelector ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`}
               onClick={(e) => e.stopPropagation()}
+              onMouseEnter={() => setShowSelector(true)}
             >
-              {showSelector ? (
-                <QuantitySelector
-                  compact
-                  minQty={step}
-                  onAdd={handleAdd}
-                  onCancel={() => setShowSelector(false)}
-                />
-              ) : (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setShowSelector(true); }}
-                  className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 active:scale-95 transition-all"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5" /> Adicionar ao orçamento
-                </button>
-              )}
+              <QuantitySelector
+                compact
+                minQty={step}
+                onAdd={handleAdd}
+                onCancel={() => setShowSelector(false)}
+              />
             </div>
           )}
         </div>
