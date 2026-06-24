@@ -28,6 +28,22 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
+        /* Cores dos mundos VRCF — usadas nos WorldBtn, hero, badges */
+        "world-seg": {
+          DEFAULT: "hsl(var(--world-seg))",
+          light:   "hsl(var(--world-seg-light))",
+          dark:    "hsl(var(--world-seg-dark))",
+        },
+        "world-esc": {
+          DEFAULT: "hsl(var(--world-esc))",
+          light:   "hsl(var(--world-esc-light))",
+          dark:    "hsl(var(--world-esc-dark))",
+        },
+        "world-eco": {
+          DEFAULT: "hsl(var(--world-eco))",
+          light:   "hsl(var(--world-eco-light))",
+          dark:    "hsl(var(--world-eco-dark))",
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

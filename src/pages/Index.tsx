@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
+import { QueryError } from "@/components/QueryError";
 
 // ── HOOKS ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,8 @@ const useFeaturedProducts = (mundo?: string) =>
         .order("created_at", { ascending: false })
         .limit(8);
       if (mundo) q = (q as any).eq("mundo", mundo);
-      const { data } = await q;
+      const { data, error } = await q;
+      if (error) throw error;
       if (data && data.length > 0) return data;
       let q2 = supabase.from("products").select("*")
         .eq("include_in_catalog", true)
@@ -41,55 +43,65 @@ const useFeaturedProducts = (mundo?: string) =>
         .order("created_at", { ascending: false })
         .limit(8);
       if (mundo) q2 = (q2 as any).eq("mundo", mundo);
-      const { data: fb } = await q2;
+      const { data: fb, error: e2 } = await q2;
+      if (e2) throw e2;
       return fb ?? [];
     },
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
 const useCategories = (mundo: string) =>
   useQuery({
     queryKey: ["hp-categories", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("*")
+      const { data, error } = await supabase.from("categories").select("*")
         .in("mundo", [mundo, "todos"]).eq("visivel", true)
         .order("ordem");
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
 const useWorldCount = (mundo: string) =>
   useQuery({
     queryKey: ["hp-count", mundo],
     queryFn: async () => {
-      const { count } = await supabase.from("products").select("*", { count: "exact", head: true })
+      const { count, error } = await supabase.from("products").select("*", { count: "exact", head: true })
         .eq("mundo", mundo).eq("include_in_catalog", true);
+      if (error) throw error;
       return count ?? 0;
     },
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
 
 const useBrands = () =>
   useQuery({
     queryKey: ["hp-brands"],
     queryFn: async () => {
-      const { data } = await supabase.from("brands").select("id,name,logo_url")
+      const { data, error } = await supabase.from("brands").select("id,name,logo_url")
         .eq("show_on_homepage", true).order("name").limit(16);
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
 
 const useBanners = () =>
   useQuery({
     queryKey: ["hp-banners"],
     queryFn: async () => {
-      const { data } = await supabase.from("banners").select("*")
+      const { data, error } = await supabase.from("banners").select("*")
         .eq("ativo", true).in("mundo", ["todos", "homepage"]).order("ordem");
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 5 * 60 * 1000,
+    retry: 2,
   });
 
 // ── COMPONENT ─────────────────────────────────────────────────────────────────
@@ -315,16 +327,18 @@ const Index = () => {
       )}
 
       {/* ── FEATURED PRODUCTS ── */}
-      {featured.data && featured.data.length > 0 && (
-        <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Star className="h-4 w-4 text-primary fill-primary" /> Em destaque
-            </h2>
-            <Link to={worldPath} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
-              Ver mais <ArrowRight className="h-3 w-3" />
-            </Link>
-          </div>
+      <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+            <Star className="h-4 w-4 text-primary fill-primary" /> Em destaque
+          </h2>
+          <Link to={worldPath} className="text-[11px] text-primary font-semibold hover:underline flex items-center gap-0.5">
+            Ver mais <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+        {featured.isError ? (
+          <QueryError message="Não foi possível carregar os produtos em destaque." onRetry={() => featured.refetch()} />
+        ) : featured.data && featured.data.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {featured.data.slice(0, 6).map((p: any) => (
               <ProductCard
@@ -340,8 +354,8 @@ const Index = () => {
               />
             ))}
           </div>
-        </section>
-      )}
+        ) : null}
+      </section>
 
 
       {/* ── BRANDS ── */}
@@ -419,29 +433,33 @@ const Index = () => {
       )}
 
       {/* ── MAIS VISTOS — linha horizontal ── */}
-      {maisVistos.data && maisVistos.data.length > 0 && (
+      {(maisVistos.isError || (maisVistos.data && maisVistos.data.length > 0)) && (
         <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
           <div className="flex items-center mb-3">
             <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-primary" /> Mais Vistos
             </h2>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {maisVistos.data.slice(0, 6).map((p: any) => (
-              <div key={p.id} className="shrink-0 w-44">
-                <ProductCard
-                  id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                  description={p.short_description ?? p.description}
-                  category={p.category} price={p.price}
-                  imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
-                  familyName={null} brandName={p.brand || null}
-                  featured={false} stockStatus={p.stock_status}
-                  minSaleQty={p.min_sale_qty ?? null}
-                  onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
-                />
-              </div>
-            ))}
-          </div>
+          {maisVistos.isError ? (
+            <QueryError size="sm" message="Não foi possível carregar os mais vistos." onRetry={() => maisVistos.refetch()} />
+          ) : (
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+              {maisVistos.data!.slice(0, 6).map((p: any) => (
+                <div key={p.id} className="shrink-0 w-44">
+                  <ProductCard
+                    id={p.id} name={p.name} sku={p.sku} slug={p.slug}
+                    description={p.short_description ?? p.description}
+                    category={p.category} price={p.price}
+                    imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
+                    familyName={null} brandName={p.brand || null}
+                    featured={false} stockStatus={p.stock_status}
+                    minSaleQty={p.min_sale_qty ?? null}
+                    onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 
@@ -511,12 +529,12 @@ const Index = () => {
 // ── HERO ROTATIVO ─────────────────────────────────────────────────────────────
 const HERO_SLIDES = [
   {
-    color: "text-orange-500",
-    bg: "from-orange-500/10 via-orange-500/5 to-background",
-    badge: "bg-orange-500/10 border-orange-500/20 text-orange-600",
+    color: "text-world-seg",
+    bg: "from-world-seg/10 via-world-seg/4 to-background",
+    badge: "bg-world-seg/10 border-world-seg/20 text-world-seg",
     label: "Segurança & Redes",
     desc: "Soluções de videovigilância, controlo de acessos e infraestrutura de rede para empresas.",
-    iconColor: "text-orange-500",
+    iconColor: "text-world-seg",
     // Ícones: câmara, cadeado, wifi, shield
     bgIcons: [
       { Icon: Camera,     size: 96, top: "8%",  right: "6%",  opacity: 0.10, rotate: -12 },
@@ -526,12 +544,12 @@ const HERO_SLIDES = [
     ],
   },
   {
-    color: "text-blue-500",
-    bg: "from-blue-500/10 via-blue-500/5 to-background",
-    badge: "bg-blue-500/10 border-blue-500/20 text-blue-600",
+    color: "text-world-esc",
+    bg: "from-world-esc/10 via-world-esc/4 to-background",
+    badge: "bg-world-esc/10 border-world-esc/20 text-world-esc",
     label: "Informática & Tecnologia",
     desc: "Portáteis, desktops, periféricos e software. Equipamento certificado para a sua empresa.",
-    iconColor: "text-blue-500",
+    iconColor: "text-world-esc",
     bgIcons: [
       { Icon: Monitor,    size: 96, top: "8%",  right: "5%",  opacity: 0.10, rotate: -6  },
       { Icon: Cpu,        size: 64, top: "55%", right: "20%", opacity: 0.07, rotate: 12  },
@@ -540,12 +558,12 @@ const HERO_SLIDES = [
     ],
   },
   {
-    color: "text-green-600",
-    bg: "from-green-600/10 via-green-600/5 to-background",
-    badge: "bg-green-600/10 border-green-600/20 text-green-700",
+    color: "text-world-eco",
+    bg: "from-world-eco/10 via-world-eco/4 to-background",
+    badge: "bg-world-eco/10 border-world-eco/20 text-world-eco",
     label: "Economato",
     desc: "Papel, toners, mobiliário e tudo o que o seu escritório precisa no dia-a-dia.",
-    iconColor: "text-green-600",
+    iconColor: "text-world-eco",
     bgIcons: [
       { Icon: Package,    size: 96, top: "8%",  right: "5%",  opacity: 0.10, rotate: 8   },
       { Icon: Printer,    size: 64, top: "55%", right: "20%", opacity: 0.07, rotate: -8  },
@@ -619,7 +637,7 @@ function HeroRotativo() {
             <button
               key={i}
               onClick={() => { setVisible(false); setTimeout(() => { setIdx(i); setVisible(true); }, 300); }}
-              className={`h-1.5 rounded-full transition-all duration-300 ${i === idx ? `w-5 ${i === 0 ? "bg-orange-500" : i === 1 ? "bg-blue-500" : "bg-green-600"}` : "w-1.5 bg-border"}`}
+              className={`h-1.5 rounded-full transition-all duration-300 ${i === idx ? `w-5 ${i === 0 ? "bg-world-seg" : i === 1 ? "bg-world-esc" : "bg-world-eco"}` : "w-1.5 bg-border"}`}
             />
           ))}
         </div>
@@ -634,33 +652,40 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
   active: boolean; onClick: () => void; to: string;
   icon: any; label: string; count?: number; color: "orange" | "blue" | "green";
 }) {
+  // Cores proprietárias VRCF — definidas no index.css como variáveis CSS
   const cm = {
     orange: {
-      gradient: "from-orange-500 to-orange-600",
-      shadow: "shadow-orange-500/40",
-      glow: "hover:shadow-orange-500/30",
-      iconBg: "bg-white/20",
-      inactive: "border-orange-200 dark:border-orange-900/40 hover:border-orange-300",
-      inactiveIcon: "bg-orange-50 dark:bg-orange-950/40 text-orange-500",
-      inactiveText: "text-orange-600 dark:text-orange-400",
+      // Ativo: gradiente do laranja VRCF (mais quente que orange-500)
+      activeBg:     "bg-world-seg",
+      activeGrad:   "from-world-seg to-world-seg-dark",
+      activeShadow: "world-btn-seg-shadow",
+      // Inativo: subtil, com acento da cor do mundo
+      inactiveBorder: "border-world-seg/25 hover:border-world-seg/50",
+      inactiveIcon:   "bg-world-seg/8 text-world-seg",
+      inactiveText:   "text-world-seg",
+      // Badge de contagem
+      countActive:  "text-white/65",
+      countInactive:"text-muted-foreground",
     },
     blue: {
-      gradient: "from-blue-500 to-blue-600",
-      shadow: "shadow-blue-500/40",
-      glow: "hover:shadow-blue-500/30",
-      iconBg: "bg-white/20",
-      inactive: "border-blue-200 dark:border-blue-900/40 hover:border-blue-300",
-      inactiveIcon: "bg-blue-50 dark:bg-blue-950/40 text-blue-500",
-      inactiveText: "text-blue-600 dark:text-blue-400",
+      activeBg:     "bg-world-esc",
+      activeGrad:   "from-world-esc to-world-esc-dark",
+      activeShadow: "world-btn-esc-shadow",
+      inactiveBorder: "border-world-esc/25 hover:border-world-esc/50",
+      inactiveIcon:   "bg-world-esc/8 text-world-esc",
+      inactiveText:   "text-world-esc",
+      countActive:  "text-white/65",
+      countInactive:"text-muted-foreground",
     },
     green: {
-      gradient: "from-green-500 to-green-700",
-      shadow: "shadow-green-600/40",
-      glow: "hover:shadow-green-600/30",
-      iconBg: "bg-white/20",
-      inactive: "border-green-200 dark:border-green-900/40 hover:border-green-300",
-      inactiveIcon: "bg-green-50 dark:bg-green-950/40 text-green-600",
-      inactiveText: "text-green-700 dark:text-green-400",
+      activeBg:     "bg-world-eco",
+      activeGrad:   "from-world-eco to-world-eco-dark",
+      activeShadow: "world-btn-eco-shadow",
+      inactiveBorder: "border-world-eco/25 hover:border-world-eco/50",
+      inactiveIcon:   "bg-world-eco/8 text-world-eco",
+      inactiveText:   "text-world-eco",
+      countActive:  "text-white/65",
+      countInactive:"text-muted-foreground",
     },
   }[color];
 
@@ -668,20 +693,22 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
     return (
       <div
         onClick={onClick}
-        className={`relative rounded-2xl cursor-pointer overflow-hidden bg-gradient-to-br ${cm.gradient} shadow-lg ${cm.shadow} transition-all duration-200 hover:scale-[1.02] hover:shadow-xl ${cm.glow} select-none`}>
-        {/* Brilho no canto superior */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-white/30" />
-        <div className="absolute top-0 left-0 w-1/2 h-full bg-white/5" />
+        className={`relative rounded-2xl cursor-pointer overflow-hidden bg-gradient-to-br ${cm.activeGrad} select-none world-btn-glass ${cm.activeShadow}`}>
+        {/* Reflexo diagonal — efeito de profundidade sem ser metalizado */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-black/10 pointer-events-none rounded-2xl" />
+        {/* Linha de brilho no topo */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
         <div className="p-4 relative">
-          <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl mb-3 ${cm.iconBg} backdrop-blur-sm`}>
-            <Icon className="h-6 w-6 text-white" />
+          <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl mb-3 bg-white/15 backdrop-blur-sm border border-white/20">
+            <Icon className="h-6 w-6 text-white drop-shadow-sm" />
           </div>
-          <p className="font-bold text-sm text-white leading-tight">{label}</p>
+          <p className="font-bold text-sm text-white leading-tight drop-shadow-sm">{label}</p>
           {count != null && (
-            <p className="text-[10px] text-white/70 mt-0.5">{count.toLocaleString()} produtos</p>
+            <p className={`text-[10px] mt-0.5 ${cm.countActive}`}>{count.toLocaleString()} produtos</p>
           )}
           <Link to={to} onClick={e => e.stopPropagation()}
-            className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-white/90 hover:text-white transition-colors">
+            className="mt-3 inline-flex items-center gap-1 text-[11px] font-bold text-white/85 hover:text-white transition-colors">
             Explorar <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
@@ -692,14 +719,17 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
   return (
     <div
       onClick={onClick}
-      className={`relative rounded-2xl border-2 cursor-pointer overflow-hidden bg-card transition-all duration-200 hover:scale-[1.01] hover:shadow-md select-none ${cm.inactive}`}>
-      <div className="p-4">
-        <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl mb-3 ${cm.inactiveIcon}`}>
+      className={`relative rounded-2xl border cursor-pointer overflow-hidden bg-card/80 select-none world-btn-glass ${cm.inactiveBorder}`}>
+      {/* Reflexo muito subtil no inativo */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none rounded-2xl" />
+
+      <div className="p-4 relative">
+        <div className={`inline-flex h-11 w-11 items-center justify-center rounded-xl mb-3 ${cm.inactiveIcon} border border-current/10`}>
           <Icon className="h-6 w-6" />
         </div>
         <p className="font-bold text-sm text-foreground leading-tight">{label}</p>
         {count != null && (
-          <p className="text-[10px] text-muted-foreground mt-0.5">{count.toLocaleString()} produtos</p>
+          <p className={`text-[10px] mt-0.5 ${cm.countInactive}`}>{count.toLocaleString()} produtos</p>
         )}
         <Link to={to} onClick={e => e.stopPropagation()}
           className={`mt-3 inline-flex items-center gap-1 text-[11px] font-bold transition-colors ${cm.inactiveText}`}>
@@ -711,4 +741,3 @@ function WorldBtn({ active, onClick, to, icon: Icon, label, count, color }: {
 }
 
 export default Index;
-

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
+import { QueryError } from "@/components/QueryError";
 import BrandsStrip from "@/components/BrandsStrip";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
@@ -111,44 +112,52 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   };
 
   // Categories
-  const { data: categories = [] } = useQuery({
+  const categoriesQuery = useQuery({
     queryKey: ["categories", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("*")
+      const { data, error } = await supabase.from("categories").select("*")
         .in("mundo", [mundo, "todos"]).eq("visivel", true).order("ordem");
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
+  const categories = categoriesQuery.data ?? [];
 
   // Families
   const { data: families = [] } = useQuery({
     queryKey: ["families", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("product_families").select("*")
+      const { data, error } = await supabase.from("product_families").select("*")
         .in("mundo", [mundo, "todos"]).order("name");
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
 
   // Brands
   const { data: brands = [] } = useQuery({
     queryKey: ["brands", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("brands").select("*")
+      const { data, error } = await supabase.from("brands").select("*")
         .in("mundo", [mundo, "todos"]).order("name");
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
+    retry: 2,
   });
 
   // Tipos (Nível 3 — dependentes de uma família)
   const { data: types = [] } = useQuery({
     queryKey: ["types", mundo],
     queryFn: async () => {
-      const { data } = await supabase.from("product_types").select("*")
+      const { data, error } = await supabase.from("product_types").select("*")
         .in("mundo", [mundo, "todos"]).order("name");
+      if (error) throw error;
       return data ?? [];
     },
     staleTime: 10 * 60 * 1000,
@@ -490,6 +499,11 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       </header>
 
       {/* Categories strip — título do mundo integrado, sem hero separado */}
+      {categoriesQuery.isError && (
+        <div className="px-4 pt-3">
+          <QueryError size="sm" message="Não foi possível carregar as categorias." onRetry={() => categoriesQuery.refetch()} />
+        </div>
+      )}
       {categories.length > 0 && (
         <section className={`px-4 pt-4 pb-3 border-b border-border ${
           mundo === "seguranca"  ? "bg-gradient-to-b from-orange-50/80 to-transparent dark:from-orange-950/20" :
@@ -681,17 +695,19 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           )}
 
           {/* Contador */}
-          <p className="text-sm text-muted-foreground mb-4">
-            {productsQuery.isLoading ? "A carregar..." : `${total} produto${total !== 1 ? "s" : ""} — Página ${page} de ${totalPages || 1}`}
-          </p>
-          {productsQuery.isError && (
-            <p className="text-sm text-destructive mb-4">
-              Erro ao filtrar produtos: {(productsQuery.error as any)?.message || String(productsQuery.error)}
+          {!productsQuery.isError && (
+            <p className="text-sm text-muted-foreground mb-4">
+              {productsQuery.isLoading ? "A carregar..." : `${total} produto${total !== 1 ? "s" : ""} — Página ${page} de ${totalPages || 1}`}
             </p>
           )}
 
           {/* Grid */}
-          {productsQuery.isLoading ? (
+          {productsQuery.isError ? (
+            <QueryError
+              message="Não foi possível carregar os produtos. Verifique a sua ligação."
+              onRetry={() => productsQuery.refetch()}
+            />
+          ) : productsQuery.isLoading ? (
             <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : products.length > 0 ? (
             <>
