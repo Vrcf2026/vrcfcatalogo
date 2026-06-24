@@ -13,10 +13,6 @@ export default {
     "from-world-eco", "to-world-eco-dark",
     // WorldBtn — sombras
     "world-btn-seg-shadow", "world-btn-esc-shadow", "world-btn-eco-shadow",
-    // WorldBtn — inativo borders
-    "border-world-seg/25", "hover:border-world-seg/50",
-    "border-world-esc/25", "hover:border-world-esc/50",
-    "border-world-eco/25", "hover:border-world-eco/50",
     // WorldBtn — ícone inativo
     "bg-world-seg/8", "text-world-seg",
     "bg-world-esc/8", "text-world-esc",
@@ -28,11 +24,18 @@ export default {
     "from-world-seg/10", "via-world-seg/4",
     "from-world-esc/10", "via-world-esc/4",
     "from-world-eco/10", "via-world-eco/4",
-    // Indicadores hero
+    // Indicadores hero e botões ativos
     "bg-world-seg", "bg-world-esc", "bg-world-eco",
     // WorldCatalog — category strip
     "from-world-seg/6", "from-world-esc/6", "from-world-eco/6",
     "bg-world-seg/15", "bg-world-esc/15", "bg-world-eco/15",
+    // WorldBtn inativo — border base
+    "border-world-seg/25", "border-world-esc/25", "border-world-eco/25",
+    // WorldBtn inativo — border hover (pattern+variants para Tailwind v3)
+    {
+      pattern: /border-world-(seg|esc|eco)\/(25|50)/,
+      variants: ["hover"],
+    },
   ],
   theme: {
     container: {
