@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Minus, Plus, ShoppingCart, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 interface QuantitySelectorProps {
   /** Quantidade mínima (MOQ). Default: 1. */
