@@ -1,72 +1,90 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Phone, Mail, MapPin, Star } from "lucide-react";
+import { Phone, Mail, MapPin } from "lucide-react";
 import { SuggestionDialog } from "@/components/SuggestionDialog";
 import { openCookiePreferences } from "@/components/CookieConsentBanner";
 import vrcfShield from "@/assets/vrcf-shield.png";
 
-/**
- * Rodapé partilhado por todas as páginas do catálogo (homepage e
- * mundos/produto). Inclui identificação da empresa, contactos, avisos
- * legais (preços/imagens) e links para Termos, Privacidade, Cookies,
- * Livro de Reclamações e Sugestão.
- */
 export function SiteFooter() {
   const [suggestionOpen, setSuggestionOpen] = useState(false);
 
   return (
     <>
-      <footer className="border-t border-border py-7 px-4 bg-muted">
-        <div className="max-w-[1600px] mx-auto space-y-5">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
-            <div className="flex items-center gap-3">
-              <img src={vrcfShield} alt="VRCF" className="h-9 w-auto" />
-              <div>
-                <p className="font-bold text-sm">VRCF — Informática & Segurança</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
-                  NIF 515237205 · Montijo
-                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[11px] font-bold text-primary">
-                    <Star className="h-3 w-3 fill-primary text-primary" />
-                    Desde 2019
-                  </span>
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-5 text-sm">
-              <a href="tel:+351911564243" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
-                <Phone className="h-3.5 w-3.5" /> +351 911 564 243
-              </a>
-              <a href="mailto:geral@vrcf.pt" className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
-                <Mail className="h-3.5 w-3.5" /> geral@vrcf.pt
-              </a>
-              <a href="https://maps.google.com/?q=Rua+Luis+Calado+Nunes+15+Montijo" target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-muted-foreground hover:text-primary transition-colors text-xs">
-                <MapPin className="h-3.5 w-3.5" /> R. Luis Calado Nunes 15 LJ B
-              </a>
-            </div>
-          </div>
+      <footer className="border-t border-border bg-muted/50">
 
-          <div className="border-t border-border pt-4 space-y-1.5 text-center sm:text-right">
-            <p className="text-xs text-muted-foreground">
-              Os preços apresentados incluem IVA à taxa legal em vigor e são meramente indicativos, podendo sofrer alterações sem aviso prévio.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              As imagens apresentadas são meramente ilustrativas.
-            </p>
-            <p className="flex flex-wrap items-center justify-center sm:justify-end gap-x-3 gap-y-1 text-xs pt-1">
-              <Link to="/termos-e-condicoes" className="text-primary hover:underline transition-colors">Termos e Condições</Link>
-              <Link to="/politica-de-privacidade" className="text-primary hover:underline transition-colors">Privacidade</Link>
-              <Link to="/politica-de-cookies" className="text-primary hover:underline transition-colors">Cookies</Link>
-              <Link to="/conta" className="text-primary hover:underline transition-colors">A Minha Conta</Link>
-              <button type="button" onClick={openCookiePreferences} className="text-primary hover:underline transition-colors">Gerir Cookies</button>
-              <a href="https://www.livroreclamacoes.pt" target="_blank" rel="noopener noreferrer"
-                className="text-primary hover:underline transition-colors">
-                Livro de Reclamações
+        {/* ── Corpo principal ── */}
+        <div className="max-w-[1600px] mx-auto px-4 py-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+
+            {/* Coluna 1 — Identidade */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
+                <img src={vrcfShield} alt="VRCF" className="h-9 w-auto" />
+                <div>
+                  <p className="font-bold text-sm leading-tight">VRCF</p>
+                  <p className="text-[11px] text-muted-foreground">Informática & Segurança</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                Soluções de tecnologia, segurança e economato para empresas e particulares. Montijo, desde 2019.
+              </p>
+              <p className="text-[11px] text-muted-foreground">NIF 515237205</p>
+            </div>
+
+            {/* Coluna 2 — Contactos */}
+            <div className="flex flex-col gap-2.5">
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-1">Contacto</p>
+              <a href="tel:+351911564243"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                <Phone className="h-3.5 w-3.5 shrink-0" /> +351 911 564 243
               </a>
-              <button onClick={() => setSuggestionOpen(true)} className="text-primary hover:underline transition-colors">Sugestão</button>
-            </p>
+              <a href="mailto:geral@vrcf.pt"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                <Mail className="h-3.5 w-3.5 shrink-0" /> geral@vrcf.pt
+              </a>
+              <a href="https://maps.google.com/?q=Rua+Luis+Calado+Nunes+15+Montijo"
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                <MapPin className="h-3.5 w-3.5 shrink-0" /> R. Luís Calado Nunes 15 LJ B, Montijo
+              </a>
+            </div>
+
+            {/* Coluna 3 — Links legais */}
+            <div className="flex flex-col gap-2.5">
+              <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-1">Informações</p>
+              <Link to="/termos-e-condicoes" className="text-xs text-muted-foreground hover:text-primary transition-colors">Termos e Condições</Link>
+              <Link to="/politica-de-privacidade" className="text-xs text-muted-foreground hover:text-primary transition-colors">Política de Privacidade</Link>
+              <Link to="/politica-de-cookies" className="text-xs text-muted-foreground hover:text-primary transition-colors">Política de Cookies</Link>
+              <button type="button" onClick={openCookiePreferences}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors text-left">
+                Gerir Cookies
+              </button>
+              <button onClick={() => setSuggestionOpen(true)}
+                className="text-xs text-muted-foreground hover:text-primary transition-colors text-left">
+                Enviar Sugestão
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* ── Barra inferior ── */}
+        <div className="border-t border-border/60">
+          <div className="max-w-[1600px] mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-[10px] text-muted-foreground/70 text-center sm:text-left">
+              Os preços incluem IVA à taxa legal em vigor e são meramente indicativos. As imagens são meramente ilustrativas.
+            </p>
+            <div className="flex items-center gap-3">
+              <a href="https://www.livroreclamacoes.pt" target="_blank" rel="noopener noreferrer"
+                className="text-[11px] font-semibold text-primary hover:underline transition-colors whitespace-nowrap">
+                Livro de Reclamações
+              </a>
+              <Link to="/conta" className="text-[11px] text-muted-foreground hover:text-primary transition-colors">
+                A Minha Conta
+              </Link>
+            </div>
+          </div>
+        </div>
+
       </footer>
 
       <SuggestionDialog open={suggestionOpen} onOpenChange={setSuggestionOpen} />

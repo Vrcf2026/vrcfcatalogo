@@ -505,42 +505,44 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         </div>
       )}
       {categories.length > 0 && (
-        <section className={`px-4 pt-4 pb-3 border-b border-border ${
-          mundo === "seguranca"  ? "bg-gradient-to-b from-orange-50/80 to-transparent dark:from-orange-950/20" :
-          mundo === "economato"  ? "bg-gradient-to-b from-green-50/80 to-transparent dark:from-green-950/20" :
-                                   "bg-gradient-to-b from-blue-50/80 to-transparent dark:from-blue-950/20"
+        <section className={`border-b border-border ${
+          mundo === "seguranca"  ? "bg-gradient-to-b from-world-seg/6 to-transparent" :
+          mundo === "economato"  ? "bg-gradient-to-b from-world-eco/6 to-transparent" :
+                                   "bg-gradient-to-b from-world-esc/6 to-transparent"
         }`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${
-                mundo === "seguranca" ? "bg-primary/15 text-primary" :
-                mundo === "economato" ? "bg-green-600/15 text-green-700" :
-                "bg-blue-500/15 text-blue-700"
-              }`}>
-                <Icon className="h-3 w-3" />
-                {title}
+          <div className="max-w-[1600px] mx-auto px-4 pt-4 pb-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${
+                  mundo === "seguranca" ? "bg-world-seg/15 text-world-seg" :
+                  mundo === "economato" ? "bg-world-eco/15 text-world-eco" :
+                  "bg-world-esc/15 text-world-esc"
+                }`}>
+                  <Icon className="h-3 w-3" />
+                  {title}
+                </div>
+                <p className="text-[11px] text-muted-foreground hidden sm:block">{subtitle}</p>
               </div>
-              <p className="text-[11px] text-muted-foreground hidden sm:block">{subtitle}</p>
+              <div className="hidden sm:flex gap-1">
+                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <div className="hidden sm:flex gap-1">
-              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </Button>
-              <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
-                <ChevronRight className="h-3.5 w-3.5" />
-              </Button>
+            <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth">
+              <CategoryTile active={categoryFilter === "all"} onClick={() => setCategory("all")}
+                icon={LayoutGrid} color="text-primary" bg="bg-primary/10" label="Todos" />
+              {categories.map((cat: any) => {
+                const meta = getCategoryMeta(cat.name);
+                return (
+                  <CategoryTile key={cat.id} active={categoryFilter === cat.name} onClick={() => setCategory(cat.name)}
+                    icon={meta.icon} color={meta.color} bg={meta.bg} label={cat.name} />
+                );
+              })}
             </div>
-          </div>
-          <div ref={scrollRef} className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide scroll-smooth">
-            <CategoryTile active={categoryFilter === "all"} onClick={() => setCategory("all")}
-              icon={LayoutGrid} color="text-primary" bg="bg-primary/10" label="Todos" />
-            {categories.map((cat: any) => {
-              const meta = getCategoryMeta(cat.name);
-              return (
-                <CategoryTile key={cat.id} active={categoryFilter === cat.name} onClick={() => setCategory(cat.name)}
-                  icon={meta.icon} color={meta.color} bg={meta.bg} label={cat.name} />
-              );
-            })}
           </div>
         </section>
       )}
