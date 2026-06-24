@@ -3,7 +3,7 @@ import { ImageOff, ShoppingCart, Star, Zap } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/trackEvent";
-import { Badge } from "@/components/ui/badge";
+import { QuantitySelector } from "@/components/QuantitySelector";
 
 function ProductImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -54,18 +54,27 @@ interface ProductCardProps {
 export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
   function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, minSaleQty, onEdit, isAdmin, onClick }, ref) {
     const { addItem } = useCart();
+    const [showSelector, setShowSelector] = useState(false);
     const allImages = images.length > 0
       ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
       : imageUrl ? [imageUrl] : [];
     const currentImage = allImages[0] || null;
-    const isNew = false; // pode ser derivado de created_at no futuro
 
-    const handleAddToCart = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      const qty = minSaleQty && minSaleQty > 1 ? minSaleQty : 1;
-      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category, weight: weight ?? null, fornecedor: fornecedor ?? null, envio_especial: envioEspecial ?? false, minSaleQty: qty }, qty);
-      toast.success(qty > 1 ? `${qty}x ${name} adicionado ao orçamento (embalagem mínima)` : `${name} adicionado ao orçamento`);
+    const step = minSaleQty && minSaleQty > 1 ? minSaleQty : 1;
+
+    const handleAdd = (qty: number) => {
+      addItem({
+        id, name, price,
+        imageUrl: currentImage || imageUrl,
+        category,
+        weight: weight ?? null,
+        fornecedor: fornecedor ?? null,
+        envio_especial: envioEspecial ?? false,
+        minSaleQty: step,
+      }, qty);
+      toast.success(qty > 1 ? `${qty}× ${name} adicionado ao orçamento` : `${name} adicionado ao orçamento`);
       trackEvent(id, "quote");
+      setShowSelector(false);
     };
 
     return (
@@ -105,17 +114,27 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               <ImageOff className="h-10 w-10" />
             </div>
           )}
-          {/* Quick add overlay */}
+          {/* Quick add overlay — seletor de quantidade */}
           {!isAdmin && (
             <div
-              className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 p-2"
+              className={`absolute inset-x-0 bottom-0 transition-transform duration-200 p-2 ${showSelector ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`}
               onClick={(e) => e.stopPropagation()}
             >
-              <button
-                onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 active:scale-95 transition-all">
-                <ShoppingCart className="h-3.5 w-3.5" /> Adicionar ao orçamento
-              </button>
+              {showSelector ? (
+                <QuantitySelector
+                  compact
+                  minQty={step}
+                  onAdd={handleAdd}
+                  onCancel={() => setShowSelector(false)}
+                />
+              ) : (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowSelector(true); }}
+                  className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 active:scale-95 transition-all"
+                >
+                  <ShoppingCart className="h-3.5 w-3.5" /> Adicionar ao orçamento
+                </button>
+              )}
             </div>
           )}
         </div>

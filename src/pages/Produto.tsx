@@ -18,6 +18,7 @@ import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { addToRecentlyViewed } from "@/pages/Index";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
 import { StockAlertButton } from "@/components/StockAlertButton";
+import { QuantitySelector } from "@/components/QuantitySelector";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
@@ -403,14 +404,26 @@ const Produto = () => {
 
           {/* CTA */}
           <div className="grid grid-cols-1 gap-2 pt-2">
-            {minSaleQty > 1 && (
-              <p className="text-sm text-muted-foreground -mb-1">
-                Vendido em embalagens de <strong>{minSaleQty} unidades</strong> — o preço indicado é por unidade.
-              </p>
-            )}
-            <Button size="lg" className="gap-2 h-12 text-base font-bold rounded-xl" onClick={handleAddToCart}>
-              <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento{minSaleQty > 1 ? ` (${minSaleQty} un.)` : ""}
-            </Button>
+            <QuantitySelector
+              minQty={minSaleQty}
+              onAdd={(qty) => {
+                addItem({
+                  id: product.id, name: product.name, price: product.price,
+                  imageUrl: currentImage, category: product.category,
+                  weight: product.weight ?? null,
+                  fornecedor: product.fornecedor ?? null,
+                  envio_especial: envio_especial,
+                  minSaleQty,
+                }, qty);
+                toast.success(
+                  qty > 1
+                    ? `${qty}× ${product.name} adicionado ao orçamento`
+                    : `${product.name} adicionado ao orçamento`
+                );
+                setIsOpen(true);
+              }}
+              label={`Adicionar ao Orçamento${minSaleQty > 1 ? ` (mín. ${minSaleQty} un.)` : ""}`}
+            />
             {/* Por encomenda — CTA discreto */}
             {(product.stock_status === "out" || product.stock_status === "on_request") && (
               <a
