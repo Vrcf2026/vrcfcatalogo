@@ -232,7 +232,7 @@ const Index = () => {
 
       {/* ── WORLD SELECTOR ── */}
       <section className="px-3 pt-4 pb-2 max-w-[1600px] mx-auto w-full">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <WorldBtn
             active={activeMundo === "seguranca"}
             onClick={() => setActiveMundo("seguranca")}

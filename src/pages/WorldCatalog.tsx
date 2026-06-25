@@ -596,7 +596,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
         {/* Sidebar filtros — desktop (só aparece após escolher uma categoria) */}
         {categoryFilter !== "all" && (
-          <aside className="hidden lg:block w-64 shrink-0 pt-4">
+          <aside className="hidden md:block w-56 shrink-0 pt-4">
             <div className="sticky top-20 rounded-2xl border border-border bg-card p-5 max-h-[calc(100vh-6rem)] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-bold">Filtrar</h2>
@@ -623,7 +623,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
             {categoryFilter !== "all" && (
               <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+                  <Button variant="outline" size="sm" className="md:hidden gap-1.5 h-9 relative">
                     <SlidersHorizontal className="h-4 w-4" /> Filtros
                     {activeFiltersCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
@@ -721,7 +721,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
             <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : products.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {products.map((product: any) => (
                   <ProductCard
                     key={product.id}

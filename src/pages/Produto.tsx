@@ -3,7 +3,7 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
 import {
-  Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2,
+  Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2, Search,
   MessageCircle, Copy, Truck, Clock, Info, ChevronLeft, ChevronRight,
   ZoomIn, Star,
 } from "lucide-react";
@@ -35,7 +35,7 @@ const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }
 // Tradução de chaves de specs para português legível
 const Produto = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { addItem, setIsOpen } = useCart();
+  const { addItem, setIsOpen, totalItems } = useCart();
   const [imgIdx, setImgIdx] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
@@ -245,7 +245,7 @@ const Produto = () => {
       </nav>
 
       {/* Produto */}
-      <section className="container mx-auto px-4 pb-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      <section className="container mx-auto px-4 pb-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
 
         {/* Imagens */}
         <div className="space-y-3">
@@ -543,6 +543,26 @@ const Produto = () => {
       )}
 
       <SiteFooter />
+
+      {/* Mobile bottom nav */}
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+        <div className="grid grid-cols-3 h-14">
+          <Link to="/" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
+            <span className="text-[9px] font-medium">Início</span>
+          </Link>
+          <Link to="/pesquisa" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <Search className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Pesquisa</span>
+          </Link>
+          <button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground relative">
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && <span className="absolute top-1.5 right-3 bg-primary text-primary-foreground text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center">{totalItems}</span>}
+            <span className="text-[9px] font-medium">Orçamento</span>
+          </button>
+        </div>
+      </nav>
+      <div className="h-14 sm:hidden" />
 
       <CartDrawer />
       <ContactFloatingBubble />

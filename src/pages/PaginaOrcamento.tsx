@@ -223,7 +223,7 @@ export default function PaginaOrcamento() {
         </div>
       </header>
 
-      <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div className="flex-1 max-w-5xl mx-auto w-full px-4 py-6 grid grid-cols-1 md:grid-cols-[1fr_360px] gap-6">
 
         {/* ── COLUNA ESQUERDA: produtos + formulário ── */}
         <div className="space-y-6">
