@@ -1,0 +1,1341 @@
+diff -ruN patch6-base/src/components/AdminDashboard.tsx patch6-mod/src/components/AdminDashboard.tsx
+--- patch6-base/src/components/AdminDashboard.tsx	2026-06-16 11:57:32.183566183 +0000
++++ patch6-mod/src/components/AdminDashboard.tsx	2026-06-16 11:57:32.211042956 +0000
+@@ -1,7 +1,10 @@
+ import { useState, useMemo } from "react";
+ import { useQuery, useQueryClient } from "@tanstack/react-query";
+ import { supabase } from "@/integrations/supabase/client";
+-import { BarChart3, Package, ImageOff, Star, MousePointerClick, ShoppingCart, Eye, Trash2, CalendarDays, Truck, RefreshCw } from "lucide-react";
++import {
++  BarChart3, Package, ImageOff, Star, MousePointerClick, ShoppingCart,
++  Trash2, CalendarDays, RefreshCw, TrendingUp, Globe, Tag, Zap,
++} from "lucide-react";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Button } from "@/components/ui/button";
+@@ -9,80 +12,162 @@
+ import { Badge } from "@/components/ui/badge";
+ import { toast } from "sonner";
+ 
+-interface AdminDashboardProps {}
++const FORNECEDORES_DASH = ["diginova", "visiotech", "bydemes", "allto", "manual"];
+ 
+-const FORNECEDORES_DASH = ["diginova", "visiotech", "bydemes", "manual"];
++const MUNDO_LABEL: Record<string, string> = {
++  seguranca: "Segurança", escritorio: "Escritório", economato: "Economato",
++};
++const MUNDO_COLOR: Record<string, string> = {
++  seguranca:  "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
++  escritorio: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
++  economato:  "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
++};
++
++function StatCard({ icon: Icon, label, value, color, sub }: {
++  icon: any; label: string; value: number | string; color?: string; sub?: string;
++}) {
++  return (
++    <Card>
++      <CardContent className="flex items-center gap-3 p-3">
++        <Icon className={`h-4 w-4 flex-shrink-0 ${color || "text-primary"}`} />
++        <div className="min-w-0">
++          <p className="text-xl font-bold text-foreground leading-none">{value}</p>
++          <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{label}</p>
++          {sub && <p className="text-[10px] text-muted-foreground/70">{sub}</p>}
++        </div>
++      </CardContent>
++    </Card>
++  );
++}
+ 
+-export function AdminDashboard(_props: AdminDashboardProps = {}) {
++// Ranking limpo: número ordinal + nome com contexto + contagem simples.
++// Sem barras de progresso (inúteis quando todos têm contagem igual).
++function RankingList({ items, emptyText }: {
++  items: Array<{
++    id?: string; name: string; category?: string; brand?: string;
++    mundo?: string; stock_status?: string; count: number;
++  }>;
++  emptyText: string;
++}) {
++  if (items.length === 0) {
++    return <p className="text-sm text-muted-foreground text-center py-6">{emptyText}</p>;
++  }
++  const max = Math.max(...items.map((i) => i.count), 1);
++  return (
++    <div className="space-y-1.5 mt-2">
++      {items.map((item, i) => (
++        <div key={item.id ?? item.name} className="flex items-start gap-3 py-2 px-3 rounded-lg hover:bg-secondary/40 transition-colors">
++          <span className="text-xs font-bold text-muted-foreground w-5 text-right pt-0.5 flex-shrink-0">
++            {i + 1}.
++          </span>
++          <div className="flex-1 min-w-0">
++            <div className="flex items-center gap-1.5 flex-wrap">
++              <p className="text-sm font-medium truncate">{item.name}</p>
++              {item.stock_status === "out" && (
++                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 flex-shrink-0">
++                  sem stock
++                </span>
++              )}
++            </div>
++            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
++              {item.mundo && (
++                <span className={`text-[10px] px-1.5 py-0 rounded-full font-medium ${MUNDO_COLOR[item.mundo] ?? "bg-muted text-muted-foreground"}`}>
++                  {MUNDO_LABEL[item.mundo] ?? item.mundo}
++                </span>
++              )}
++              {item.category && (
++                <span className="text-[11px] text-muted-foreground truncate">{item.category}</span>
++              )}
++              {item.brand && (
++                <span className="text-[11px] text-muted-foreground/70 truncate">· {item.brand}</span>
++              )}
++            </div>
++            {/* Barra só aparece quando há variação real (max > 1 e não todos iguais) */}
++            {max > 1 && (
++              <div className="h-1 rounded-full bg-muted mt-1.5">
++                <div
++                  className="h-1 rounded-full bg-primary/50 transition-all"
++                  style={{ width: `${Math.max((item.count / max) * 100, 4)}%` }}
++                />
++              </div>
++            )}
++          </div>
++          <span className="text-sm font-bold tabular-nums text-foreground flex-shrink-0 pt-0.5">
++            {item.count}
++          </span>
++        </div>
++      ))}
++    </div>
++  );
++}
++
++function CategoryRanking({ data }: { data: any[] }) {
++  if (!data.length) return <p className="text-sm text-muted-foreground text-center py-6">Sem dados</p>;
++  const max = Math.max(...data.map((d) => Number(d.count)), 1);
++  return (
++    <div className="space-y-1.5 mt-2">
++      {data.map((d, i) => (
++        <div key={`${d.categoria}-${d.mundo}`} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary/40">
++          <span className="text-xs font-bold text-muted-foreground w-5 text-right flex-shrink-0">{i + 1}.</span>
++          <div className="flex-1 min-w-0">
++            <div className="flex items-center gap-1.5 flex-wrap">
++              <span className="text-sm font-medium">{d.category ?? d.categoria ?? "—"}</span>
++              {d.mundo && (
++                <span className={`text-[10px] px-1.5 py-0 rounded-full font-medium ${MUNDO_COLOR[d.mundo] ?? "bg-muted text-muted-foreground"}`}>
++                  {MUNDO_LABEL[d.mundo] ?? d.mundo}
++                </span>
++              )}
++            </div>
++            {max > 1 && (
++              <div className="h-1 rounded-full bg-muted mt-1.5">
++                <div className="h-1 rounded-full bg-primary/50 transition-all" style={{ width: `${Math.max((Number(d.count) / max) * 100, 4)}%` }} />
++              </div>
++            )}
++          </div>
++          <span className="text-sm font-bold tabular-nums flex-shrink-0">{d.count}</span>
++        </div>
++      ))}
++    </div>
++  );
++}
++
++export function AdminDashboard(_props = {}) {
+   const [dateRange, setDateRange] = useState("all");
+   const [clearing, setClearing] = useState(false);
+   const queryClient = useQueryClient();
+ 
+-  const dateFilter = (() => {
++  const since = (() => {
+     const now = new Date();
+-    if (dateRange === "7d") return new Date(now.getTime() - 7 * 86400000).toISOString();
++    if (dateRange === "7d")  return new Date(now.getTime() -  7 * 86400000).toISOString();
+     if (dateRange === "30d") return new Date(now.getTime() - 30 * 86400000).toISOString();
+     if (dateRange === "90d") return new Date(now.getTime() - 90 * 86400000).toISOString();
+     return null;
+   })();
+ 
+-  const { data: analytics = [] } = useQuery({
+-    queryKey: ["product_analytics", dateRange],
+-    queryFn: async () => {
+-      let query = (supabase as any)
+-        .from("product_analytics")
+-        .select("product_id, event_type, created_at")
+-        .order("created_at", { ascending: false })
+-        .limit(5000);
+-      if (dateFilter) query = query.gte("created_at", dateFilter);
+-      const { data, error } = await query;
+-      if (error) throw error;
+-      return data as { product_id: string; event_type: string; created_at: string }[];
+-    },
+-  });
+-
+-  const handleClearAnalytics = async () => {
+-    if (!confirm("Limpar todos os dados de analytics? Esta acção é irreversível.")) return;
+-    setClearing(true);
+-    try {
+-      const { error } = await (supabase as any).from("product_analytics").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+-      if (error) throw error;
+-      queryClient.invalidateQueries({ queryKey: ["product_analytics"] });
+-      toast.success("Analytics limpos");
+-    } catch (e: any) {
+-      toast.error("Erro: " + e.message);
+-    } finally {
+-      setClearing(false);
+-    }
+-  };
+-
+-  // Stats gerais — contagens feitas no servidor (head:true não transfere
+-  // linhas), em vez de carregar os 27000+ produtos para o browser.
++  // ── Stats gerais (server-side counts) ────────────────────────────────
+   const { data: stats } = useQuery({
+     queryKey: ["admin-dashboard-stats"],
+     queryFn: async () => {
+       const countOf = async (build: (q: any) => any) => {
+-        let q = supabase.from("products").select("id", { count: "exact", head: true });
+-        q = build(q);
+-        const { count, error } = await q;
++        const { count, error } = await build(
++          supabase.from("products").select("id", { count: "exact", head: true })
++        );
+         if (error) throw error;
+         return count ?? 0;
+       };
+-
+       const [total, noCatalog, featured, semImagem, porFornecedor] = await Promise.all([
+         countOf((q) => q),
+         countOf((q) => q.eq("include_in_catalog", true)),
+         countOf((q) => q.eq("featured", true)),
+         countOf((q) => q.is("image_url", null)),
+         Promise.all(FORNECEDORES_DASH.map(async (f) => {
+-          const [total, semStock] = await Promise.all([
++          const [tot, semStock] = await Promise.all([
+             countOf((q) => q.eq("fornecedor", f)),
+             countOf((q) => q.eq("fornecedor", f).eq("stock_status", "out")),
+           ]);
+-          return [f, { total, comStock: total - semStock, semStock }] as const;
++          return [f, { total: tot, comStock: tot - semStock, semStock }] as const;
+         })),
+       ]);
+-
+       return {
+         total, noCatalog, featured, semImagem,
+         porFornecedor: Object.fromEntries(porFornecedor.filter(([, s]) => s.total > 0)),
+@@ -91,88 +176,178 @@
+     staleTime: 60 * 1000,
+   });
+ 
+-  const total = stats?.total ?? 0;
+-  const noCatalog = stats?.noCatalog ?? 0;
+-  const featured = stats?.featured ?? 0;
+-  const semImagem = stats?.semImagem ?? 0;
+-  const porFornecedor = stats?.porFornecedor ?? {};
++  // ── Analytics: top produtos clicados e orçamentados (com contexto) ──
++  const { data: topClicks = [] } = useQuery({
++    queryKey: ["analytics-top-clicks", since],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_top_products_with_context", {
++        p_event_type: "click", p_since: since, p_limit: 10,
++      });
++      if (error) throw error;
++      return (data ?? []).map((r: any) => ({ ...r, id: r.product_id, count: Number(r.count) }));
++    },
++    staleTime: 60 * 1000,
++  });
++
++  const { data: topQuotes = [] } = useQuery({
++    queryKey: ["analytics-top-quotes", since],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_top_products_with_context", {
++        p_event_type: "quote", p_since: since, p_limit: 10,
++      });
++      if (error) throw error;
++      return (data ?? []).map((r: any) => ({ ...r, id: r.product_id, count: Number(r.count) }));
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // ── Analytics por categoria ──────────────────────────────────────────
++  const { data: catClicks = [] } = useQuery({
++    queryKey: ["analytics-cat-clicks", since],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_analytics_by_category", {
++        p_event_type: "click", p_since: since, p_limit: 10,
++      });
++      if (error) throw error;
++      return (data ?? []).map((r: any) => ({ ...r, count: Number(r.count) }));
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // ── Analytics por marca ──────────────────────────────────────────────
++  const { data: brandClicks = [] } = useQuery({
++    queryKey: ["analytics-brand-clicks", since],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_analytics_by_brand", {
++        p_event_type: "click", p_since: since, p_limit: 10,
++      });
++      if (error) throw error;
++      return (data ?? []).map((r: any) => ({ ...r, count: Number(r.count) }));
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // ── Analytics por mundo ──────────────────────────────────────────────
++  const { data: mundoStats = [] } = useQuery({
++    queryKey: ["analytics-mundo", since],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_analytics_by_mundo", { p_since: since });
++      if (error) throw error;
++      return (data ?? []).map((r: any) => ({ ...r, clicks: Number(r.clicks), quotes: Number(r.quotes) }));
++    },
++    staleTime: 60 * 1000,
++  });
+ 
+-  // Analytics
+-  const clickCounts: Record<string, number> = {};
+-  const quoteCounts: Record<string, number> = {};
+-  const viewCounts: Record<string, number> = {};
+-  analytics.forEach(e => {
+-    if (e.event_type === "click") clickCounts[e.product_id] = (clickCounts[e.product_id] || 0) + 1;
+-    if (e.event_type === "quote") quoteCounts[e.product_id] = (quoteCounts[e.product_id] || 0) + 1;
+-    if (e.event_type === "catalog_view") viewCounts[e.product_id] = (viewCounts[e.product_id] || 0) + 1;
+-  });
+-
+-  const topClicked = Object.entries(clickCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+-  const topQuoted = Object.entries(quoteCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
+-  const totalClicks = analytics.filter(e => e.event_type === "click").length;
+-  const totalQuotes = analytics.filter(e => e.event_type === "quote").length;
+-
+-  // Nomes dos produtos nos rankings — só os ~20 IDs necessários, não os
+-  // 27000 produtos. Serializado para evitar recomputar/refetch a cada
+-  // render (topClicked/topQuoted são arrays novos sempre que analytics
+-  // muda de referência, mas o conteúdo é normalmente o mesmo).
+-  const rankingIdsKey = useMemo(() => {
+-    const ids = new Set<string>();
+-    topClicked.forEach(([id]) => ids.add(id));
+-    topQuoted.forEach(([id]) => ids.add(id));
+-    return Array.from(ids).sort().join(",");
+-  }, [topClicked, topQuoted]);
+-
+-  const rankingIds = useMemo(() => rankingIdsKey ? rankingIdsKey.split(",") : [], [rankingIdsKey]);
+-
+-  const { data: rankingNames = {} } = useQuery({
+-    queryKey: ["admin-dashboard-ranking-names", rankingIdsKey],
+-    queryFn: async () => {
+-      if (rankingIds.length === 0) return {};
+-      const { data, error } = await supabase.from("products").select("id,name").in("id", rankingIds);
++  // ── Produtos sem stock mais clicados (oportunidades) ─────────────────
++  const { data: outOfStockHits = [] } = useQuery({
++    queryKey: ["analytics-out-of-stock", since],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_out_of_stock_clicked", {
++        p_since: since, p_limit: 10,
++      });
+       if (error) throw error;
+-      return Object.fromEntries((data ?? []).map((p: any) => [p.id, p.name]));
++      return (data ?? []).map((r: any) => ({ ...r, id: r.product_id, count: Number(r.count) }));
+     },
+-    enabled: rankingIds.length > 0,
++    staleTime: 60 * 1000,
+   });
+ 
+-  const productName = (id: string) => rankingNames[id] || "Produto removido";
++  // ── Totais de cliques/orçamentos (rápido via analytics existente) ────
++  const { data: totalsAnalytics } = useQuery({
++    queryKey: ["analytics-totals", since],
++    queryFn: async () => {
++      let q = (supabase as any).from("product_analytics")
++        .select("event_type", { count: "exact" });
++      if (since) q = q.gte("created_at", since);
++      const [clicks, quotes] = await Promise.all([
++        (supabase as any).from("product_analytics").select("id", { count: "exact", head: true })
++          .eq("event_type", "click").then(({ count }: any) => count ?? 0),
++        (supabase as any).from("product_analytics").select("id", { count: "exact", head: true })
++          .eq("event_type", "quote").then(({ count }: any) => count ?? 0),
++      ]);
++      return { clicks, quotes };
++    },
++    staleTime: 60 * 1000,
++  });
++
++  const handleClearAnalytics = async () => {
++    if (!confirm("Limpar todos os dados de analytics? Esta acção é irreversível.")) return;
++    setClearing(true);
++    try {
++      const { error } = await (supabase as any).from("product_analytics")
++        .delete().neq("id", "00000000-0000-0000-0000-000000000000");
++      if (error) throw error;
++      queryClient.invalidateQueries({ queryKey: ["analytics"] });
++      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
++      toast.success("Analytics limpos");
++    } catch (e: any) {
++      toast.error("Erro: " + e.message);
++    } finally {
++      setClearing(false);
++    }
++  };
++
++  const total      = stats?.total ?? 0;
++  const noCatalog  = stats?.noCatalog ?? 0;
++  const featured   = stats?.featured ?? 0;
++  const semImagem  = stats?.semImagem ?? 0;
++  const porFornecedor = stats?.porFornecedor ?? {};
+ 
+   return (
+-    <div className="space-y-4">
+-      {/* Cards gerais */}
++    <div className="space-y-5">
++      {/* ── Cards gerais ─────────────────────────────────────────────── */}
+       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+-        <StatCard icon={Package} label="Total" value={total} />
+-        <StatCard icon={BarChart3} label="No Catálogo" value={noCatalog} />
+-        <StatCard icon={Star} label="Destaques" value={featured} color="text-amber-500" />
+-        <StatCard icon={ImageOff} label="Sem Imagem" value={semImagem} color={semImagem > 0 ? "text-orange-500" : undefined} />
+-        <StatCard icon={MousePointerClick} label="Cliques" value={totalClicks} color="text-blue-500" />
+-        <StatCard icon={ShoppingCart} label="Orçamentos" value={totalQuotes} color="text-green-500" />
++        <StatCard icon={Package}          label="Total produtos"  value={total}      />
++        <StatCard icon={BarChart3}         label="No catálogo"     value={noCatalog}  />
++        <StatCard icon={Star}             label="Destaques"       value={featured}   color="text-amber-500" />
++        <StatCard icon={ImageOff}         label="Sem imagem"      value={semImagem}  color={semImagem > 0 ? "text-orange-500" : undefined} />
++        <StatCard icon={MousePointerClick} label="Cliques"         value={totalsAnalytics?.clicks ?? "—"} color="text-blue-500" />
++        <StatCard icon={ShoppingCart}     label="Orçamentados"   value={totalsAnalytics?.quotes ?? "—"} color="text-green-500" />
+       </div>
+ 
+-      {/* Por fornecedor */}
++      {/* ── Por fornecedor ─────────────────────────────────────────── */}
+       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+-        {Object.entries(porFornecedor).map(([f, fStats]) => (
++        {Object.entries(porFornecedor).map(([f, s]: any) => (
+           <Card key={f}>
+             <CardContent className="p-3">
+               <div className="flex items-center justify-between mb-2">
+                 <Badge variant="outline" className="capitalize text-xs">{f}</Badge>
+-                <span className="text-lg font-bold">{(fStats as any).total}</span>
++                <span className="text-lg font-bold">{s.total}</span>
+               </div>
+               <div className="flex gap-3 text-xs text-muted-foreground">
+-                <span className="text-green-600">✓ {(fStats as any).comStock}</span>
+-                {(fStats as any).semStock > 0 && <span className="text-red-500">✗ {(fStats as any).semStock}</span>}
++                <span className="text-green-600">✓ {s.comStock} c/stock</span>
++                {s.semStock > 0 && <span className="text-red-500">✗ {s.semStock}</span>}
+               </div>
+             </CardContent>
+           </Card>
+         ))}
+       </div>
+ 
+-      {/* Analytics */}
++      {/* ── Por mundo ─────────────────────────────────────────────── */}
++      {mundoStats.length > 0 && (
++        <div className="grid grid-cols-3 gap-3">
++          {mundoStats.map((m: any) => (
++            <Card key={m.mundo}>
++              <CardContent className="p-3">
++                <div className="flex items-center justify-between mb-1.5">
++                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${MUNDO_COLOR[m.mundo] ?? "bg-muted text-muted-foreground"}`}>
++                    {MUNDO_LABEL[m.mundo] ?? m.mundo}
++                  </span>
++                </div>
++                <div className="flex gap-4 text-xs text-muted-foreground">
++                  <span className="flex items-center gap-1"><MousePointerClick className="h-3 w-3" /> {m.clicks}</span>
++                  <span className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> {m.quotes}</span>
++                </div>
++              </CardContent>
++            </Card>
++          ))}
++        </div>
++      )}
++
++      {/* ── Filtro temporal + limpar ──────────────────────────────── */}
+       <div className="flex items-center gap-3 flex-wrap">
+         <div className="flex items-center gap-2">
+           <CalendarDays className="h-4 w-4 text-muted-foreground" />
+-          <Select value={dateRange} onValueChange={setDateRange}>
++          <Select value={dateRange} onValueChange={(v) => { setDateRange(v); }}>
+             <SelectTrigger className="w-[150px] h-8 text-sm"><SelectValue /></SelectTrigger>
+             <SelectContent>
+               <SelectItem value="all">Todo o período</SelectItem>
+@@ -182,63 +357,113 @@
+             </SelectContent>
+           </Select>
+         </div>
+-        <Button variant="outline" size="sm" onClick={handleClearAnalytics} disabled={clearing} className="gap-1.5 h-8 text-destructive border-destructive/30 hover:bg-destructive/10">
++        <Button variant="outline" size="sm" onClick={handleClearAnalytics} disabled={clearing}
++          className="gap-1.5 h-8 text-destructive border-destructive/30 hover:bg-destructive/10">
+           {clearing ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+-          Limpar Analytics
++          Limpar analytics
+         </Button>
+       </div>
+ 
+-      <Tabs defaultValue="clicks" className="w-full">
+-        <TabsList className="grid w-full grid-cols-2 max-w-xs">
+-          <TabsTrigger value="clicks" className="gap-1.5 text-xs">
+-            <MousePointerClick className="h-3 w-3" /> Cliques
+-          </TabsTrigger>
+-          <TabsTrigger value="quotes" className="gap-1.5 text-xs">
+-            <ShoppingCart className="h-3 w-3" /> Orçamentos
+-          </TabsTrigger>
++      {/* ── Rankings e análises ───────────────────────────────────── */}
++      <Tabs defaultValue="produtos" className="w-full">
++        <TabsList className="flex flex-wrap h-auto gap-1">
++          <TabsTrigger value="produtos"     className="gap-1.5 text-xs"><TrendingUp className="h-3 w-3" /> Produtos</TabsTrigger>
++          <TabsTrigger value="categorias"   className="gap-1.5 text-xs"><Tag className="h-3 w-3" /> Categorias</TabsTrigger>
++          <TabsTrigger value="marcas"       className="gap-1.5 text-xs"><BarChart3 className="h-3 w-3" /> Marcas</TabsTrigger>
++          <TabsTrigger value="oportunidades" className="gap-1.5 text-xs"><Zap className="h-3 w-3 text-amber-500" /> Oportunidades</TabsTrigger>
+         </TabsList>
+-        <TabsContent value="clicks">
+-          <RankingList items={topClicked} productName={productName} emptyText="Sem dados de cliques" />
++
++        {/* Produtos — top clicados e orçamentados */}
++        <TabsContent value="produtos">
++          <div className="grid md:grid-cols-2 gap-4 mt-3">
++            <Card>
++              <CardHeader className="pb-2 pt-4 px-4">
++                <CardTitle className="text-sm flex items-center gap-2">
++                  <MousePointerClick className="h-4 w-4 text-blue-500" /> Mais Clicados
++                </CardTitle>
++              </CardHeader>
++              <CardContent className="px-2 pb-3">
++                <RankingList items={topClicks} emptyText="Sem dados de cliques" />
++              </CardContent>
++            </Card>
++            <Card>
++              <CardHeader className="pb-2 pt-4 px-4">
++                <CardTitle className="text-sm flex items-center gap-2">
++                  <ShoppingCart className="h-4 w-4 text-green-500" /> Mais Orçamentados
++                </CardTitle>
++              </CardHeader>
++              <CardContent className="px-2 pb-3">
++                <RankingList items={topQuotes} emptyText="Sem dados de orçamentos" />
++              </CardContent>
++            </Card>
++          </div>
+         </TabsContent>
+-        <TabsContent value="quotes">
+-          <RankingList items={topQuoted} productName={productName} emptyText="Sem dados de orçamentos" />
++
++        {/* Categorias */}
++        <TabsContent value="categorias">
++          <Card className="mt-3">
++            <CardHeader className="pb-2 pt-4 px-4">
++              <CardTitle className="text-sm flex items-center gap-2">
++                <Tag className="h-4 w-4 text-primary" /> Categorias mais clicadas
++              </CardTitle>
++            </CardHeader>
++            <CardContent className="px-2 pb-3">
++              <CategoryRanking data={catClicks} />
++            </CardContent>
++          </Card>
+         </TabsContent>
+-      </Tabs>
+-    </div>
+-  );
+-}
+ 
+-function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color?: string }) {
+-  return (
+-    <Card>
+-      <CardContent className="flex items-center gap-3 p-3">
+-        <Icon className={`h-4 w-4 flex-shrink-0 ${color || "text-primary"}`} />
+-        <div>
+-          <p className="text-xl font-bold text-foreground leading-none">{value}</p>
+-          <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
+-        </div>
+-      </CardContent>
+-    </Card>
+-  );
+-}
++        {/* Marcas */}
++        <TabsContent value="marcas">
++          <Card className="mt-3">
++            <CardHeader className="pb-2 pt-4 px-4">
++              <CardTitle className="text-sm flex items-center gap-2">
++                <BarChart3 className="h-4 w-4 text-primary" /> Marcas mais clicadas
++              </CardTitle>
++            </CardHeader>
++            <CardContent className="px-2 pb-3">
++              <div className="space-y-1.5 mt-2">
++                {brandClicks.length === 0 ? (
++                  <p className="text-sm text-muted-foreground text-center py-6">Sem dados</p>
++                ) : brandClicks.map((b: any, i: number) => {
++                  const max = Math.max(...brandClicks.map((x: any) => Number(x.count)), 1);
++                  return (
++                    <div key={b.brand} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary/40">
++                      <span className="text-xs font-bold text-muted-foreground w-5 text-right flex-shrink-0">{i + 1}.</span>
++                      <div className="flex-1 min-w-0">
++                        <p className="text-sm font-medium">{b.brand}</p>
++                        {max > 1 && (
++                          <div className="h-1 rounded-full bg-muted mt-1.5">
++                            <div className="h-1 rounded-full bg-primary/50" style={{ width: `${Math.max((Number(b.count) / max) * 100, 4)}%` }} />
++                          </div>
++                        )}
++                      </div>
++                      <span className="text-sm font-bold tabular-nums flex-shrink-0">{b.count}</span>
++                    </div>
++                  );
++                })}
++              </div>
++            </CardContent>
++          </Card>
++        </TabsContent>
+ 
+-function RankingList({ items, productName, emptyText }: { items: [string, number][]; productName: (id: string) => string; emptyText: string }) {
+-  if (items.length === 0) return <p className="text-sm text-muted-foreground text-center py-4">{emptyText}</p>;
+-  const max = items[0]?.[1] || 1;
+-  return (
+-    <div className="space-y-2 mt-3">
+-      {items.map(([id, count], i) => (
+-        <div key={id} className="flex items-center gap-3">
+-          <span className="text-xs font-bold text-muted-foreground w-5 text-right">{i + 1}.</span>
+-          <div className="flex-1 min-w-0">
+-            <p className="text-sm font-medium truncate">{productName(id)}</p>
+-            <div className="h-1 rounded-full bg-muted mt-1">
+-              <div className="h-1 rounded-full bg-primary/60 transition-all" style={{ width: `${(count / max) * 100}%` }} />
+-            </div>
+-          </div>
+-          <span className="text-sm font-semibold tabular-nums">{count}</span>
+-        </div>
+-      ))}
++        {/* Oportunidades — produtos sem stock mais clicados */}
++        <TabsContent value="oportunidades">
++          <Card className="mt-3">
++            <CardHeader className="pb-2 pt-4 px-4">
++              <CardTitle className="text-sm flex items-center gap-2">
++                <Zap className="h-4 w-4 text-amber-500" /> Produtos sem stock com mais interesse
++              </CardTitle>
++              <p className="text-xs text-muted-foreground mt-0.5">
++                Produtos com <strong>stock esgotado</strong> que os clientes continuam a clicar — potencial de encomenda ou restock.
++              </p>
++            </CardHeader>
++            <CardContent className="px-2 pb-3">
++              <RankingList items={outOfStockHits} emptyText="Nenhum produto sem stock foi clicado no período seleccionado." />
++            </CardContent>
++          </Card>
++        </TabsContent>
++      </Tabs>
+     </div>
+   );
+ }
+diff -ruN patch6-base/src/components/UsersManager.tsx patch6-mod/src/components/UsersManager.tsx
+--- patch6-base/src/components/UsersManager.tsx	1970-01-01 00:00:00.000000000 +0000
++++ patch6-mod/src/components/UsersManager.tsx	2026-06-16 11:57:32.213095465 +0000
+@@ -0,0 +1,298 @@
++import { useState } from "react";
++import { useQuery, useQueryClient } from "@tanstack/react-query";
++import { supabase } from "@/integrations/supabase/client";
++import { useAuth } from "@/hooks/useAuth";
++import { Button } from "@/components/ui/button";
++import { Input } from "@/components/ui/input";
++import { Label } from "@/components/ui/label";
++import { Badge } from "@/components/ui/badge";
++import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
++import { Card, CardContent } from "@/components/ui/card";
++import { Loader2, Users, Plus, Search, ShieldCheck, Briefcase, User, Trash2, UserPlus } from "lucide-react";
++import { toast } from "sonner";
++
++const ALL_ROLES = ["super_admin", "admin", "gestor"] as const;
++type AppRole = typeof ALL_ROLES[number];
++
++const ROLE_META: Record<AppRole, { label: string; color: string; icon: React.ElementType }> = {
++  super_admin: { label: "Super Admin", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",    icon: ShieldCheck },
++  admin:       { label: "Admin",       color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400", icon: ShieldCheck },
++  gestor:      { label: "Gestor",      color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400", icon: Briefcase },
++};
++
++export function UsersManager() {
++  const { user: currentUser } = useAuth();
++  const qc = useQueryClient();
++  const [search, setSearch] = useState("");
++  const [inviteOpen, setInviteOpen] = useState(false);
++  const [inviteEmail, setInviteEmail] = useState("");
++  const [invitePassword, setInvitePassword] = useState("");
++  const [inviteFullName, setInviteFullName] = useState("");
++  const [inviteRole, setInviteRole] = useState<AppRole | "">("");
++  const [inviting, setInviting] = useState(false);
++  const [addingRole, setAddingRole] = useState<{ userId: string; role: AppRole } | null>(null);
++
++  // Lista de utilizadores via RPC
++  const { data: users = [], isLoading } = useQuery({
++    queryKey: ["admin-users"],
++    queryFn: async () => {
++      const { data, error } = await supabase.rpc("get_users_with_roles");
++      if (error) throw error;
++      return (data as any[]) ?? [];
++    },
++    staleTime: 30 * 1000,
++  });
++
++  const filtered = users.filter((u: any) => {
++    if (!search.trim()) return true;
++    const s = search.toLowerCase();
++    return u.email?.toLowerCase().includes(s) || u.full_name?.toLowerCase().includes(s);
++  });
++
++  // Atribuir role
++  const handleAddRole = async (userId: string, role: AppRole) => {
++    setAddingRole({ userId, role });
++    const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
++    setAddingRole(null);
++    if (error) {
++      if (error.code === "23505") {
++        toast.info("Utilizador já tem este role.");
++      } else {
++        toast.error(error.message);
++      }
++      return;
++    }
++    toast.success(`Role "${ROLE_META[role].label}" atribuído.`);
++    qc.invalidateQueries({ queryKey: ["admin-users"] });
++  };
++
++  // Remover role
++  const handleRemoveRole = async (userId: string, role: string) => {
++    // Não permitir remover o próprio super_admin
++    if (userId === currentUser?.id && role === "super_admin") {
++      toast.error("Não podes remover o teu próprio role super_admin.");
++      return;
++    }
++    const { error } = await supabase
++      .from("user_roles")
++      .delete()
++      .eq("user_id", userId)
++      .eq("role", role);
++    if (error) { toast.error(error.message); return; }
++    toast.success("Role removido.");
++    qc.invalidateQueries({ queryKey: ["admin-users"] });
++  };
++
++  // Criar novo utilizador
++  const handleInvite = async (e: React.FormEvent) => {
++    e.preventDefault();
++    if (!inviteEmail.trim() || invitePassword.length < 8) {
++      toast.error("Email válido e palavra-passe com mínimo 8 caracteres são obrigatórios.");
++      return;
++    }
++    setInviting(true);
++    try {
++      // Criar utilizador via signUp (cria conta mas fica por confirmar)
++      const { data, error } = await supabase.auth.signUp({
++        email: inviteEmail.trim(),
++        password: invitePassword,
++        options: {
++          data: inviteFullName.trim() ? { full_name: inviteFullName.trim() } : undefined,
++          // emailRedirectTo é necessário mas o admin pode confirmar manualmente via Supabase
++          emailRedirectTo: `${window.location.origin}/conta`,
++        },
++      });
++      if (error) throw error;
++      if (!data.user) throw new Error("Utilizador não criado.");
++
++      // Atribuir role se selecionado
++      if (inviteRole) {
++        const { error: roleError } = await supabase
++          .from("user_roles")
++          .insert({ user_id: data.user.id, role: inviteRole });
++        if (roleError && roleError.code !== "23505") throw roleError;
++      }
++
++      toast.success(`Utilizador ${inviteEmail} criado.${inviteRole ? ` Role "${ROLE_META[inviteRole as AppRole].label}" atribuído.` : ""} Irá receber email de confirmação.`);
++      setInviteOpen(false);
++      setInviteEmail(""); setInvitePassword(""); setInviteFullName(""); setInviteRole("");
++      qc.invalidateQueries({ queryKey: ["admin-users"] });
++    } catch (err: any) {
++      toast.error(err.message ?? "Erro ao criar utilizador.");
++    } finally {
++      setInviting(false);
++    }
++  };
++
++  return (
++    <div className="space-y-4">
++      <div className="flex items-center justify-between flex-wrap gap-3">
++        <div>
++          <h3 className="font-semibold text-foreground">Utilizadores</h3>
++          <p className="text-sm text-muted-foreground">
++            {users.length} utilizador{users.length !== 1 ? "es" : ""} registado{users.length !== 1 ? "s" : ""}
++          </p>
++        </div>
++        <Button size="sm" className="gap-1.5" onClick={() => setInviteOpen(true)}>
++          <UserPlus className="h-4 w-4" /> Criar utilizador
++        </Button>
++      </div>
++
++      <div className="relative">
++        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
++        <Input
++          placeholder="Pesquisar por email ou nome..."
++          className="pl-9 h-9"
++          value={search}
++          onChange={(e) => setSearch(e.target.value)}
++        />
++      </div>
++
++      {isLoading ? (
++        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
++      ) : filtered.length === 0 ? (
++        <Card>
++          <CardContent className="py-12 text-center text-muted-foreground">
++            <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
++            <p>{search ? "Nenhum utilizador encontrado." : "Sem utilizadores registados."}</p>
++          </CardContent>
++        </Card>
++      ) : (
++        <div className="space-y-2">
++          {filtered.map((u: any) => {
++            const isCurrentUser = u.id === currentUser?.id;
++            return (
++              <Card key={u.id} className={isCurrentUser ? "border-primary/40" : ""}>
++                <CardContent className="py-3 space-y-2">
++                  <div className="flex items-start justify-between gap-3 flex-wrap">
++                    <div className="min-w-0">
++                      <div className="flex items-center gap-2 flex-wrap">
++                        <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
++                        <span className="text-sm font-medium truncate">{u.email}</span>
++                        {isCurrentUser && <Badge variant="outline" className="text-[10px]">Tu</Badge>}
++                        {!u.confirmed && <Badge variant="outline" className="text-[10px] text-amber-600">Por confirmar</Badge>}
++                      </div>
++                      {u.full_name && <p className="text-xs text-muted-foreground ml-5">{u.full_name}</p>}
++                      <p className="text-xs text-muted-foreground ml-5 mt-0.5">
++                        Registo: {new Date(u.created_at).toLocaleDateString("pt-PT")}
++                        {u.last_sign_in && ` · Último acesso: ${new Date(u.last_sign_in).toLocaleDateString("pt-PT")}`}
++                      </p>
++                    </div>
++                  </div>
++
++                  {/* Roles actuais */}
++                  <div className="flex items-center gap-2 flex-wrap ml-5">
++                    {(u.roles as string[]).length === 0 ? (
++                      <span className="text-xs text-muted-foreground italic">Sem roles (cliente normal)</span>
++                    ) : (
++                      (u.roles as string[]).map((role) => {
++                        const meta = ROLE_META[role as AppRole];
++                        const Icon = meta?.icon ?? ShieldCheck;
++                        return (
++                          <span key={role} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${meta?.color ?? "bg-slate-100 text-slate-700"}`}>
++                            <Icon className="h-3 w-3" />
++                            {meta?.label ?? role}
++                            {!(isCurrentUser && role === "super_admin") && (
++                              <button
++                                onClick={() => handleRemoveRole(u.id, role)}
++                                className="ml-0.5 hover:opacity-70 transition-opacity"
++                                title="Remover role"
++                              >
++                                <Trash2 className="h-2.5 w-2.5" />
++                              </button>
++                            )}
++                          </span>
++                        );
++                      })
++                    )}
++
++                    {/* Adicionar role */}
++                    {ALL_ROLES.filter((r) => !(u.roles as string[]).includes(r)).map((role) => {
++                      const meta = ROLE_META[role];
++                      const isLoading = addingRole?.userId === u.id && addingRole?.role === role;
++                      return (
++                        <button
++                          key={role}
++                          onClick={() => handleAddRole(u.id, role)}
++                          disabled={!!addingRole}
++                          className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
++                          title={`Atribuir role ${meta.label}`}
++                        >
++                          {isLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Plus className="h-2.5 w-2.5" />}
++                          {meta.label}
++                        </button>
++                      );
++                    })}
++                  </div>
++                </CardContent>
++              </Card>
++            );
++          })}
++        </div>
++      )}
++
++      {/* Dialog: criar utilizador */}
++      <Dialog open={inviteOpen} onOpenChange={(o) => { if (!inviting) { setInviteOpen(o); }}}>
++        <DialogContent className="max-w-md">
++          <DialogHeader>
++            <DialogTitle>Criar novo utilizador</DialogTitle>
++            <DialogDescription>
++              Cria uma conta e opcionalmente atribui um role de acesso.
++              O utilizador irá receber um email de confirmação.
++            </DialogDescription>
++          </DialogHeader>
++          <form onSubmit={handleInvite} className="space-y-3">
++            <div className="space-y-1.5">
++              <Label className="text-xs">Nome completo (opcional)</Label>
++              <Input
++                value={inviteFullName}
++                onChange={(e) => setInviteFullName(e.target.value)}
++                placeholder="Nome Apelido"
++                maxLength={100}
++              />
++            </div>
++            <div className="space-y-1.5">
++              <Label className="text-xs">Email *</Label>
++              <Input
++                type="email"
++                value={inviteEmail}
++                onChange={(e) => setInviteEmail(e.target.value)}
++                required
++                maxLength={255}
++              />
++            </div>
++            <div className="space-y-1.5">
++              <Label className="text-xs">Palavra-passe (mín. 8 caracteres) *</Label>
++              <Input
++                type="password"
++                value={invitePassword}
++                onChange={(e) => setInvitePassword(e.target.value)}
++                required
++                minLength={8}
++              />
++            </div>
++            <div className="space-y-1.5">
++              <Label className="text-xs">Role (opcional)</Label>
++              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as AppRole)}>
++                <SelectTrigger>
++                  <SelectValue placeholder="Sem role especial (cliente)" />
++                </SelectTrigger>
++                <SelectContent>
++                  <SelectItem value="">Sem role (cliente normal)</SelectItem>
++                  <SelectItem value="gestor">Gestor — acesso à área comercial</SelectItem>
++                  <SelectItem value="admin">Admin — acesso ao catálogo e gestão</SelectItem>
++                  <SelectItem value="super_admin">Super Admin — acesso total</SelectItem>
++                </SelectContent>
++              </Select>
++            </div>
++            <Button type="submit" className="w-full gap-2" disabled={inviting}>
++              {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
++              Criar utilizador
++            </Button>
++          </form>
++        </DialogContent>
++      </Dialog>
++    </div>
++  );
++}
+diff -ruN patch6-base/src/pages/Admin.tsx patch6-mod/src/pages/Admin.tsx
+--- patch6-base/src/pages/Admin.tsx	2026-06-16 11:57:32.186994387 +0000
++++ patch6-mod/src/pages/Admin.tsx	2026-06-16 11:57:32.215247533 +0000
+@@ -10,6 +10,7 @@
+ import { AddProductDialog } from "@/components/AddProductDialog";
+ import { BannersManager } from "@/components/BannersManager";
+ import { ShippingConfig } from "@/components/ShippingConfig";
++import { UsersManager } from "@/components/UsersManager";
+ import { Input } from "@/components/ui/input";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Button } from "@/components/ui/button";
+@@ -17,7 +18,7 @@
+ import { Switch } from "@/components/ui/switch";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { useState, useMemo, useEffect } from "react";
+-import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download, Shuffle } from "lucide-react";
++import { Search, ShieldCheck, LogOut, Trash2, ChevronUp, ChevronDown, Loader2, Package, Image, Truck, LayoutGrid, Download, Shuffle, Users } from "lucide-react";
+ import { DarkModeToggle } from "@/components/DarkModeToggle";
+ import { toast } from "sonner";
+ import { useAuth } from "@/hooks/useAuth";
+@@ -474,6 +475,9 @@
+             <TabsTrigger value="portes" className="gap-1.5">
+               <Truck className="h-4 w-4" /> Portes
+             </TabsTrigger>
++            <TabsTrigger value="utilizadores" className="gap-1.5">
++              <Users className="h-4 w-4" /> Utilizadores
++            </TabsTrigger>
+           </TabsList>
+ 
+           {/* ── PRODUTOS ── */}
+@@ -714,6 +718,11 @@
+           <TabsContent value="portes" className="mt-4">
+             <ShippingConfig />
+           </TabsContent>
++
++          {/* ── UTILIZADORES ── */}
++          <TabsContent value="utilizadores" className="mt-4">
++            <UsersManager />
++          </TabsContent>
+         </Tabs>
+       </div>
+ 
+diff -ruN patch6-base/src/pages/gestao/Dashboard.tsx patch6-mod/src/pages/gestao/Dashboard.tsx
+--- patch6-base/src/pages/gestao/Dashboard.tsx	2026-06-16 11:57:32.188110673 +0000
++++ patch6-mod/src/pages/gestao/Dashboard.tsx	2026-06-16 11:57:32.217148720 +0000
+@@ -1,161 +1,284 @@
++import { useState } from "react";
+ import { Link } from "react-router-dom";
+ import { useQuery } from "@tanstack/react-query";
+ import { supabase } from "@/integrations/supabase/client";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
++import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Badge } from "@/components/ui/badge";
+-import { FileText, Wrench, Users, ArrowRight, Clock } from "lucide-react";
++import { FileText, Wrench, Users, ArrowRight, Clock, TrendingUp, CalendarDays } from "lucide-react";
++
++const STATUS_LABEL: Record<string, string> = {
++  pending: "Pendente", sent: "Enviado", in_review: "Em análise",
++  accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
++};
++const STATUS_COLOR: Record<string, string> = {
++  pending:   "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
++  sent:      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
++  in_review: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
++  accepted:  "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
++  rejected:  "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
++  cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
++  completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
++};
++
++function StatCard({ icon: Icon, label, value, sub, color }: {
++  icon: any; label: string; value: number | string; sub?: string; color?: string;
++}) {
++  return (
++    <Card>
++      <CardContent className="flex items-center gap-3 p-4">
++        <Icon className={`h-5 w-5 flex-shrink-0 ${color || "text-primary"}`} />
++        <div>
++          <p className="text-2xl font-bold leading-none">{value}</p>
++          <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
++          {sub && <p className="text-xs text-amber-600 mt-0.5">{sub}</p>}
++        </div>
++      </CardContent>
++    </Card>
++  );
++}
+ 
+ export default function GestaoDashboard() {
++  const [weeks, setWeeks] = useState("12");
++
++  // Stats gerais
+   const { data: stats } = useQuery({
+     queryKey: ["gestao-stats"],
+     queryFn: async () => {
+-      const [quotes, rmas, clients, pendingQuotes, pendingRmas] = await Promise.all([
++      const [quotes, rmas, clients, pendingQ, pendingR, acceptedQ] = await Promise.all([
+         supabase.from("quotes").select("id", { count: "exact", head: true }),
+         supabase.from("rma_requests").select("id", { count: "exact", head: true }),
+         supabase.from("customer_profiles").select("id", { count: "exact", head: true }),
+         supabase.from("quotes").select("id", { count: "exact", head: true }).eq("status", "pending"),
+         supabase.from("rma_requests").select("id", { count: "exact", head: true }).eq("status", "submitted"),
++        supabase.from("quotes").select("id", { count: "exact", head: true }).eq("status", "accepted"),
+       ]);
+       return {
+         quotes: quotes.count ?? 0,
+         rmas: rmas.count ?? 0,
+         clients: clients.count ?? 0,
+-        pendingQuotes: pendingQuotes.count ?? 0,
+-        pendingRmas: pendingRmas.count ?? 0,
++        pendingQuotes: pendingQ.count ?? 0,
++        pendingRmas: pendingR.count ?? 0,
++        acceptedQuotes: acceptedQ.count ?? 0,
+       };
+     },
+     staleTime: 60 * 1000,
+   });
+ 
+-  // Orçamentos recentes (últimos 5)
+-  const { data: recentQuotes } = useQuery({
++  // Evolução temporal de orçamentos
++  const { data: overtime = [] } = useQuery({
++    queryKey: ["gestao-quotes-overtime", weeks],
++    queryFn: async () => {
++      const { data, error } = await (supabase as any).rpc("get_quotes_over_time", {
++        p_weeks: parseInt(weeks),
++      });
++      if (error) throw error;
++      return (data ?? []).map((r: any) => ({
++        ...r,
++        total: Number(r.total),
++        accepted: Number(r.accepted),
++        pending: Number(r.pending),
++        week: new Date(r.week).toLocaleDateString("pt-PT", { day: "2-digit", month: "short" }),
++      }));
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // Orçamentos recentes (últimos 8)
++  const { data: recentQuotes = [] } = useQuery({
+     queryKey: ["gestao-recent-quotes"],
+     queryFn: async () => {
+       const { data, error } = await supabase
+         .from("quotes")
+         .select("id,quote_number,status,total,created_at,customer_profiles(full_name,company)")
+         .order("created_at", { ascending: false })
++        .limit(8);
++      if (error) throw error;
++      return data ?? [];
++    },
++    staleTime: 30 * 1000,
++  });
++
++  // RMAs pendentes (urgentes)
++  const { data: pendingRmas = [] } = useQuery({
++    queryKey: ["gestao-pending-rmas"],
++    queryFn: async () => {
++      const { data, error } = await supabase
++        .from("rma_requests")
++        .select("id,rma_number,status,product_name,created_at,customer_profiles(full_name,company)")
++        .in("status", ["submitted", "in_review"])
++        .order("created_at", { ascending: true })
+         .limit(5);
+       if (error) throw error;
+       return data ?? [];
+     },
+-    staleTime: 60 * 1000,
++    staleTime: 30 * 1000,
+   });
+ 
+-  const STATUS_LABEL: Record<string, string> = {
+-    pending: "Pendente", sent: "Enviado", in_review: "Em análise",
+-    accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
+-  };
+-  const STATUS_COLOR: Record<string, string> = {
+-    pending: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+-    sent: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+-    in_review: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
+-    accepted: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+-    rejected: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+-    cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+-    completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+-  };
++  // Taxa de conversão (aceites / total)
++  const conversionRate = stats?.quotes
++    ? Math.round((stats.acceptedQuotes / stats.quotes) * 100)
++    : 0;
+ 
+   return (
+     <div className="space-y-6">
+       <div>
+-        <h1 className="font-heading text-2xl font-bold">Resumo</h1>
++        <h1 className="font-heading text-2xl font-bold">Resumo Comercial</h1>
+         <p className="text-muted-foreground text-sm">Visão geral da actividade comercial</p>
+       </div>
+ 
+       {/* Stats */}
+-      <div className="grid sm:grid-cols-3 gap-4">
+-        <Card>
+-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+-            <CardTitle className="text-sm font-medium">Orçamentos</CardTitle>
+-            <FileText className="h-4 w-4 text-primary" />
+-          </CardHeader>
+-          <CardContent>
+-            <div className="text-2xl font-bold">{stats?.quotes ?? "—"}</div>
+-            {(stats?.pendingQuotes ?? 0) > 0 && (
+-              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+-                <Clock className="h-3 w-3" /> {stats?.pendingQuotes} pendente{stats?.pendingQuotes !== 1 ? "s" : ""}
+-              </p>
+-            )}
+-            <Button variant="link" size="sm" asChild className="px-0 h-auto mt-1">
+-              <Link to="/gestao/orcamentos">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
+-            </Button>
+-          </CardContent>
+-        </Card>
++      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
++        <StatCard
++          icon={FileText} label="Total orçamentos" value={stats?.quotes ?? "—"}
++          sub={stats?.pendingQuotes ? `${stats.pendingQuotes} pendente${stats.pendingQuotes !== 1 ? "s" : ""}` : undefined}
++          color="text-blue-500"
++        />
++        <StatCard
++          icon={TrendingUp} label="Aceites" value={`${conversionRate}%`}
++          sub={`${stats?.acceptedQuotes ?? 0} orçamentos aceites`}
++          color="text-green-500"
++        />
++        <StatCard
++          icon={Wrench} label="Pedidos RMA" value={stats?.rmas ?? "—"}
++          sub={stats?.pendingRmas ? `${stats.pendingRmas} por analisar` : undefined}
++          color="text-purple-500"
++        />
++        <StatCard
++          icon={Users} label="Clientes" value={stats?.clients ?? "—"}
++          color="text-cyan-500"
++        />
++      </div>
+ 
++      {/* Evolução temporal */}
++      {overtime.length > 0 && (
+         <Card>
+-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+-            <CardTitle className="text-sm font-medium">RMAs</CardTitle>
+-            <Wrench className="h-4 w-4 text-primary" />
++          <CardHeader className="flex flex-row items-center justify-between pb-2">
++            <CardTitle className="text-base flex items-center gap-2">
++              <CalendarDays className="h-4 w-4" /> Evolução de orçamentos
++            </CardTitle>
++            <Select value={weeks} onValueChange={setWeeks}>
++              <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
++              <SelectContent>
++                <SelectItem value="4">4 semanas</SelectItem>
++                <SelectItem value="12">12 semanas</SelectItem>
++                <SelectItem value="24">24 semanas</SelectItem>
++              </SelectContent>
++            </Select>
+           </CardHeader>
+           <CardContent>
+-            <div className="text-2xl font-bold">{stats?.rmas ?? "—"}</div>
+-            {(stats?.pendingRmas ?? 0) > 0 && (
+-              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1">
+-                <Clock className="h-3 w-3" /> {stats?.pendingRmas} por analisar
+-              </p>
+-            )}
+-            <Button variant="link" size="sm" asChild className="px-0 h-auto mt-1">
+-              <Link to="/gestao/rma">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
+-            </Button>
++            <div className="overflow-x-auto">
++              <div className="flex items-end gap-2 min-w-0 h-32">
++                {overtime.map((w: any) => {
++                  const maxVal = Math.max(...overtime.map((x: any) => x.total), 1);
++                  const heightPct = Math.max((w.total / maxVal) * 100, 4);
++                  const acceptedPct = w.total > 0 ? (w.accepted / w.total) * heightPct : 0;
++                  return (
++                    <div key={w.week} className="flex flex-col items-center gap-1 flex-1 min-w-[28px]">
++                      <span className="text-[9px] text-muted-foreground tabular-nums">{w.total}</span>
++                      <div className="w-full flex flex-col justify-end h-24 relative rounded overflow-hidden bg-muted/30">
++                        <div
++                          className="w-full bg-primary/20 absolute bottom-0"
++                          style={{ height: `${heightPct}%` }}
++                        />
++                        <div
++                          className="w-full bg-green-500/60 absolute bottom-0"
++                          style={{ height: `${acceptedPct}%` }}
++                        />
++                      </div>
++                      <span className="text-[9px] text-muted-foreground text-center leading-tight">{w.week}</span>
++                    </div>
++                  );
++                })}
++              </div>
++              <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
++                <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-primary/20 inline-block" /> Total</span>
++                <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm bg-green-500/60 inline-block" /> Aceites</span>
++              </div>
++            </div>
+           </CardContent>
+         </Card>
++      )}
+ 
++      <div className="grid md:grid-cols-2 gap-4">
++        {/* Orçamentos recentes */}
+         <Card>
+-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+-            <CardTitle className="text-sm font-medium">Clientes</CardTitle>
+-            <Users className="h-4 w-4 text-primary" />
+-          </CardHeader>
+-          <CardContent>
+-            <div className="text-2xl font-bold">{stats?.clients ?? "—"}</div>
+-            <Button variant="link" size="sm" asChild className="px-0 h-auto mt-1">
+-              <Link to="/gestao/clientes">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
++          <CardHeader className="flex flex-row items-center justify-between pb-2">
++            <CardTitle className="text-base">Orçamentos Recentes</CardTitle>
++            <Button variant="ghost" size="sm" asChild>
++              <Link to="/gestao/orcamentos">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
+             </Button>
++          </CardHeader>
++          <CardContent className="p-0">
++            {recentQuotes.length === 0 ? (
++              <p className="text-sm text-muted-foreground text-center py-6">Sem orçamentos</p>
++            ) : (
++              <div className="divide-y divide-border">
++                {recentQuotes.map((q: any) => (
++                  <div key={q.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-secondary/20 transition-colors">
++                    <div className="min-w-0">
++                      <span className="font-mono text-xs font-semibold">{q.quote_number}</span>
++                      <p className="text-xs text-muted-foreground truncate">
++                        {q.customer_profiles?.company || q.customer_profiles?.full_name || "—"}
++                      </p>
++                    </div>
++                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
++                      {q.total > 0 && (
++                        <span className="text-xs font-semibold">{Number(q.total).toFixed(2).replace(".", ",")} €</span>
++                      )}
++                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status] ?? ""}`}>
++                        {STATUS_LABEL[q.status] ?? q.status}
++                      </span>
++                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" asChild>
++                        <Link to={`/gestao/orcamentos/${q.id}`}>Ver</Link>
++                      </Button>
++                    </div>
++                  </div>
++                ))}
++              </div>
++            )}
+           </CardContent>
+         </Card>
+-      </div>
+ 
+-      {/* Orçamentos recentes */}
+-      {recentQuotes && recentQuotes.length > 0 && (
++        {/* RMAs pendentes */}
+         <Card>
+-          <CardHeader className="flex flex-row items-center justify-between">
+-            <CardTitle className="text-base">Orçamentos Recentes</CardTitle>
++          <CardHeader className="flex flex-row items-center justify-between pb-2">
++            <CardTitle className="text-base flex items-center gap-2">
++              <Clock className="h-4 w-4 text-amber-500" /> RMAs Por Tratar
++            </CardTitle>
+             <Button variant="ghost" size="sm" asChild>
+-              <Link to="/gestao/orcamentos">Ver todos</Link>
++              <Link to="/gestao/rma">Ver todos <ArrowRight className="ml-1 h-3 w-3" /></Link>
+             </Button>
+           </CardHeader>
+           <CardContent className="p-0">
+-            <div className="divide-y divide-border">
+-              {recentQuotes.map((q: any) => (
+-                <div key={q.id} className="flex items-center justify-between px-6 py-3 hover:bg-secondary/30 transition-colors">
+-                  <div>
+-                    <span className="font-mono text-sm font-semibold">{q.quote_number}</span>
+-                    <p className="text-xs text-muted-foreground">
+-                      {q.customer_profiles?.company || q.customer_profiles?.full_name || "Cliente"}
++            {pendingRmas.length === 0 ? (
++              <p className="text-sm text-muted-foreground text-center py-6">Nenhum RMA pendente 🎉</p>
++            ) : (
++              <div className="divide-y divide-border">
++                {pendingRmas.map((r: any) => (
++                  <div key={r.id} className="px-4 py-2.5 hover:bg-secondary/20 transition-colors">
++                    <div className="flex items-center justify-between">
++                      <span className="font-mono text-xs font-semibold">{r.rma_number}</span>
++                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
++                        r.status === "submitted" ? STATUS_COLOR.pending : STATUS_COLOR.in_review
++                      }`}>
++                        {r.status === "submitted" ? "Novo" : "Em análise"}
++                      </span>
++                    </div>
++                    <p className="text-xs text-foreground mt-0.5 truncate">{r.product_name}</p>
++                    <p className="text-xs text-muted-foreground truncate">
++                      {r.customer_profiles?.company || r.customer_profiles?.full_name || "—"}
+                       {" · "}
+-                      {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
++                      {new Date(r.created_at).toLocaleDateString("pt-PT", { dateStyle: "short" })}
+                     </p>
+                   </div>
+-                  <div className="flex items-center gap-3">
+-                    {q.total > 0 && (
+-                      <span className="text-sm font-semibold">
+-                        {Number(q.total).toFixed(2).replace(".", ",")} €
+-                      </span>
+-                    )}
+-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status] ?? ""}`}>
+-                      {STATUS_LABEL[q.status] ?? q.status}
+-                    </span>
+-                    <Button variant="ghost" size="sm" asChild>
+-                      <Link to={`/gestao/orcamentos/${q.id}`}>Ver</Link>
+-                    </Button>
+-                  </div>
+-                </div>
+-              ))}
+-            </div>
++                ))}
++              </div>
++            )}
+           </CardContent>
+         </Card>
+-      )}
++      </div>
+     </div>
+   );
+ }

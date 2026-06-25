@@ -200,6 +200,57 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_profiles: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          company: string | null
+          country: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          notes: string | null
+          phone: string | null
+          postal_code: string | null
+          tax_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          company?: string | null
+          country?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          tax_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
@@ -661,6 +712,60 @@ export type Database = {
           },
         ]
       }
+      quote_items: {
+        Row: {
+          created_at: string
+          id: string
+          line_total: number
+          product_id: string | null
+          product_image_snapshot: string | null
+          product_name_snapshot: string
+          product_sku_snapshot: string | null
+          quantity: number
+          quote_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          line_total?: number
+          product_id?: string | null
+          product_image_snapshot?: string | null
+          product_name_snapshot: string
+          product_sku_snapshot?: string | null
+          quantity?: number
+          quote_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          line_total?: number
+          product_id?: string | null
+          product_image_snapshot?: string | null
+          product_name_snapshot?: string
+          product_sku_snapshot?: string | null
+          quantity?: number
+          quote_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_requests: {
         Row: {
           created_at: string
@@ -691,6 +796,140 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          customer_company: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          customer_tax_id: string | null
+          decided_at: string | null
+          id: string
+          notes: string | null
+          prazo_entrega: string | null
+          quote_number: string
+          rejection_reason: string | null
+          sent_final_at: string | null
+          shipping_address: string | null
+          shipping_total: number | null
+          status: Database["public"]["Enums"]["quote_status"]
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
+          decided_at?: string | null
+          id?: string
+          notes?: string | null
+          prazo_entrega?: string | null
+          quote_number?: string
+          rejection_reason?: string | null
+          sent_final_at?: string | null
+          shipping_address?: string | null
+          shipping_total?: number | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          customer_company?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          customer_tax_id?: string | null
+          decided_at?: string | null
+          id?: string
+          notes?: string | null
+          prazo_entrega?: string | null
+          quote_number?: string
+          rejection_reason?: string | null
+          sent_final_at?: string | null
+          shipping_address?: string | null
+          shipping_total?: number | null
+          status?: Database["public"]["Enums"]["quote_status"]
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      rma_requests: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string | null
+          id: string
+          invoice_number: string | null
+          product_id: string | null
+          product_name: string
+          purchase_date: string | null
+          reason: string
+          resolution_notes: string | null
+          rma_number: string
+          serial_number: string | null
+          status: Database["public"]["Enums"]["rma_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_number?: string | null
+          product_id?: string | null
+          product_name: string
+          purchase_date?: string | null
+          reason: string
+          resolution_notes?: string | null
+          rma_number?: string
+          serial_number?: string | null
+          status?: Database["public"]["Enums"]["rma_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_number?: string | null
+          product_id?: string | null
+          product_name?: string
+          purchase_date?: string | null
+          reason?: string
+          resolution_notes?: string | null
+          rma_number?: string
+          serial_number?: string | null
+          status?: Database["public"]["Enums"]["rma_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rma_requests_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shipping_config: {
         Row: {
           ativo: boolean | null
@@ -717,6 +956,44 @@ export type Database = {
           preco_unidade_adicional?: number | null
         }
         Relationships: []
+      }
+      stock_alerts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          notified_at: string | null
+          product_id: string
+          status: Database["public"]["Enums"]["stock_alert_status"]
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          notified_at?: string | null
+          product_id: string
+          status?: Database["public"]["Enums"]["stock_alert_status"]
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          notified_at?: string | null
+          product_id?: string
+          status?: Database["public"]["Enums"]["stock_alert_status"]
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppressed_emails: {
         Row: {
@@ -773,6 +1050,102 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      f_unaccent: { Args: { "": string }; Returns: string }
+      get_analytics_by_brand: {
+        Args: { p_event_type?: string; p_limit?: number; p_since?: string }
+        Returns: {
+          brand: string
+          count: number
+        }[]
+      }
+      get_analytics_by_category: {
+        Args: { p_event_type?: string; p_limit?: number; p_since?: string }
+        Returns: {
+          category: string
+          count: number
+          mundo: string
+        }[]
+      }
+      get_analytics_by_mundo: {
+        Args: { p_since?: string }
+        Returns: {
+          clicks: number
+          mundo: string
+          quotes: number
+        }[]
+      }
+      get_out_of_stock_clicked: {
+        Args: { p_limit?: number; p_since?: string }
+        Returns: {
+          brand: string
+          category: string
+          count: number
+          mundo: string
+          name: string
+          product_id: string
+        }[]
+      }
+      get_quotes_over_time: {
+        Args: { p_weeks?: number }
+        Returns: {
+          accepted: number
+          pending: number
+          total: number
+          week: string
+        }[]
+      }
+      get_search_category_counts: {
+        Args: { p_mundo?: string; p_query: string }
+        Returns: {
+          category: string
+          count: number
+        }[]
+      }
+      get_specs_aggregation: {
+        Args: {
+          p_brand_id?: string
+          p_brand_ids?: string[]
+          p_brand_name?: string
+          p_brand_names?: string[]
+          p_category?: string
+          p_family_id?: string
+          p_family_ids?: string[]
+          p_mundo: string
+          p_tech_filters?: Json
+          p_type_ids?: string[]
+        }
+        Returns: Json
+      }
+      get_top_products_with_context: {
+        Args: { p_event_type?: string; p_limit?: number; p_since?: string }
+        Returns: {
+          brand: string
+          category: string
+          count: number
+          image_url: string
+          mundo: string
+          name: string
+          price: number
+          product_id: string
+          sku: string
+          slug: string
+          stock_status: string
+          weight: number
+        }[]
+      }
+      get_users_with_roles: {
+        Args: never
+        Returns: {
+          confirmed: boolean
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          last_sign_in: string
+          roles: string[]
+        }[]
+      }
+      has_gestao_access: { Args: { _user_id: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -797,9 +1170,49 @@ export type Database = {
           read_ct: number
         }[]
       }
+      search_products: {
+        Args: {
+          p_brand?: string
+          p_brand_id?: string
+          p_category?: string
+          p_family_id?: string
+          p_limit?: number
+          p_mundo?: string
+          p_offset?: number
+          p_order_asc?: boolean
+          p_order_by?: string
+          p_query: string
+          p_type_id?: string
+        }
+        Returns: {
+          row_data: Json
+          total_count: number
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
+      unaccent: { Args: { "": string }; Returns: string }
     }
     Enums: {
-      app_role: "super_admin" | "admin"
+      app_role: "super_admin" | "admin" | "gestor"
+      quote_status:
+        | "pending"
+        | "sent"
+        | "in_review"
+        | "accepted"
+        | "rejected"
+        | "cancelled"
+        | "completed"
+      rma_status:
+        | "submitted"
+        | "in_review"
+        | "approved"
+        | "rejected"
+        | "in_repair"
+        | "shipped_back"
+        | "completed"
+        | "cancelled"
+      stock_alert_status: "pending" | "notified" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -927,7 +1340,27 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "admin"],
+      app_role: ["super_admin", "admin", "gestor"],
+      quote_status: [
+        "pending",
+        "sent",
+        "in_review",
+        "accepted",
+        "rejected",
+        "cancelled",
+        "completed",
+      ],
+      rma_status: [
+        "submitted",
+        "in_review",
+        "approved",
+        "rejected",
+        "in_repair",
+        "shipped_back",
+        "completed",
+        "cancelled",
+      ],
+      stock_alert_status: ["pending", "notified", "cancelled"],
     },
   },
 } as const

@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
+    --background: 30 20% 97%;
     --foreground: 220 25% 12%;
 
     --card: 0 0% 100%;
@@ -15,7 +15,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 12%;
 
-    --primary: 27 90% 50%;
+    /* VRCF Orange — mais quente e profundo que o Tailwind orange-500 */
+    --primary: 22 88% 46%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 210 15% 93%;
@@ -32,9 +33,25 @@
 
     --border: 210 15% 89%;
     --input: 210 15% 89%;
-    --ring: 27 90% 50%;
+    --ring: 22 88% 46%;
 
     --radius: 0.75rem;
+
+    /* ── Cores dos mundos VRCF ── */
+    /* Segurança — laranja quente, industrial */
+    --world-seg:        22 88% 46%;
+    --world-seg-light:  22 88% 96%;
+    --world-seg-dark:   22 88% 36%;
+
+    /* Informática — azul profundo, tecnológico */
+    --world-esc:        217 85% 40%;
+    --world-esc-light:  217 85% 96%;
+    --world-esc-dark:   217 85% 30%;
+
+    /* Economato — esmeralda escuro, estável */
+    --world-eco:        158 68% 30%;
+    --world-eco-light:  158 68% 95%;
+    --world-eco-dark:   158 68% 22%;
 
     --font-heading: 'Space Grotesk', sans-serif;
     --font-body: 'Inter', sans-serif;
@@ -46,7 +63,7 @@
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 27 90% 50%;
+    --sidebar-ring: 24 82% 52%;
   }
 
   .dark {
@@ -56,7 +73,8 @@
     --card-foreground: 0 0% 95%;
     --popover: 220 25% 10%;
     --popover-foreground: 0 0% 95%;
-    --primary: 27 90% 55%;
+    /* VRCF Orange dark — ligeiramente mais claro para contraste */
+    --primary: 22 84% 54%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 15% 16%;
     --secondary-foreground: 0 0% 90%;
@@ -68,15 +86,28 @@
     --destructive-foreground: 210 40% 98%;
     --border: 220 15% 18%;
     --input: 220 15% 18%;
-    --ring: 27 90% 55%;
+    --ring: 22 84% 54%;
+
+    /* ── Cores dos mundos VRCF dark ── */
+    --world-seg:        22 84% 54%;
+    --world-seg-light:  22 84% 12%;
+    --world-seg-dark:   22 84% 64%;
+
+    --world-esc:        217 80% 52%;
+    --world-esc-light:  217 80% 12%;
+    --world-esc-dark:   217 80% 62%;
+
+    --world-eco:        158 60% 40%;
+    --world-eco-light:  158 60% 10%;
+    --world-eco-dark:   158 60% 50%;
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 27 90% 55%;
+    --sidebar-primary: 24 78% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 27 90% 55%;
+    --sidebar-ring: 24 78% 56%;
   }
 }
 
@@ -102,6 +133,40 @@
     box-shadow: 0 10px 25px -5px hsl(220 20% 10% / 0.08), 0 4px 10px -4px hsl(220 20% 10% / 0.04);
     transform: translateY(-2px);
   }
+
+  /* ── WorldBtn glassmorphism ── */
+  .world-btn-glass {
+    position: relative;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .world-btn-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    /* linha de brilho superior — efeito de profundidade */
+    background: linear-gradient(
+      160deg,
+      rgba(255,255,255,0.18) 0%,
+      rgba(255,255,255,0.04) 40%,
+      transparent 100%
+    );
+    pointer-events: none;
+  }
+  .world-btn-glass:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+
+  /* Sombra colorida por mundo */
+  .world-btn-seg-shadow { box-shadow: 0 4px 20px -4px hsl(var(--world-seg) / 0.35), 0 1px 4px -1px hsl(var(--world-seg) / 0.2); }
+  .world-btn-esc-shadow { box-shadow: 0 4px 20px -4px hsl(var(--world-esc) / 0.35), 0 1px 4px -1px hsl(var(--world-esc) / 0.2); }
+  .world-btn-eco-shadow { box-shadow: 0 4px 20px -4px hsl(var(--world-eco) / 0.35), 0 1px 4px -1px hsl(var(--world-eco) / 0.2); }
+
+  .world-btn-seg-shadow:hover { box-shadow: 0 8px 28px -4px hsl(var(--world-seg) / 0.45), 0 2px 8px -1px hsl(var(--world-seg) / 0.25); }
+  .world-btn-esc-shadow:hover { box-shadow: 0 8px 28px -4px hsl(var(--world-esc) / 0.45), 0 2px 8px -1px hsl(var(--world-esc) / 0.25); }
+  .world-btn-eco-shadow:hover { box-shadow: 0 8px 28px -4px hsl(var(--world-eco) / 0.45), 0 2px 8px -1px hsl(var(--world-eco) / 0.25); }
 }
 
 @keyframes flip-next {

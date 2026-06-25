@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { ShieldCheck, Loader2, Lock } from "lucide-react";
 
@@ -12,27 +13,45 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { signIn, user, isAdmin, loading: authLoading } = useAuth();
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const { signIn, resetPassword, user, isAdmin, isGestor, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const redirect = params.get("redirect");
 
   useEffect(() => {
-    if (!authLoading && user && isAdmin) {
-      navigate("/admin", { replace: true });
+    if (!authLoading && user) {
+      if (redirect) navigate(redirect, { replace: true });
+      else if (isAdmin) navigate("/admin", { replace: true });
+      else if (isGestor) navigate("/gestao", { replace: true });
+      else navigate("/conta", { replace: true });
     }
-  }, [authLoading, user, isAdmin, navigate]);
+  }, [authLoading, user, isAdmin, isGestor, navigate, redirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error, isAdmin: hasAdminAccess } = await signIn(email, password);
+    const { error } = await signIn(email, password);
     setLoading(false);
-
     if (error) {
       toast.error("Credenciais inválidas");
-    } else if (!hasAdminAccess) {
-      toast.error("Sem permissões de administrador");
     } else {
-      toast.success("Login realizado!");
+      toast.success("Sessão iniciada!");
+    }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    const { error } = await resetPassword(forgotEmail.trim());
+    setForgotLoading(false);
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("Email de recuperação enviado.");
+      setForgotOpen(false);
     }
   };
 
@@ -44,7 +63,7 @@ const Login = () => {
             <ShieldCheck className="h-7 w-7 text-primary" />
             <CardTitle className="font-heading text-xl">VRCF</CardTitle>
           </div>
-          <p className="text-sm text-muted-foreground">Acesso administrativo</p>
+          <p className="text-sm text-muted-foreground">Iniciar sessão</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,9 +79,31 @@ const Login = () => {
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />}
               Entrar
             </Button>
+            <div className="flex justify-between text-xs">
+              <button type="button" onClick={() => setForgotOpen(true)} className="text-primary hover:underline">
+                Esqueci a palavra-passe
+              </button>
+              <Link to="/registo" className="text-primary hover:underline">Criar conta</Link>
+            </div>
           </form>
         </CardContent>
       </Card>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Recuperar palavra-passe</DialogTitle>
+            <DialogDescription>Enviamos um link para o seu email.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgot} className="space-y-3">
+            <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="email@exemplo.com" required />
+            <Button type="submit" className="w-full" disabled={forgotLoading}>
+              {forgotLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Enviar
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -92,7 +92,7 @@ const PoliticaCookies = () => {
                   </tr>
                   <tr className="border-t border-border">
                     <td className="p-3 font-mono text-xs">sb-*-auth-token</td>
-                    <td className="p-3">Sessão de autenticação (apenas para administradores)</td>
+                    <td className="p-3">Sessão de autenticação para utilizadores com conta registada (área "A Minha Conta" e administradores)</td>
                     <td className="p-3">Sessão</td>
                   </tr>
                 </tbody>
@@ -114,7 +114,7 @@ const PoliticaCookies = () => {
                 </thead>
                 <tbody className="text-muted-foreground">
                   <tr className="border-t border-border">
-                    <td className="p-3 font-mono text-xs">localStorage (carrinho)</td>
+                    <td className="p-3 font-mono text-xs">vrcf_cart (localStorage)</td>
                     <td className="p-3">Guardar os produtos adicionados ao pedido de orçamento</td>
                     <td className="p-3">Persistente</td>
                   </tr>
@@ -158,10 +158,12 @@ const PoliticaCookies = () => {
               Pode gerir as suas preferências de cookies de duas formas:
             </p>
 
-            <h3 className="font-heading text-lg font-semibold text-foreground mt-4">5.1 Através do nosso banner de cookies</h3>
+            <h3 className="font-heading text-lg font-semibold text-foreground mt-4">5.1 Através do nosso painel de preferências</h3>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Na sua primeira visita ao website, será apresentado um banner onde pode aceitar ou rejeitar os cookies 
-              não essenciais. Pode alterar as suas preferências a qualquer momento limpando os dados do seu navegador.
+              Na sua primeira visita ao website, é apresentado um banner onde pode aceitar ou rejeitar os cookies
+              não essenciais. Pode alterar a sua escolha a qualquer momento clicando no link{" "}
+              <strong className="text-foreground">Gerir Cookies</strong> no rodapé da página, que reabre o banner
+              de consentimento.
             </p>
 
             <h3 className="font-heading text-lg font-semibold text-foreground mt-4">5.2 Através do seu navegador</h3>

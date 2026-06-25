@@ -1,9 +1,9 @@
 import { useState, forwardRef } from "react";
-import { ImageOff, ShoppingCart, Star, Zap } from "lucide-react";
+import { ImageOff, Star, Zap } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/trackEvent";
-import { Badge } from "@/components/ui/badge";
+import { QuantitySelector } from "@/components/QuantitySelector";
 
 function ProductImage({ src, alt }: { src: string; alt: string }) {
   const [loaded, setLoaded] = useState(false);
@@ -45,31 +45,43 @@ interface ProductCardProps {
   fornecedor?: string | null;
   envioEspecial?: boolean;
   teclado?: string | null;
+  minSaleQty?: number | null;
   onEdit?: () => void;
   isAdmin?: boolean;
   onClick?: () => void;
 }
 
 export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
-  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, onEdit, isAdmin, onClick }, ref) {
+  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, minSaleQty, onEdit, isAdmin, onClick }, ref) {
     const { addItem } = useCart();
+    const [showSelector, setShowSelector] = useState(false);
     const allImages = images.length > 0
       ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
       : imageUrl ? [imageUrl] : [];
     const currentImage = allImages[0] || null;
-    const isNew = false; // pode ser derivado de created_at no futuro
 
-    const handleAddToCart = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      addItem({ id, name, price, imageUrl: currentImage || imageUrl, category, weight: weight ?? null, fornecedor: fornecedor ?? null, envio_especial: envioEspecial ?? false }, 1);
-      toast.success(`${name} adicionado ao orçamento`);
+    const step = minSaleQty && minSaleQty > 1 ? minSaleQty : 1;
+
+    const handleAdd = (qty: number) => {
+      addItem({
+        id, name, price,
+        imageUrl: currentImage || imageUrl,
+        category,
+        weight: weight ?? null,
+        fornecedor: fornecedor ?? null,
+        envio_especial: envioEspecial ?? false,
+        minSaleQty: step,
+      }, qty);
+      toast.success(qty > 1 ? `${qty}× ${name} adicionado ao orçamento` : `${name} adicionado ao orçamento`);
       trackEvent(id, "quote");
+      setShowSelector(false);
     };
 
     return (
       <div ref={ref}
         className={`group relative flex flex-col bg-card rounded-2xl border overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-primary/30 ${featured && !isAdmin ? "border-primary/40 shadow-primary/10 shadow-sm" : "border-border"}`}
-        onClick={() => { if (isAdmin) onEdit?.(); else { trackEvent(id, "click"); onClick?.(); } }}>
+        onClick={() => { if (isAdmin) onEdit?.(); else { trackEvent(id, "click"); onClick?.(); } }}
+        onMouseLeave={() => setShowSelector(false)}>
 
         {/* Badges */}
         <div className="absolute top-2.5 left-2.5 z-10 flex flex-col gap-1.5">
@@ -83,18 +95,12 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               <Zap className="h-2.5 w-2.5" /> Últimas unidades
             </span>
           )}
-          {sobEncomenda && stockStatus === "out" && (
+          {sobEncomenda && (stockStatus === "out" || stockStatus === "on_request") && (
             <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-medium">
               Sob encomenda
             </span>
           )}
         </div>
-        {/* Bandeira PT — teclado português */}
-        {teclado === "PT" && (
-          <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
-            <span className="text-base leading-none">🇵🇹</span>
-          </div>
-        )}
         {/* Bandeira PT — teclado português */}
         {teclado === "PT" && (
           <div className="absolute top-2.5 right-2.5 z-10" title="Teclado Português">
@@ -109,14 +115,19 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               <ImageOff className="h-10 w-10" />
             </div>
           )}
-          {/* Quick add overlay */}
+          {/* Quick add overlay — seletor de quantidade direto no hover */}
           {!isAdmin && (
-            <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-200 p-2">
-              <button
-                onClick={handleAddToCart}
-                className="w-full flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary text-primary-foreground text-xs font-semibold shadow-lg hover:bg-primary/90 active:scale-95 transition-all">
-                <ShoppingCart className="h-3.5 w-3.5" /> Adicionar ao orçamento
-              </button>
+            <div
+              className={`absolute inset-x-0 bottom-0 transition-transform duration-200 p-2 ${showSelector ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`}
+              onClick={(e) => e.stopPropagation()}
+              onMouseEnter={() => setShowSelector(true)}
+            >
+              <QuantitySelector
+                compact
+                minQty={step}
+                onAdd={handleAdd}
+                onCancel={() => setShowSelector(false)}
+              />
             </div>
           )}
         </div>
@@ -142,14 +153,34 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
           {/* SKU */}
           {sku && <p className="text-[10px] text-muted-foreground/60 font-mono">{sku}</p>}
 
-          {/* Preço */}
+          {/* Preço + indicador de stock */}
           <div className="mt-auto pt-2">
             {price != null ? (
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-bold text-foreground tabular-nums">
-                  {(price * 1.23).toFixed(2).replace(".", ",")} €
-                </span>
-                <span className="text-[10px] text-muted-foreground">c/ IVA</span>
+              <div className="flex items-baseline justify-between gap-1">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-base font-bold text-foreground tabular-nums">
+                    {(price * 1.23).toFixed(2).replace(".", ",")} €
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">c/ IVA</span>
+                </div>
+                {stockStatus && (
+                  <span
+                    title={
+                      stockStatus === "high"       ? "Em stock"
+                    : stockStatus === "medium"     ? "Stock médio"
+                    : stockStatus === "low"        ? "Últimas unidades"
+                    : stockStatus === "on_request" ? "Por encomenda"
+                    : "Disponibilidade desconhecida"
+                    }
+                    className={`h-2.5 w-2.5 rounded-full flex-shrink-0 mb-0.5 ${
+                      stockStatus === "high"       ? "bg-green-500"
+                    : stockStatus === "medium"     ? "bg-amber-400"
+                    : stockStatus === "low"        ? "bg-orange-500"
+                    : stockStatus === "on_request" ? "bg-blue-500"
+                    : "bg-gray-400"
+                    }`}
+                  />
+                )}
               </div>
             ) : (
               <span className="text-xs text-muted-foreground italic">Preço sob consulta</span>

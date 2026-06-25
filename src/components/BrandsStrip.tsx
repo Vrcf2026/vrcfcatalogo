@@ -19,13 +19,14 @@ const BrandsStrip = ({ mundo }: BrandsStripProps) => {
         .eq("show_in_world_strip", true)
         .order("name", { ascending: true });
       if (mundo) {
-        // Marcas do próprio mundo, ou marcadas como "todos" (transversais)
         query = query.in("mundo", [mundo, "todos"]);
       }
       const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+    retry: 2,
+    staleTime: 10 * 60 * 1000,
   });
 
   const location = useLocation();
@@ -51,49 +52,46 @@ const BrandsStrip = ({ mundo }: BrandsStripProps) => {
 
   return (
     <section
-      className="border-y border-border/50 bg-muted/30 py-6 overflow-hidden"
-      aria-label="Marcas que trabalhamos"
+      className="border-y border-border/40 bg-background py-4 overflow-hidden"
+      aria-label="Marcas"
     >
-      <div className="container mx-auto px-4">
-        <p className="text-center text-xs uppercase tracking-widest text-muted-foreground mb-4">
-          Marcas que trabalhamos — clique para filtrar
-        </p>
+      <div className="max-w-[1600px] mx-auto px-4">
         <div
           className="relative group"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
-          {/* Setas de navegação — aparecem ao passar o rato */}
+          {/* Setas */}
           <button
             type="button"
             aria-label="Marcas anteriores"
             onClick={() => scrollByArrow("left")}
             className={cn(
-              "absolute left-0 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full",
-              "bg-background/90 border border-border shadow-sm flex items-center justify-center",
+              "absolute left-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full",
+              "bg-background border border-border shadow-sm flex items-center justify-center",
               "opacity-0 group-hover:opacity-100 transition-opacity",
-              "hover:bg-background hover:scale-105",
+              "hover:bg-muted hover:scale-105",
             )}
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             type="button"
             aria-label="Marcas seguintes"
             onClick={() => scrollByArrow("right")}
             className={cn(
-              "absolute right-0 top-1/2 -translate-y-1/2 z-10 h-9 w-9 rounded-full",
-              "bg-background/90 border border-border shadow-sm flex items-center justify-center",
+              "absolute right-0 top-1/2 -translate-y-1/2 z-10 h-8 w-8 rounded-full",
+              "bg-background border border-border shadow-sm flex items-center justify-center",
               "opacity-0 group-hover:opacity-100 transition-opacity",
-              "hover:bg-background hover:scale-105",
+              "hover:bg-muted hover:scale-105",
             )}
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4" />
           </button>
 
           <div ref={scrollerRef} className="overflow-x-auto scrollbar-hide">
             <div
-              className="flex gap-8 sm:gap-12 w-max"
+              className="flex gap-3 w-max"
               style={{
                 animation: "vrcf-scroll-x 40s linear infinite",
                 animationPlayState: isPaused ? "paused" : "running",
@@ -103,19 +101,25 @@ const BrandsStrip = ({ mundo }: BrandsStripProps) => {
                 <Link
                   key={`${b.id}-${i}`}
                   to={`${basePath}?marca=${b.id}`}
-                  className="shrink-0 flex items-center justify-center h-10 sm:h-12 px-3 hover:scale-105 transition-transform cursor-pointer"
                   title={b.name}
                   aria-label={`Ver produtos ${b.name}`}
+                  className={cn(
+                    "shrink-0 flex items-center justify-center",
+                    "h-12 w-28 rounded-xl border border-border/60",
+                    "bg-white dark:bg-card",
+                    "hover:border-border hover:shadow-md transition-all duration-200",
+                    "hover:scale-105 px-3",
+                  )}
                 >
                   {b.logo_url ? (
                     <img
                       src={b.logo_url}
                       alt={b.name}
-                      className="h-full w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+                      className="h-7 w-auto max-w-full object-contain opacity-80 hover:opacity-100 transition-opacity"
                       loading="lazy"
                     />
                   ) : (
-                    <span className="font-heading text-sm sm:text-base font-semibold text-foreground hover:text-primary transition-colors whitespace-nowrap">
+                    <span className="font-heading text-[11px] font-bold text-foreground/70 hover:text-foreground transition-colors whitespace-nowrap text-center">
                       {b.name}
                     </span>
                   )}

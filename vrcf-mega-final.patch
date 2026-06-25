@@ -1,0 +1,1513 @@
+diff -ruN mega6-base/src/components/AddProductDialog.tsx mega6-mod/src/components/AddProductDialog.tsx
+--- mega6-base/src/components/AddProductDialog.tsx	2026-06-16 21:12:09.944772180 +0000
++++ mega6-mod/src/components/AddProductDialog.tsx	2026-06-16 21:12:09.999886493 +0000
+@@ -7,8 +7,11 @@
+ import { Label } from "@/components/ui/label";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
++import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
++import { Switch } from "@/components/ui/switch";
++import { Separator } from "@/components/ui/separator";
+ import { toast } from "sonner";
+-import { Plus, Wand2, Loader2, Sparkles } from "lucide-react";
++import { Plus, Wand2, Loader2, Sparkles, Save } from "lucide-react";
+ import { ImageSlotPicker, type ImageSlot } from "@/components/ImageSlotPicker";
+ 
+ interface AddProductDialogProps {
+@@ -18,19 +21,55 @@
+   brands: { id: string; name: string }[];
+ }
+ 
++const STOCK_OPTIONS = [
++  { value: "high", label: "Em stock" },
++  { value: "low", label: "Stock baixo" },
++  { value: "out", label: "Sem stock" },
++];
++
+ export function AddProductDialog({ families, types = [], categories, brands }: AddProductDialogProps) {
+   const [open, setOpen] = useState(false);
++  const [loading, setLoading] = useState(false);
++  const [generatingDesc, setGeneratingDesc] = useState(false);
++
++  // Geral
+   const [name, setName] = useState("");
++  const [sku, setSku] = useState("");
+   const [description, setDescription] = useState("");
++  const [mundo, setMundo] = useState("escritorio");
+   const [category, setCategory] = useState("");
+   const [familyId, setFamilyId] = useState("none");
+   const [typeId, setTypeId] = useState("none");
+   const [brandId, setBrandId] = useState("none");
+-  const [mundo, setMundo] = useState("escritorio");
+-  const [price, setPrice] = useState("");
+-  const [loading, setLoading] = useState(false);
+-  const [generatingDesc, setGeneratingDesc] = useState(false);
++  const [stockStatus, setStockStatus] = useState("high");
++  const [sobEncomenda, setSobEncomenda] = useState(false);
++  const [includeInCatalog, setIncludeInCatalog] = useState(true);
++  const [featured, setFeatured] = useState(false);
++  const [imageUrl, setImageUrl] = useState("");
+   const [imageSlots, setImageSlots] = useState<ImageSlot[]>([]);
++
++  // Preços
++  const [price, setPrice] = useState("");
++  const [purchasePrice, setPurchasePrice] = useState("");
++  const [purchasePriceVat, setPurchasePriceVat] = useState("");
++  const [weight, setWeight] = useState("");
++  const [minSaleQty, setMinSaleQty] = useState("1");
++
++  // Campos calculados
++  const priceWithVat = price ? (parseFloat(price) * 1.23).toFixed(2) : null;
++  const margem = purchasePrice && price
++    ? ((parseFloat(price) - parseFloat(purchasePrice)) / parseFloat(purchasePrice) * 100).toFixed(1)
++    : null;
++
++  const handlePurchasePriceChange = (val: string) => {
++    setPurchasePrice(val);
++    if (val && !isNaN(parseFloat(val))) {
++      setPurchasePriceVat((parseFloat(val) * 1.23).toFixed(2));
++    } else {
++      setPurchasePriceVat("");
++    }
++  };
++
+   const queryClient = useQueryClient();
+ 
+   const filteredFamilies = families.filter((f) => !category || f.category === category);
+@@ -39,248 +78,297 @@
+   );
+ 
+   const handleGenerateDescription = async () => {
+-    if (!name.trim()) {
+-      toast.error("Preencha o nome do produto primeiro");
+-      return;
+-    }
++    if (!name.trim()) { toast.error("Preencha o nome do produto primeiro"); return; }
+     setGeneratingDesc(true);
+     try {
+       const { data, error } = await supabase.functions.invoke("generate-description", {
+         body: { productName: name.trim(), category: category || null },
+       });
+       if (error) throw error;
+-      if (data?.description) {
+-        setDescription(data.description);
+-        toast.success("Descrição gerada!");
+-      }
+-    } catch {
+-      toast.error("Erro ao gerar descrição");
+-    } finally {
+-      setGeneratingDesc(false);
+-    }
++      if (data?.description) { setDescription(data.description); toast.success("Descrição gerada!"); }
++    } catch { toast.error("Erro ao gerar descrição"); }
++    finally { setGeneratingDesc(false); }
+   };
+ 
+   const saveSlotImage = async (productId: string, slot: ImageSlot, position: number): Promise<string | null> => {
+     if (slot.source === "upload" && slot.file) {
+       const ext = slot.file.name.split(".").pop() || "png";
+       const fileName = `${productId}_upload_${position}.${ext}`;
+-      const { error: uploadError } = await supabase.storage
+-        .from("product-images")
+-        .upload(fileName, slot.file, { contentType: slot.file.type, upsert: true });
+-      if (uploadError) {
+-        console.error("Upload error:", uploadError);
+-        return null;
+-      }
+-      const { data: publicUrlData } = supabase.storage.from("product-images").getPublicUrl(fileName);
+-      const imageUrl = publicUrlData.publicUrl;
+-      await supabase.from("product_images").insert({ product_id: productId, image_url: imageUrl, position });
+-      return imageUrl;
++      const { error } = await supabase.storage.from("product-images").upload(fileName, slot.file, { contentType: slot.file.type, upsert: true });
++      if (error) return null;
++      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
++      await supabase.from("product_images").insert({ product_id: productId, image_url: data.publicUrl, position });
++      return data.publicUrl;
+     }
+-
+-    const imageUrl = slot.url;
+-    if (imageUrl && imageUrl.startsWith("http")) {
+-      await supabase.from("product_images").insert({ product_id: productId, image_url: imageUrl, position });
+-      return imageUrl;
++    if (slot.url?.startsWith("http")) {
++      await supabase.from("product_images").insert({ product_id: productId, image_url: slot.url, position });
++      return slot.url;
+     }
+-
+     return null;
+   };
+ 
+   const handleSubmit = async () => {
+-    if (!name.trim()) {
+-      toast.error("Nome do produto é obrigatório");
+-      return;
+-    }
+-
++    if (!name.trim()) { toast.error("Nome do produto é obrigatório"); return; }
+     setLoading(true);
+-    const productName = name.trim();
+-
+     try {
+-      const { data: product, error } = await supabase
+-        .from("products")
+-        .insert({
+-          name: productName,
+-          description: description.trim() || null,
+-          category: category || null,
+-          price: price ? parseFloat(price) : null,
+-          family_id: familyId === "none" ? null : familyId,
+-          type_id: typeId === "none" ? null : typeId,
+-          brand_id: brandId === "none" ? null : brandId,
+-          mundo,
+-        })
+-        .select()
+-        .single();
++      const { data: product, error } = await supabase.from("products").insert({
++        name: name.trim(),
++        sku: sku.trim() || null,
++        description: description.trim() || null,
++        category: category || null,
++        family_id: familyId === "none" ? null : familyId,
++        type_id: typeId === "none" ? null : typeId,
++        brand_id: brandId === "none" ? null : brandId,
++        mundo,
++        price: price ? parseFloat(price) : null,
++        purchase_price: purchasePrice ? parseFloat(purchasePrice) : null,
++        purchase_price_vat: purchasePriceVat ? parseFloat(purchasePriceVat) : null,
++        weight: weight ? parseFloat(weight) : null,
++        min_sale_qty: minSaleQty ? parseInt(minSaleQty) : 1,
++        stock_status: stockStatus,
++        sob_encomenda: sobEncomenda,
++        include_in_catalog: includeInCatalog,
++        featured,
++        image_url: imageUrl.trim() || null,
++        fornecedor: "manual",
++      }).select().single();
+ 
+       if (error) throw error;
+ 
+-      const allSlots = imageSlots;
+-
+-      if (allSlots.length > 0) {
+-        toast.info("A guardar imagens...");
++      // Guardar imagens dos slots
++      if (imageSlots.length > 0) {
+         const savedUrls: string[] = [];
+-        for (let i = 0; i < allSlots.length; i++) {
+-          const url = await saveSlotImage(product.id, allSlots[i], i);
++        for (let i = 0; i < imageSlots.length; i++) {
++          const url = await saveSlotImage(product.id, imageSlots[i], i);
+           if (url) savedUrls.push(url);
+         }
+-        if (savedUrls.length > 0) {
++        if (savedUrls.length > 0 && !imageUrl.trim()) {
+           await supabase.from("products").update({ image_url: savedUrls[0] }).eq("id", product.id);
+         }
+       }
+ 
+-      toast.success("Produto guardado!");
++      toast.success("Produto criado com sucesso!");
+       queryClient.invalidateQueries({ queryKey: ["products"] });
+-      queryClient.invalidateQueries({ queryKey: ["product_images"] });
+       setOpen(false);
+       resetForm();
+     } catch (e: any) {
+-      toast.error(e.message || "Erro ao adicionar produto");
++      toast.error(e.message || "Erro ao criar produto");
+     } finally {
+       setLoading(false);
+     }
+   };
+ 
+   const resetForm = () => {
+-    setName("");
+-    setDescription("");
+-    setCategory("");
+-    setPrice("");
+-    setFamilyId("none");
+-    setTypeId("none");
+-    setBrandId("none");
+-    setMundo("escritorio");
+-    setImageSlots([]);
++    setName(""); setSku(""); setDescription(""); setMundo("escritorio");
++    setCategory(""); setFamilyId("none"); setTypeId("none"); setBrandId("none");
++    setPrice(""); setPurchasePrice(""); setPurchasePriceVat(""); setWeight(""); setMinSaleQty("1");
++    setStockStatus("high"); setSobEncomenda(false); setIncludeInCatalog(true); setFeatured(false);
++    setImageUrl(""); setImageSlots([]);
+   };
+ 
+   return (
+-    <Dialog open={open} onOpenChange={setOpen}>
++    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+       <DialogTrigger asChild>
+-        <Button className="gap-2">
+-          <Plus className="h-4 w-4" />
+-          Novo Produto
+-        </Button>
++        <Button className="gap-2"><Plus className="h-4 w-4" /> Novo Produto</Button>
+       </DialogTrigger>
+-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
++      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogHeader>
+-          <DialogTitle className="font-heading text-xl">Adicionar Produto</DialogTitle>
++          <DialogTitle className="font-heading text-xl flex items-center gap-2">
++            <Plus className="h-5 w-5" /> Novo Produto
++          </DialogTitle>
+         </DialogHeader>
+-        <div className="space-y-4 pt-2">
+-          <div className="space-y-2">
+-            <Label htmlFor="name">Nome do Produto *</Label>
+-            <div className="relative">
+-              <Input id="name" placeholder="Ex: iPhone 15 Pro Max" value={name} onChange={(e) => setName(e.target.value)} />
+-              <Sparkles className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+-            </div>
+-          </div>
+ 
+-          <div className="space-y-2">
+-            <div className="flex items-center justify-between">
+-              <Label htmlFor="description">Descrição</Label>
+-              <Button
+-                type="button"
+-                variant="ghost"
+-                size="sm"
+-                onClick={handleGenerateDescription}
+-                disabled={generatingDesc || !name.trim()}
+-                className="h-7 gap-1 text-xs text-primary"
+-              >
+-                {generatingDesc ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+-                Gerar com IA
+-              </Button>
++        <Tabs defaultValue="geral" className="space-y-4">
++          <TabsList className="grid grid-cols-4 w-full">
++            <TabsTrigger value="geral">Geral</TabsTrigger>
++            <TabsTrigger value="precos">Preços</TabsTrigger>
++            <TabsTrigger value="imagens">Imagens</TabsTrigger>
++            <TabsTrigger value="visibilidade">Opções</TabsTrigger>
++          </TabsList>
++
++          {/* ── GERAL ── */}
++          <TabsContent value="geral" className="space-y-4">
++            <div className="grid grid-cols-2 gap-4">
++              <div className="space-y-2 col-span-2">
++                <Label>Nome *</Label>
++                <Input placeholder="Nome do produto" value={name} onChange={(e) => setName(e.target.value)} />
++              </div>
++              <div className="space-y-2">
++                <Label>SKU / Referência</Label>
++                <Input placeholder="REF-001" value={sku} onChange={(e) => setSku(e.target.value)} />
++              </div>
++              <div className="space-y-2">
++                <Label>Mundo</Label>
++                <Select value={mundo} onValueChange={(v) => { setMundo(v); setTypeId("none"); }}>
++                  <SelectTrigger><SelectValue /></SelectTrigger>
++                  <SelectContent>
++                    <SelectItem value="escritorio">Escritório & IT</SelectItem>
++                    <SelectItem value="seguranca">Segurança & Redes</SelectItem>
++                    <SelectItem value="economato">Economato</SelectItem>
++                    <SelectItem value="todos">Todos</SelectItem>
++                  </SelectContent>
++                </Select>
++              </div>
+             </div>
+-            <Textarea id="description" placeholder="Descreva o produto ou use a IA..." value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+-          </div>
+ 
+-          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+-              <Label>Mundo</Label>
+-              <Select value={mundo} onValueChange={(v) => { setMundo(v); setTypeId("none"); }}>
+-                <SelectTrigger><SelectValue /></SelectTrigger>
+-                <SelectContent>
+-                  <SelectItem value="escritorio">Escritório & IT</SelectItem>
+-                  <SelectItem value="seguranca">Segurança & Redes</SelectItem>
+-                  <SelectItem value="economato">Economato</SelectItem>
+-                  <SelectItem value="todos">Todos</SelectItem>
+-                </SelectContent>
+-              </Select>
++              <div className="flex items-center justify-between">
++                <Label>Descrição</Label>
++                <Button type="button" variant="ghost" size="sm" onClick={handleGenerateDescription}
++                  disabled={generatingDesc || !name.trim()} className="h-7 gap-1 text-xs text-primary">
++                  {generatingDesc ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
++                  Gerar com IA
++                </Button>
++              </div>
++              <Textarea placeholder="Descrição do produto..." value={description}
++                onChange={(e) => setDescription(e.target.value)} rows={4} />
+             </div>
+-            <div className="space-y-2">
+-              <Label htmlFor="price">Preço (€)</Label>
+-              <Input id="price" type="number" step="0.01" min="0" placeholder="0,00" value={price} onChange={(e) => setPrice(e.target.value)} />
++
++            <Separator />
++
++            <div className="grid grid-cols-2 gap-4">
++              <div className="space-y-2">
++                <Label>Categoria</Label>
++                <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
++                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
++                  <SelectContent>
++                    {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
++                  </SelectContent>
++                </Select>
++              </div>
++              <div className="space-y-2">
++                <Label>Família</Label>
++                <Select value={familyId} onValueChange={(v) => { setFamilyId(v); setTypeId("none"); }}>
++                  <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
++                  <SelectContent>
++                    <SelectItem value="none">Sem família</SelectItem>
++                    {filteredFamilies.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
++                  </SelectContent>
++                </Select>
++              </div>
++              <div className="space-y-2">
++                <Label>Tipo (Nível 3)</Label>
++                <Select value={typeId} onValueChange={setTypeId} disabled={filteredTypes.length === 0}>
++                  <SelectTrigger><SelectValue placeholder={familyId === "none" ? "Escolha a família" : "Sem tipo"} /></SelectTrigger>
++                  <SelectContent>
++                    <SelectItem value="none">Sem tipo</SelectItem>
++                    {filteredTypes.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
++                  </SelectContent>
++                </Select>
++              </div>
++              <div className="space-y-2">
++                <Label>Marca</Label>
++                <Select value={brandId} onValueChange={setBrandId}>
++                  <SelectTrigger><SelectValue placeholder="Sem marca" /></SelectTrigger>
++                  <SelectContent>
++                    <SelectItem value="none">Sem marca</SelectItem>
++                    {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
++                  </SelectContent>
++                </Select>
++              </div>
+             </div>
+-          </div>
+ 
+-          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+-              <Label>Categoria</Label>
+-              <Select value={category} onValueChange={(v) => { setCategory(v); setFamilyId("none"); }}>
+-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
++              <Label>Stock</Label>
++              <Select value={stockStatus} onValueChange={setStockStatus}>
++                <SelectTrigger><SelectValue /></SelectTrigger>
+                 <SelectContent>
+-                  {categories.map((cat) => (
+-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+-                  ))}
++                  {STOCK_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                 </SelectContent>
+               </Select>
+             </div>
+-            <div className="space-y-2">
+-              <Label>Família</Label>
+-              <Select value={familyId} onValueChange={(v) => { setFamilyId(v); setTypeId("none"); }}>
+-                <SelectTrigger><SelectValue placeholder="Sem família" /></SelectTrigger>
+-                <SelectContent>
+-                  <SelectItem value="none">Sem família</SelectItem>
+-                  {filteredFamilies.map((f) => (
+-                    <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+-                  ))}
+-                </SelectContent>
+-              </Select>
++          </TabsContent>
++
++          {/* ── PREÇOS ── */}
++          <TabsContent value="precos" className="space-y-4">
++            <div className="grid grid-cols-2 gap-4">
++              <div className="space-y-2">
++                <Label>Custo sem IVA (€)</Label>
++                <Input type="number" step="0.01" value={purchasePrice}
++                  onChange={(e) => handlePurchasePriceChange(e.target.value)} placeholder="0.00" />
++              </div>
++              <div className="space-y-2">
++                <Label>Custo com IVA (€) <span className="text-muted-foreground text-xs">auto</span></Label>
++                <Input type="number" step="0.01" value={purchasePriceVat}
++                  onChange={(e) => setPurchasePriceVat(e.target.value)}
++                  className="bg-muted/30" placeholder="0.00" />
++              </div>
+             </div>
+-          </div>
++            <div className="grid grid-cols-2 gap-4">
++              <div className="space-y-2">
++                <Label>Preço venda s/ IVA (€)</Label>
++                <Input type="number" step="0.01" value={price}
++                  onChange={(e) => setPrice(e.target.value)} placeholder="0.00" />
++              </div>
++              <div className="space-y-2">
++                <Label>Preço venda c/ IVA (€) <span className="text-muted-foreground text-xs">calc.</span></Label>
++                <Input type="number" step="0.01" value={priceWithVat ?? ""}
++                  readOnly className="bg-muted/30 cursor-default" placeholder="0.00" />
++              </div>
++            </div>
++            <div className="grid grid-cols-2 gap-4">
++              <div className="space-y-2">
++                <Label>Peso (kg)</Label>
++                <Input type="number" step="0.001" value={weight}
++                  onChange={(e) => setWeight(e.target.value)} placeholder="0.000" />
++              </div>
++              <div className="space-y-2">
++                <Label>Qtd. mínima de venda</Label>
++                <Input type="number" step="1" min="1" value={minSaleQty}
++                  onChange={(e) => setMinSaleQty(e.target.value)} />
++              </div>
++            </div>
++            {margem && (
++              <div className="rounded-lg bg-muted/50 p-3 text-sm">
++                <span className="text-muted-foreground">Margem: </span>
++                <span className="font-semibold">{margem}%</span>
++                {purchasePrice && price && (
++                  <span className="text-muted-foreground ml-2">
++                    ({(parseFloat(price) - parseFloat(purchasePrice)).toFixed(2)}€ por unidade)
++                  </span>
++                )}
++              </div>
++            )}
++          </TabsContent>
+ 
+-          <div className="grid grid-cols-2 gap-4">
++          {/* ── IMAGENS ── */}
++          <TabsContent value="imagens" className="space-y-4">
+             <div className="space-y-2">
+-              <Label>Tipo (Nível 3)</Label>
+-              <Select value={typeId} onValueChange={setTypeId} disabled={filteredTypes.length === 0}>
+-                <SelectTrigger><SelectValue placeholder={familyId === "none" ? "Escolha primeiro a família" : "Sem tipo"} /></SelectTrigger>
+-                <SelectContent>
+-                  <SelectItem value="none">Sem tipo</SelectItem>
+-                  {filteredTypes.map((t) => (
+-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+-                  ))}
+-                </SelectContent>
+-              </Select>
++              <Label>URL da imagem principal</Label>
++              <Input placeholder="https://..." value={imageUrl}
++                onChange={(e) => setImageUrl(e.target.value)} />
++              {imageUrl && (
++                <img src={imageUrl} alt="" className="h-24 w-24 object-contain rounded border bg-muted" />
++              )}
+             </div>
+-            <div className="space-y-2">
+-              <Label>Marca</Label>
+-              <Select value={brandId} onValueChange={setBrandId}>
+-                <SelectTrigger><SelectValue placeholder="Sem marca" /></SelectTrigger>
+-                <SelectContent>
+-                  <SelectItem value="none">Sem marca</SelectItem>
+-                  {brands.map((b) => (
+-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+-                  ))}
+-                </SelectContent>
+-              </Select>
++            <Separator />
++            <ImageSlotPicker
++              slots={imageSlots} onSlotsChange={setImageSlots}
++              productName={name} disabled={loading}
++            />
++          </TabsContent>
++
++          {/* ── OPÇÕES ── */}
++          <TabsContent value="visibilidade" className="space-y-4">
++            <div className="space-y-3">
++              {[
++                { label: "Visível no catálogo", val: includeInCatalog, set: setIncludeInCatalog },
++                { label: "Destaque na família", val: featured, set: setFeatured },
++                { label: "Sob encomenda", val: sobEncomenda, set: setSobEncomenda },
++              ].map(({ label, val, set }) => (
++                <div key={label} className="flex items-center justify-between py-1">
++                  <Label className="text-sm">{label}</Label>
++                  <Switch checked={val} onCheckedChange={set} />
++                </div>
++              ))}
+             </div>
+-          </div>
+-
+-          <ImageSlotPicker
+-            slots={imageSlots}
+-            onSlotsChange={setImageSlots}
+-            productName={name}
+-            disabled={loading}
+-          />
++          </TabsContent>
++        </Tabs>
+ 
++        <div className="pt-2 border-t border-border">
+           <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2">
+-            {loading ? (
+-              <>
+-                <Loader2 className="h-4 w-4 animate-spin" />
+-                A guardar...
+-              </>
+-            ) : (
+-              <>
+-                <Sparkles className="h-4 w-4" />
+-                Adicionar Produto
+-              </>
+-            )}
++            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
++            {loading ? "A guardar..." : "Criar Produto"}
+           </Button>
+         </div>
+       </DialogContent>
+diff -ruN mega6-base/src/components/CartDrawer.tsx mega6-mod/src/components/CartDrawer.tsx
+--- mega6-base/src/components/CartDrawer.tsx	2026-06-16 21:12:09.945240430 +0000
++++ mega6-mod/src/components/CartDrawer.tsx	2026-06-16 21:12:09.988372072 +0000
+@@ -3,6 +3,8 @@
+ import { useCart } from "@/contexts/CartContext";
+ import { Minus, Plus, Trash2, ShoppingCart, Send, XCircle, Truck, Clock, Info, Package } from "lucide-react";
+ import { useState } from "react";
++import { useQuery } from "@tanstack/react-query";
++import { supabase } from "@/integrations/supabase/client";
+ import { CheckoutDialog } from "./CheckoutDialog";
+ 
+ // Tabela DHL Portugal Continental (s/IVA) — custo real cobrado pela DHL
+@@ -13,20 +15,15 @@
+   [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
+ ];
+ 
+-// Margem aplicada sobre o custo real DHL (gestão administrativa de portes)
+ const MARGEM_PORTES = 0.15;
+ 
+ function calcularPorteDHL(pesoKg: number): number | null {
+-  let custoBase: number | null;
+-  if (pesoKg <= 0) {
+-    custoBase = DHL_TABELA[0][1];
+-  } else {
+-    custoBase = null;
+-    for (const [limite, preco] of DHL_TABELA) {
+-      if (pesoKg <= limite) { custoBase = preco; break; }
+-    }
++  let custoBase: number | null = null;
++  for (const [limite, preco] of DHL_TABELA) {
++    if (pesoKg <= limite) { custoBase = preco; break; }
+   }
+-  if (custoBase === null) return null; // >250kg
++  if (pesoKg <= 0) custoBase = DHL_TABELA[0][1];
++  if (custoBase === null) return null;
+   return Math.round(custoBase * (1 + MARGEM_PORTES) * 100) / 100;
+ }
+ 
+@@ -34,21 +31,86 @@
+   const { items, isOpen, setIsOpen, updateQuantity, removeItem, clearCart } = useCart();
+   const [checkoutOpen, setCheckoutOpen] = useState(false);
+ 
++  // Configuração de portes da BD (Visiotech, Diginova, etc.)
++  const { data: shippingConfigs = [] } = useQuery({
++    queryKey: ["shipping_config"],
++    queryFn: async () => {
++      const { data } = await supabase.from("shipping_config").select("*").eq("ativo", true);
++      return data ?? [];
++    },
++    staleTime: 5 * 60 * 1000,
++  });
++
+   const totalValueSemVat = items.reduce((sum, i) => sum + (i.price ?? 0) * i.quantity, 0);
+   const totalValueComVat = totalValueSemVat * 1.23;
+ 
+-  // Peso total (informativo, todos os fornecedores) vs peso só dos
+-  // produtos ALL.TO (usado no cálculo de portes DHL — os outros
+-  // fornecedores têm portes "calculados no orçamento", não DHL).
+-  const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
+-  const pesoAllto = items.reduce((sum, i) =>
+-    (i as any).fornecedor === "allto" ? sum + ((i as any).weight ?? 0) * i.quantity : sum, 0);
+-  const temPesoAllto = pesoAllto > 0;
+-  const temOutrosFornecedores = items.some(i => (i as any).fornecedor !== "allto");
++  // Agrupar itens por fornecedor
++  const itensPorFornecedor = items.reduce((acc: Record<string, typeof items>, item) => {
++    const f = (item as any).fornecedor || "manual";
++    if (!acc[f]) acc[f] = [];
++    acc[f].push(item);
++    return acc;
++  }, {});
++
++  // Calcular portes por fornecedor
++  const portesPorFornecedor: Array<{
++    fornecedor: string;
++    portesSemIva: number;
++    portesComIva: number;
++    descricao: string;
++    isDHL?: boolean;
++  }> = [];
++
+   const temEnvioEspecial = items.some(i => (i as any).envio_especial);
+ 
+-  const porteDHL = temPesoAllto ? calcularPorteDHL(pesoAllto) : null;
+-  const porteDHLComIva = porteDHL ? porteDHL * 1.23 : null;
++  for (const [fornecedor, itensF] of Object.entries(itensPorFornecedor)) {
++    if (fornecedor === "allto") {
++      // ALL.TO: cálculo por peso via tabela DHL
++      const pesoAllto = itensF.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
++      if (pesoAllto > 0) {
++        const porte = calcularPorteDHL(pesoAllto);
++        if (porte !== null) {
++          portesPorFornecedor.push({
++            fornecedor: "allto",
++            portesSemIva: porte,
++            portesComIva: porte * 1.23,
++            descricao: `${pesoAllto.toFixed(2)}kg · DHL`,
++            isDHL: true,
++          });
++        } else {
++          portesPorFornecedor.push({
++            fornecedor: "allto",
++            portesSemIva: 0,
++            portesComIva: 0,
++            descricao: "Peso >250kg — calculado no orçamento",
++          });
++        }
++      }
++    } else {
++      // Outros fornecedores: configuração da BD (preco_primeira_unidade + adicional)
++      const config = shippingConfigs.find((c: any) => c.fornecedor === fornecedor);
++      if (config && config.ativo) {
++        const totalItens = itensF.reduce((sum, i) => sum + i.quantity, 0);
++        const primeira = config.preco_primeira_unidade ?? 0;
++        const adicional = config.preco_unidade_adicional ?? 0;
++        const portesSemIva = totalItens > 0
++          ? primeira + Math.max(0, totalItens - 1) * adicional
++          : primeira;
++        portesPorFornecedor.push({
++          fornecedor,
++          portesSemIva,
++          portesComIva: portesSemIva * 1.23,
++          descricao: `${totalItens} artigo${totalItens !== 1 ? "s" : ""}`,
++        });
++      }
++    }
++  }
++
++  const pesoTotal = items.reduce((sum, i) => sum + ((i as any).weight ?? 0) * i.quantity, 0);
++  const totalPortesComIva = portesPorFornecedor.reduce((s, p) => s + p.portesComIva, 0);
++  const temPortesCalculados = Object.keys(itensPorFornecedor).some(f =>
++    f !== "allto" && !shippingConfigs.find((c: any) => c.fornecedor === f && c.ativo)
++  );
+ 
+   return (
+     <>
+@@ -149,32 +211,41 @@
+                   )}
+                 </div>
+ 
+-                {/* Portes DHL */}
+-                {temPesoAllto && (
+-                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1.5">
++                {/* Portes por fornecedor */}
++                {portesPorFornecedor.length > 0 && (
++                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-2">
+                     <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+-                      <Truck className="h-3.5 w-3.5 text-primary" /> Portes estimados (DHL)
++                      <Truck className="h-3.5 w-3.5 text-primary" />
++                      Portes estimados
+                     </p>
+-                    {porteDHL ? (
+-                      <>
+-                        <div className="flex justify-between text-sm font-bold">
+-                          <span>Portes ({pesoAllto.toFixed(2)}kg) c/ IVA:</span>
+-                          <span className="text-primary">{porteDHLComIva!.toFixed(2).replace(".", ",")} €</span>
+-                        </div>
+-                        <p className="text-[10px] text-muted-foreground">Portugal Continental · DHL · valor indicativo</p>
+-                      </>
+-                    ) : (
+-                      <p className="text-xs text-muted-foreground">Peso superior a 250kg — portes calculados no orçamento</p>
++                    {portesPorFornecedor.map((p) => (
++                      <div key={p.fornecedor} className="flex justify-between text-sm">
++                        <span className="text-muted-foreground capitalize">
++                          {p.fornecedor} <span className="text-[10px]">({p.descricao})</span>
++                        </span>
++                        <span className="font-semibold">
++                          {p.portesComIva > 0
++                            ? `${p.portesComIva.toFixed(2).replace(".", ",")} €`
++                            : "ver orçamento"}
++                        </span>
++                      </div>
++                    ))}
++                    {portesPorFornecedor.length > 1 && totalPortesComIva > 0 && (
++                      <div className="flex justify-between text-sm font-bold border-t border-primary/20 pt-1.5 mt-1.5">
++                        <span>Total portes c/ IVA:</span>
++                        <span className="text-primary">{totalPortesComIva.toFixed(2).replace(".", ",")} €</span>
++                      </div>
+                     )}
++                    <p className="text-[10px] text-muted-foreground">Portugal Continental · valores indicativos</p>
+                   </div>
+                 )}
+ 
+                 {/* Notas */}
+                 <div className="rounded-xl bg-muted/50 border border-border p-3 space-y-2 text-xs text-muted-foreground">
+-                  {temOutrosFornecedores && (
++                  {temPortesCalculados && (
+                     <div className="flex items-start gap-1.5">
+                       <Truck className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+-                      <span>Portes de outros produtos calculados no orçamento final.</span>
++                      <span>Portes de alguns produtos calculados no orçamento final.</span>
+                     </div>
+                   )}
+                   {temEnvioEspecial && (
+diff -ruN mega6-base/src/components/EditProductSheet.tsx mega6-mod/src/components/EditProductSheet.tsx
+--- mega6-base/src/components/EditProductSheet.tsx	2026-06-16 21:12:09.945423454 +0000
++++ mega6-mod/src/components/EditProductSheet.tsx	2026-06-16 21:12:09.991072073 +0000
+@@ -30,6 +30,7 @@
+ export function EditProductSheet({ open, onOpenChange, product, families, types = [], categories, brands, onPrev, onNext, hasPrev, hasNext }: EditProductSheetProps) {
+   const [name, setName] = useState("");
+   const [description, setDescription] = useState("");
++  const [shortDescription, setShortDescription] = useState("");
+   const [category, setCategory] = useState("");
+   const [familyId, setFamilyId] = useState("none");
+   const [typeId, setTypeId] = useState("none");
+@@ -80,10 +81,22 @@
+     ? ((parseFloat(price) - parseFloat(purchasePrice)) / parseFloat(purchasePrice) * 100).toFixed(1)
+     : null;
+ 
++  const priceWithVat = price ? (parseFloat(price) * 1.23).toFixed(2) : null;
++
++  const handlePurchasePriceChange = (val: string) => {
++    setPurchasePrice(val);
++    if (val && !isNaN(parseFloat(val))) {
++      setPurchasePriceVat((parseFloat(val) * 1.23).toFixed(2));
++    } else {
++      setPurchasePriceVat("");
++    }
++  };
++
+   useEffect(() => {
+     if (!open || !product) return;
+     setName(product.name || "");
+     setDescription(product.description || "");
++    setShortDescription(product.short_description || "");
+     setCategory(product.category || "");
+     setFamilyId(product.family_id || "none");
+     setTypeId(product.type_id || "none");
+@@ -119,6 +132,7 @@
+       const { error } = await supabase.from("products").update({
+         name: name.trim(),
+         description: description.trim() || null,
++        short_description: shortDescription.trim() || null,
+         category: category || null,
+         family_id: familyId === "none" ? null : familyId,
+         type_id: typeId === "none" ? null : typeId,
+@@ -249,6 +263,7 @@
+             <EditProductGeneral
+               name={name} setName={setName}
+               description={description} setDescription={setDescription}
++              shortDescription={shortDescription} setShortDescription={setShortDescription}
+               imageUrl={imageUrl} setImageUrl={setImageUrl}
+               mundo={mundo} setMundo={setMundo}
+               stockStatus={stockStatus} setStockStatus={setStockStatus}
+@@ -271,9 +286,10 @@
+ 
+           <TabsContent value="precos">
+             <EditProductPricing
+-              purchasePrice={purchasePrice} setPurchasePrice={setPurchasePrice}
++              purchasePrice={purchasePrice} setPurchasePrice={handlePurchasePriceChange}
+               purchasePriceVat={purchasePriceVat} setPurchasePriceVat={setPurchasePriceVat}
+               price={price} setPrice={setPrice}
++              priceWithVat={priceWithVat}
+               weight={weight} setWeight={setWeight}
+               margem={margem}
+               fornecedor={product?.fornecedor}
+diff -ruN mega6-base/src/components/GenerateDescriptionsDialog.tsx mega6-mod/src/components/GenerateDescriptionsDialog.tsx
+--- mega6-base/src/components/GenerateDescriptionsDialog.tsx	2026-06-16 21:12:09.945504566 +0000
++++ mega6-mod/src/components/GenerateDescriptionsDialog.tsx	2026-06-16 21:12:10.002476824 +0000
+@@ -21,14 +21,15 @@
+ }
+ 
+ interface GenerateDescriptionsDialogProps {
+-  products: Product[];
++  products: Product[];          // produtos da página actual (fallback)
++  fetchAllWithoutDesc?: () => Promise<Product[]>; // opcional: buscar TODOS os filtrados sem desc
+ }
+ 
+ const CHUNK_SIZE = 10;
+ const PAUSE_MS = 1500;
+ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+ 
+-export function GenerateDescriptionsDialog({ products }: GenerateDescriptionsDialogProps) {
++export function GenerateDescriptionsDialog({ products, fetchAllWithoutDesc }: GenerateDescriptionsDialogProps) {
+   const [open, setOpen] = useState(false);
+   const [running, setRunning] = useState(false);
+   const [stopRequested, setStopRequested] = useState(false);
+@@ -37,15 +38,17 @@
+   const [success, setSuccess] = useState(0);
+   const [errors, setErrors] = useState(0);
+   const [currentName, setCurrentName] = useState<string>("");
++  const [loadingAll, setLoadingAll] = useState(false);
++  const [allQueue, setAllQueue] = useState<Product[] | null>(null); // null = não carregado ainda
+ 
+-  const missing = useMemo(
+-    () =>
+-      products.filter(
+-        (p) => !p.description || p.description.trim().length === 0
+-      ),
++  const localMissing = useMemo(
++    () => products.filter((p) => !p.description || p.description.trim().length === 0),
+     [products]
+   );
+ 
++  // Se fetchAllWithoutDesc disponível, usa allQueue; senão usa localMissing
++  const missing = allQueue ?? localMissing;
++
+   const queryClient = useQueryClient();
+ 
+   const handleStart = async () => {
+@@ -111,6 +114,18 @@
+       setSuccess(0);
+       setErrors(0);
+       setCurrentName("");
++      setAllQueue(null);
++    }
++  };
++
++  const handleFetchAll = async () => {
++    if (!fetchAllWithoutDesc) return;
++    setLoadingAll(true);
++    try {
++      const all = await fetchAllWithoutDesc();
++      setAllQueue(all);
++    } finally {
++      setLoadingAll(false);
+     }
+   };
+ 
+@@ -139,12 +154,31 @@
+               <div className="rounded-lg border bg-secondary/40 p-4 space-y-2 text-sm">
+                 <div className="flex justify-between">
+                   <span className="text-muted-foreground">Total de produtos</span>
+-                  <span className="font-medium">{products.length}</span>
++                  <span className="font-medium">{allQueue ? allQueue.length : products.length}</span>
+                 </div>
+                 <div className="flex justify-between">
+                   <span className="text-muted-foreground">Sem descrição</span>
+                   <span className="font-bold text-primary">{total}</span>
+                 </div>
++                {fetchAllWithoutDesc && allQueue === null && (
++                  <div className="pt-1 border-t border-border">
++                    <p className="text-xs text-muted-foreground mb-2">
++                      A mostrar apenas os produtos da página actual. Para processar todos os filtrados:
++                    </p>
++                    <Button
++                      variant="outline" size="sm" className="w-full gap-1.5 h-8 text-xs"
++                      onClick={handleFetchAll} disabled={loadingAll}
++                    >
++                      {loadingAll ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
++                      Carregar todos os produtos sem descrição
++                    </Button>
++                  </div>
++                )}
++                {allQueue !== null && (
++                  <div className="pt-1 border-t border-border">
++                    <p className="text-xs text-green-600">✓ {allQueue.length} produtos carregados (todos os filtros activos)</p>
++                  </div>
++                )}
+               </div>
+ 
+               {total === 0 ? (
+diff -ruN mega6-base/src/components/GlobalSearchBar.tsx mega6-mod/src/components/GlobalSearchBar.tsx
+--- mega6-base/src/components/GlobalSearchBar.tsx	1970-01-01 00:00:00.000000000 +0000
++++ mega6-mod/src/components/GlobalSearchBar.tsx	2026-06-16 21:12:10.005444297 +0000
+@@ -0,0 +1,36 @@
++import { useState } from "react";
++import { useNavigate } from "react-router-dom";
++import { Search } from "lucide-react";
++import { Input } from "@/components/ui/input";
++
++interface GlobalSearchBarProps {
++  className?: string;
++  placeholder?: string;
++}
++
++/**
++ * Barra de pesquisa global — redireciona para /pesquisa?q=...
++ * Reutilizável em qualquer header (Produto, Index, WorldCatalog, Pesquisa).
++ */
++export function GlobalSearchBar({ className = "", placeholder = "Pesquisar em todo o catálogo..." }: GlobalSearchBarProps) {
++  const [query, setQuery] = useState("");
++  const navigate = useNavigate();
++
++  const handleSubmit = (e: React.FormEvent) => {
++    e.preventDefault();
++    const q = query.trim();
++    if (q) navigate(`/pesquisa?q=${encodeURIComponent(q)}`);
++  };
++
++  return (
++    <form onSubmit={handleSubmit} className={`relative flex-1 max-w-xl mx-auto ${className}`}>
++      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
++      <Input
++        placeholder={placeholder}
++        value={query}
++        onChange={(e) => setQuery(e.target.value)}
++        className="pl-10 bg-muted/60 border-transparent h-9 text-sm rounded-xl"
++      />
++    </form>
++  );
++}
+diff -ruN mega6-base/src/components/admin/AdminProductsTab.tsx mega6-mod/src/components/admin/AdminProductsTab.tsx
+--- mega6-base/src/components/admin/AdminProductsTab.tsx	2026-06-16 21:12:09.946475407 +0000
++++ mega6-mod/src/components/admin/AdminProductsTab.tsx	2026-06-16 21:12:09.998250339 +0000
+@@ -489,7 +489,14 @@
+                   return (
+                     <tr key={p.id}
+                       className="hover:bg-muted/30 cursor-pointer transition-colors"
+-                      onClick={() => setEditingProduct(p)}>
++                      onClick={async () => {
++                        // Buscar produto completo (PRODUCT_COLUMNS inclui description,
++                        // upgrades, etc. que não vêm na listagem paginada LIST_COLUMNS)
++                        const { data } = await supabase.from("products")
++                          .select(PRODUCT_COLUMNS).eq("id", p.id).maybeSingle();
++                        if (data) setEditingProduct(data);
++                        else setEditingProduct(p); // fallback
++                      }}>
+                       <td className="px-3 py-2.5 max-w-[220px]">
+                         <div className="flex items-center gap-2">
+                           {p.image_url && (
+diff -ruN mega6-base/src/components/edit-product/EditProductGeneral.tsx mega6-mod/src/components/edit-product/EditProductGeneral.tsx
+--- mega6-base/src/components/edit-product/EditProductGeneral.tsx	2026-06-16 21:12:09.949511306 +0000
++++ mega6-mod/src/components/edit-product/EditProductGeneral.tsx	2026-06-16 21:12:09.993822659 +0000
+@@ -8,6 +8,7 @@
+ interface Props {
+   name: string; setName: (v: string) => void;
+   description: string; setDescription: (v: string) => void;
++  shortDescription: string; setShortDescription: (v: string) => void;
+   imageUrl: string; setImageUrl: (v: string) => void;
+   mundo: string; setMundo: (v: string) => void;
+   stockStatus: string; setStockStatus: (v: string) => void;
+@@ -35,8 +36,12 @@
+         <Input value={p.name} onChange={(e) => p.setName(e.target.value)} />
+       </div>
+       <div className="space-y-2">
+-        <Label>Descrição</Label>
+-        <Textarea value={p.description} onChange={(e) => p.setDescription(e.target.value)} rows={4} />
++        <Label>Descrição curta <span className="text-muted-foreground text-xs">(bullets, resumo — aparece nos cards)</span></Label>
++        <Textarea value={p.shortDescription} onChange={(e) => p.setShortDescription(e.target.value)} rows={2} placeholder="Resumo breve do produto..." />
++      </div>
++      <div className="space-y-2">
++        <Label>Descrição completa <span className="text-muted-foreground text-xs">(aparece na página do produto)</span></Label>
++        <Textarea value={p.description} onChange={(e) => p.setDescription(e.target.value)} rows={5} />
+       </div>
+       <div className="space-y-2">
+         <Label>URL da Imagem</Label>
+diff -ruN mega6-base/src/components/edit-product/EditProductPricing.tsx mega6-mod/src/components/edit-product/EditProductPricing.tsx
+--- mega6-base/src/components/edit-product/EditProductPricing.tsx	2026-06-16 21:12:09.949549286 +0000
++++ mega6-mod/src/components/edit-product/EditProductPricing.tsx	2026-06-16 21:12:09.995948896 +0000
+@@ -7,6 +7,7 @@
+   purchasePrice: string; setPurchasePrice: (v: string) => void;
+   purchasePriceVat: string; setPurchasePriceVat: (v: string) => void;
+   price: string; setPrice: (v: string) => void;
++  priceWithVat?: string | null;
+   weight: string; setWeight: (v: string) => void;
+   margem: string | null;
+   fornecedor?: string | null;
+@@ -23,8 +24,8 @@
+           <Input type="number" step="0.01" value={p.purchasePrice} onChange={(e) => p.setPurchasePrice(e.target.value)} />
+         </div>
+         <div className="space-y-2">
+-          <Label>Custo com IVA (€)</Label>
+-          <Input type="number" step="0.01" value={p.purchasePriceVat} onChange={(e) => p.setPurchasePriceVat(e.target.value)} />
++          <Label>Custo com IVA (€) <span className="text-muted-foreground text-xs">auto</span></Label>
++          <Input type="number" step="0.01" value={p.purchasePriceVat} onChange={(e) => p.setPurchasePriceVat(e.target.value)} className="bg-muted/30" />
+         </div>
+       </div>
+       <div className="grid grid-cols-2 gap-4">
+@@ -33,8 +34,14 @@
+           <Input type="number" step="0.01" value={p.price} onChange={(e) => p.setPrice(e.target.value)} />
+         </div>
+         <div className="space-y-2">
++          <Label>Preço de venda c/ IVA (€) <span className="text-muted-foreground text-xs">calc.</span></Label>
++          <Input type="number" step="0.01" value={p.priceWithVat ?? ""} readOnly className="bg-muted/30 cursor-default" />
++        </div>
++      </div>
++      <div className="grid grid-cols-2 gap-4">
++        <div className="space-y-2">
+           <Label>Peso (kg)</Label>
+-          <Input type="number" step="0.1" value={p.weight} onChange={(e) => p.setWeight(e.target.value)} />
++          <Input type="number" step="0.001" value={p.weight} onChange={(e) => p.setWeight(e.target.value)} placeholder="0.000" />
+         </div>
+       </div>
+       {p.margem && (
+diff -ruN mega6-base/src/pages/Produto.tsx mega6-mod/src/pages/Produto.tsx
+--- mega6-base/src/pages/Produto.tsx	2026-06-16 21:12:09.952589456 +0000
++++ mega6-mod/src/pages/Produto.tsx	2026-06-16 21:12:10.007563507 +0000
+@@ -14,6 +14,7 @@
+ import { CartDrawer } from "@/components/CartDrawer";
+ import { DarkModeToggle } from "@/components/DarkModeToggle";
+ import { UserMenuButton } from "@/components/UserMenuButton";
++import { GlobalSearchBar } from "@/components/GlobalSearchBar";
+ import ContactFloatingBubble from "@/components/ContactFloatingBubble";
+ import { StockAlertButton } from "@/components/StockAlertButton";
+ import { SiteFooter } from "@/components/SiteFooter";
+@@ -161,12 +162,13 @@
+ 
+       {/* Header */}
+       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-lg">
+-        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4">
+-          <div className="flex items-center gap-3">
++        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4">
++          <div className="flex items-center gap-2 shrink-0">
+             <Link to={worldPath} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
+             <Link to="/"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
+           </div>
+-          <div className="flex items-center gap-2">
++          <GlobalSearchBar />
++          <div className="flex items-center gap-2 shrink-0">
+             <DarkModeToggle />
+             <UserMenuButton />
+             <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9 relative">
+diff -ruN mega6-base/src/pages/gestao/Clientes.tsx mega6-mod/src/pages/gestao/Clientes.tsx
+--- mega6-base/src/pages/gestao/Clientes.tsx	2026-06-16 21:12:09.953376733 +0000
++++ mega6-mod/src/pages/gestao/Clientes.tsx	2026-06-16 21:12:10.003978806 +0000
+@@ -4,64 +4,142 @@
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
++import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+-import { Loader2, Users, Search, FileText, Wrench, Mail, Phone } from "lucide-react";
++import { Loader2, Users, Search, FileText, Wrench, Phone, UserX, Link as LinkIcon } from "lucide-react";
++
++const STATUS_LABEL: Record<string, string> = {
++  pending: "Pendente", sent: "Enviado", in_review: "Em análise",
++  accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
++  submitted: "Submetido", approved: "Aprovado", in_repair: "Em reparação", shipped_back: "Devolvido",
++};
+ 
+ export default function GestaoClientes() {
+   const [search, setSearch] = useState("");
+   const [selected, setSelected] = useState<any | null>(null);
++  const [anonSelected, setAnonSelected] = useState<any | null>(null); // {email, name, phone, quotes[]}
+ 
+-  const { data, isLoading } = useQuery({
++  // ── Clientes com conta (customer_profiles) ────────────────────────
++  const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
+     queryKey: ["gestao-clientes"],
+     queryFn: async () => {
++      const { data, error } = await supabase.from("customer_profiles").select("*").order("full_name");
++      if (error) throw error;
++      return data ?? [];
++    },
++    staleTime: 60 * 1000,
++  });
++
++  // ── Orçamentos de clientes anónimos (user_id IS NULL) ─────────────
++  const { data: anonQuotes = [], isLoading: loadingAnon } = useQuery({
++    queryKey: ["gestao-clientes-anon"],
++    queryFn: async () => {
+       const { data, error } = await supabase
+-        .from("customer_profiles")
+-        .select("*")
+-        .order("full_name");
++        .from("quotes")
++        .select("id,quote_number,status,total,created_at,customer_name,customer_email,customer_phone")
++        .is("user_id", null)
++        .order("created_at", { ascending: false });
+       if (error) throw error;
+       return data ?? [];
+     },
+     staleTime: 60 * 1000,
+   });
+ 
+-  // Orçamentos + RMAs do cliente seleccionado
++  // Agrupar anónimos por email
++  const anonByEmail = anonQuotes.reduce((acc: Record<string, any>, q: any) => {
++    const key = q.customer_email?.toLowerCase() || "sem-email";
++    if (!acc[key]) acc[key] = {
++      email: q.customer_email, name: q.customer_name,
++      phone: q.customer_phone, quotes: [],
++    };
++    acc[key].quotes.push(q);
++    return acc;
++  }, {});
++  const anonClients = Object.values(anonByEmail).sort((a: any, b: any) =>
++    (a.name || a.email || "").localeCompare(b.name || b.email || "")
++  );
++
++  // ── Actividade do cliente com conta ──────────────────────────────
+   const { data: clientActivity } = useQuery({
+     queryKey: ["gestao-client-activity", selected?.user_id],
+     enabled: !!selected?.user_id,
+     queryFn: async () => {
+       const [quotes, rmas] = await Promise.all([
+-        supabase.from("quotes")
+-          .select("id,quote_number,status,total,created_at")
+-          .eq("user_id", selected.user_id)
+-          .order("created_at", { ascending: false })
+-          .limit(10),
+-        supabase.from("rma_requests")
+-          .select("id,rma_number,status,product_name,created_at")
+-          .eq("user_id", selected.user_id)
+-          .order("created_at", { ascending: false })
+-          .limit(10),
++        supabase.from("quotes").select("id,quote_number,status,total,created_at")
++          .eq("user_id", selected.user_id).order("created_at", { ascending: false }).limit(10),
++        supabase.from("rma_requests").select("id,rma_number,status,product_name,created_at")
++          .eq("user_id", selected.user_id).order("created_at", { ascending: false }).limit(10),
+       ]);
+       return { quotes: quotes.data ?? [], rmas: rmas.data ?? [] };
+     },
+   });
+ 
+-  const filtered = (data ?? []).filter((c: any) => {
++  const filteredProfiles = profiles.filter((c: any) => {
+     if (!search.trim()) return true;
+     const s = search.toLowerCase();
+-    return (
+-      c.full_name?.toLowerCase().includes(s) ||
+-      c.company?.toLowerCase().includes(s) ||
+-      c.email?.toLowerCase().includes(s) ||
+-      c.tax_id?.includes(s) ||
+-      c.phone?.includes(s)
+-    );
++    return c.full_name?.toLowerCase().includes(s) || c.company?.toLowerCase().includes(s) ||
++      c.tax_id?.includes(s) || c.phone?.includes(s);
+   });
+ 
+-  const STATUS_LABEL: Record<string, string> = {
+-    pending: "Pendente", sent: "Enviado", in_review: "Em análise",
+-    accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
+-    submitted: "Submetido", approved: "Aprovado", in_repair: "Em reparação",
+-    shipped_back: "Devolvido",
++  const filteredAnon = anonClients.filter((c: any) => {
++    if (!search.trim()) return true;
++    const s = search.toLowerCase();
++    return c.email?.toLowerCase().includes(s) || c.name?.toLowerCase().includes(s) ||
++      c.phone?.includes(s);
++  });
++
++  const renderProfileDetail = () => {
++    if (!selected) return null;
++    return (
++      <div className="space-y-4">
++        <Card>
++          <CardHeader className="pb-2"><CardTitle className="text-sm">Dados de contacto</CardTitle></CardHeader>
++          <CardContent className="text-sm space-y-1">
++            {selected.company && <p><span className="text-muted-foreground">Empresa:</span> {selected.company}</p>}
++            {selected.tax_id && <p><span className="text-muted-foreground">NIF:</span> {selected.tax_id}</p>}
++            {selected.phone && (
++              <p className="flex items-center gap-2">
++                <span className="text-muted-foreground">Tel:</span> {selected.phone}
++                <a href={`https://wa.me/351${selected.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">WhatsApp</a>
++              </p>
++            )}
++            {selected.address_line1 && (
++              <p><span className="text-muted-foreground">Morada:</span> {selected.address_line1}{selected.city && `, ${selected.city}`}{selected.postal_code && ` ${selected.postal_code}`}</p>
++            )}
++            {selected.notes && <p><span className="text-muted-foreground">Notas:</span> {selected.notes}</p>}
++          </CardContent>
++        </Card>
++        <Card>
++          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Orçamentos</CardTitle></CardHeader>
++          <CardContent>
++            {!clientActivity ? <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
++              : clientActivity.quotes.length === 0 ? <p className="text-xs text-muted-foreground">Sem orçamentos.</p>
++              : <div className="space-y-1">{clientActivity.quotes.map((q: any) => (
++                  <div key={q.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
++                    <div><span className="font-mono font-medium">{q.quote_number}</span><span className="text-xs text-muted-foreground ml-2">{new Date(q.created_at).toLocaleDateString("pt-PT")}</span></div>
++                    <div className="flex items-center gap-2">
++                      {q.total > 0 && <span className="text-xs font-semibold">{Number(q.total).toFixed(2).replace(".", ",")} €</span>}
++                      <span className="text-xs text-muted-foreground">{STATUS_LABEL[q.status] ?? q.status}</span>
++                    </div>
++                  </div>
++                ))}</div>}
++          </CardContent>
++        </Card>
++        <Card>
++          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Wrench className="h-4 w-4" /> RMAs</CardTitle></CardHeader>
++          <CardContent>
++            {!clientActivity ? <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
++              : clientActivity.rmas.length === 0 ? <p className="text-xs text-muted-foreground">Sem pedidos de RMA.</p>
++              : <div className="space-y-1">{clientActivity.rmas.map((r: any) => (
++                  <div key={r.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
++                    <div><span className="font-mono font-medium">{r.rma_number}</span><span className="text-xs text-muted-foreground ml-2 truncate max-w-[180px] inline-block">{r.product_name}</span></div>
++                    <span className="text-xs text-muted-foreground">{STATUS_LABEL[r.status] ?? r.status}</span>
++                  </div>
++                ))}</div>}
++          </CardContent>
++        </Card>
++      </div>
++    );
+   };
+ 
+   return (
+@@ -70,143 +148,131 @@
+ 
+       <div className="relative">
+         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+-        <Input
+-          placeholder="Pesquisar por nome, empresa, NIF, email, telefone..."
+-          className="pl-9 h-9"
+-          value={search}
+-          onChange={(e) => setSearch(e.target.value)}
+-        />
++        <Input placeholder="Pesquisar por nome, email, NIF, telefone..." className="pl-9 h-9"
++          value={search} onChange={(e) => setSearch(e.target.value)} />
+       </div>
+ 
+-      {isLoading ? (
+-        <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+-      ) : filtered.length === 0 ? (
+-        <Card>
+-          <CardContent className="py-12 text-center text-muted-foreground">
+-            <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
+-            <p>{search ? "Nenhum cliente encontrado." : "Ainda não há clientes registados."}</p>
+-          </CardContent>
+-        </Card>
+-      ) : (
+-        <div className="space-y-2">
+-          {filtered.map((c: any) => (
+-            <Card key={c.id} className="hover:bg-secondary/20 transition-colors cursor-pointer" onClick={() => setSelected(c)}>
+-              <CardContent className="py-3 flex items-center justify-between gap-3">
+-                <div className="min-w-0">
+-                  <div className="flex items-center gap-2">
+-                    <span className="font-medium text-sm">{c.full_name || "—"}</span>
+-                    {c.company && <span className="text-xs text-muted-foreground">· {c.company}</span>}
+-                  </div>
+-                  <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+-                    {c.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</span>}
+-                    {c.tax_id && <span>NIF: {c.tax_id}</span>}
+-                    {c.city && <span>{c.city}</span>}
+-                  </div>
+-                </div>
+-                <Button variant="ghost" size="sm">Ver</Button>
+-              </CardContent>
+-            </Card>
+-          ))}
+-        </div>
+-      )}
++      <Tabs defaultValue="conta">
++        <TabsList>
++          <TabsTrigger value="conta" className="gap-1.5">
++            <Users className="h-3.5 w-3.5" /> Com conta ({profiles.length})
++          </TabsTrigger>
++          <TabsTrigger value="anonimos" className="gap-1.5">
++            <UserX className="h-3.5 w-3.5" /> Anónimos ({anonClients.length})
++          </TabsTrigger>
++        </TabsList>
++
++        {/* ── Clientes com conta ── */}
++        <TabsContent value="conta" className="mt-3">
++          {loadingProfiles ? (
++            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
++          ) : filteredProfiles.length === 0 ? (
++            <Card><CardContent className="py-12 text-center text-muted-foreground">
++              <Users className="h-10 w-10 mx-auto mb-3 opacity-40" />
++              <p>{search ? "Nenhum cliente encontrado." : "Ainda não há clientes registados."}</p>
++            </CardContent></Card>
++          ) : (
++            <div className="space-y-2">
++              {filteredProfiles.map((c: any) => (
++                <Card key={c.id} className="hover:bg-secondary/20 transition-colors cursor-pointer" onClick={() => setSelected(c)}>
++                  <CardContent className="py-3 flex items-center justify-between gap-3">
++                    <div className="min-w-0">
++                      <div className="flex items-center gap-2">
++                        <span className="font-medium text-sm">{c.full_name || "—"}</span>
++                        {c.company && <span className="text-xs text-muted-foreground">· {c.company}</span>}
++                      </div>
++                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
++                        {c.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</span>}
++                        {c.tax_id && <span>NIF: {c.tax_id}</span>}
++                        {c.city && <span>{c.city}</span>}
++                      </div>
++                    </div>
++                    <Button variant="ghost" size="sm">Ver</Button>
++                  </CardContent>
++                </Card>
++              ))}
++            </div>
++          )}
++        </TabsContent>
++
++        {/* ── Clientes anónimos ── */}
++        <TabsContent value="anonimos" className="mt-3">
++          {loadingAnon ? (
++            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
++          ) : filteredAnon.length === 0 ? (
++            <Card><CardContent className="py-12 text-center text-muted-foreground">
++              <UserX className="h-10 w-10 mx-auto mb-3 opacity-40" />
++              <p>{search ? "Nenhum cliente encontrado." : "Sem orçamentos de clientes anónimos."}</p>
++            </CardContent></Card>
++          ) : (
++            <div className="space-y-2">
++              {filteredAnon.map((c: any) => (
++                <Card key={c.email || c.name} className="hover:bg-secondary/20 transition-colors cursor-pointer" onClick={() => setAnonSelected(c)}>
++                  <CardContent className="py-3 flex items-center justify-between gap-3">
++                    <div className="min-w-0">
++                      <div className="flex items-center gap-2">
++                        <span className="font-medium text-sm">{c.name || "—"}</span>
++                        <span className="text-xs text-muted-foreground">· {c.quotes.length} orçamento{c.quotes.length !== 1 ? "s" : ""}</span>
++                      </div>
++                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
++                        {c.email && <span>{c.email}</span>}
++                        {c.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</span>}
++                      </div>
++                    </div>
++                    <Button variant="ghost" size="sm">Ver</Button>
++                  </CardContent>
++                </Card>
++              ))}
++            </div>
++          )}
++        </TabsContent>
++      </Tabs>
+ 
+-      {/* Detalhe do cliente */}
++      {/* Dialog: cliente com conta */}
+       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
++          <DialogHeader><DialogTitle>{selected?.full_name || "Cliente"}</DialogTitle></DialogHeader>
++          {renderProfileDetail()}
++        </DialogContent>
++      </Dialog>
++
++      {/* Dialog: cliente anónimo */}
++      <Dialog open={!!anonSelected} onOpenChange={(o) => !o && setAnonSelected(null)}>
++        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+           <DialogHeader>
+-            <DialogTitle>{selected?.full_name || "Cliente"}</DialogTitle>
++            <DialogTitle>{anonSelected?.name || anonSelected?.email || "Cliente anónimo"}</DialogTitle>
+           </DialogHeader>
+-
+-          {selected && (
++          {anonSelected && (
+             <div className="space-y-4">
+-              {/* Contacto */}
++              <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
++                {anonSelected.email && <p className="text-muted-foreground">{anonSelected.email}</p>}
++                {anonSelected.phone && (
++                  <p className="flex items-center gap-2 text-muted-foreground">
++                    {anonSelected.phone}
++                    <a href={`https://wa.me/351${anonSelected.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer" className="text-xs text-green-600 hover:underline">WhatsApp</a>
++                  </p>
++                )}
++                <p className="text-[11px] text-muted-foreground/60 pt-1 flex items-center gap-1">
++                  <UserX className="h-3 w-3" /> Sem conta registada
++                </p>
++              </div>
+               <Card>
+-                <CardHeader className="pb-2"><CardTitle className="text-sm">Dados de contacto</CardTitle></CardHeader>
+-                <CardContent className="text-sm space-y-1">
+-                  {selected.company && <p><span className="text-muted-foreground">Empresa:</span> {selected.company}</p>}
+-                  {selected.tax_id && <p><span className="text-muted-foreground">NIF:</span> {selected.tax_id}</p>}
+-                  {selected.phone && (
+-                    <p className="flex items-center gap-2">
+-                      <span className="text-muted-foreground">Tel:</span> {selected.phone}
+-                      <a
+-                        href={`https://wa.me/351${selected.phone.replace(/\D/g, "")}`}
+-                        target="_blank" rel="noopener noreferrer"
+-                        className="text-xs text-green-600 hover:underline"
+-                      >
+-                        WhatsApp
+-                      </a>
+-                    </p>
+-                  )}
+-                  {selected.address_line1 && (
+-                    <p>
+-                      <span className="text-muted-foreground">Morada:</span>{" "}
+-                      {selected.address_line1}
+-                      {selected.city && `, ${selected.city}`}
+-                      {selected.postal_code && ` ${selected.postal_code}`}
+-                    </p>
+-                  )}
+-                  {selected.notes && <p><span className="text-muted-foreground">Notas:</span> {selected.notes}</p>}
+-                </CardContent>
+-              </Card>
+-
+-              {/* Orçamentos */}
+-              <Card>
+-                <CardHeader className="pb-2">
+-                  <CardTitle className="text-sm flex items-center gap-2">
+-                    <FileText className="h-4 w-4" /> Orçamentos
+-                  </CardTitle>
+-                </CardHeader>
++                <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><FileText className="h-4 w-4" /> Orçamentos</CardTitle></CardHeader>
+                 <CardContent>
+-                  {!clientActivity ? (
+-                    <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+-                  ) : clientActivity.quotes.length === 0 ? (
+-                    <p className="text-xs text-muted-foreground">Sem orçamentos.</p>
+-                  ) : (
+-                    <div className="space-y-1">
+-                      {clientActivity.quotes.map((q: any) => (
+-                        <div key={q.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
+-                          <div>
+-                            <span className="font-mono font-medium">{q.quote_number}</span>
+-                            <span className="text-xs text-muted-foreground ml-2">
+-                              {new Date(q.created_at).toLocaleDateString("pt-PT")}
+-                            </span>
+-                          </div>
+-                          <div className="flex items-center gap-2">
+-                            {q.total > 0 && <span className="text-xs font-semibold">{Number(q.total).toFixed(2).replace(".", ",")} €</span>}
+-                            <span className="text-xs text-muted-foreground">{STATUS_LABEL[q.status] ?? q.status}</span>
+-                          </div>
++                  <div className="space-y-1">
++                    {anonSelected.quotes.map((q: any) => (
++                      <div key={q.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
++                        <div>
++                          <span className="font-mono font-medium">{q.quote_number}</span>
++                          <span className="text-xs text-muted-foreground ml-2">{new Date(q.created_at).toLocaleDateString("pt-PT")}</span>
+                         </div>
+-                      ))}
+-                    </div>
+-                  )}
+-                </CardContent>
+-              </Card>
+-
+-              {/* RMAs */}
+-              <Card>
+-                <CardHeader className="pb-2">
+-                  <CardTitle className="text-sm flex items-center gap-2">
+-                    <Wrench className="h-4 w-4" /> RMAs
+-                  </CardTitle>
+-                </CardHeader>
+-                <CardContent>
+-                  {!clientActivity ? (
+-                    <div className="flex justify-center py-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
+-                  ) : clientActivity.rmas.length === 0 ? (
+-                    <p className="text-xs text-muted-foreground">Sem pedidos de RMA.</p>
+-                  ) : (
+-                    <div className="space-y-1">
+-                      {clientActivity.rmas.map((r: any) => (
+-                        <div key={r.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
+-                          <div>
+-                            <span className="font-mono font-medium">{r.rma_number}</span>
+-                            <span className="text-xs text-muted-foreground ml-2 truncate max-w-[180px] inline-block">{r.product_name}</span>
+-                          </div>
+-                          <span className="text-xs text-muted-foreground">{STATUS_LABEL[r.status] ?? r.status}</span>
++                        <div className="flex items-center gap-2">
++                          {Number(q.total) > 0 && <span className="text-xs font-semibold">{Number(q.total).toFixed(2).replace(".", ",")} €</span>}
++                          <span className="text-xs text-muted-foreground">{STATUS_LABEL[q.status] ?? q.status}</span>
+                         </div>
+-                      ))}
+-                    </div>
+-                  )}
++                      </div>
++                    ))}
++                  </div>
+                 </CardContent>
+               </Card>
+             </div>
+diff -ruN mega6-base/supabase/migrations/20260616010000_fix_allto_prices_remove_double_vat.sql mega6-mod/supabase/migrations/20260616010000_fix_allto_prices_remove_double_vat.sql
+--- mega6-base/supabase/migrations/20260616010000_fix_allto_prices_remove_double_vat.sql	1970-01-01 00:00:00.000000000 +0000
++++ mega6-mod/supabase/migrations/20260616010000_fix_allto_prices_remove_double_vat.sql	2026-06-16 21:12:10.011043425 +0000
+@@ -0,0 +1,25 @@
++-- Correcção de preços ALL.TO: o importador estava a gravar "price" com
++-- IVA incluído (pvp_com_iva) em vez de sem IVA (pvp_sem_iva). O site
++-- aplica *1.23 ao mostrar o preço, por isso os produtos ALL.TO estavam
++-- com IVA aplicado duas vezes — preços ~23% mais caros do que deviam.
++--
++-- Esta migration divide o price e price_tier* por 1.23 para que fiquem
++-- consistentes com Visiotech e Diginova (que gravam sem IVA).
++
++UPDATE public.products
++SET
++  price      = ROUND((price      / 1.23)::numeric, 2),
++  price_tier2 = CASE WHEN price_tier2 IS NOT NULL
++                  THEN ROUND((price_tier2 / 1.23)::numeric, 2)
++                  ELSE NULL END,
++  price_tier3 = CASE WHEN price_tier3 IS NOT NULL
++                  THEN ROUND((price_tier3 / 1.23)::numeric, 2)
++                  ELSE NULL END
++WHERE fornecedor = 'allto'
++  AND price IS NOT NULL
++  AND price > 0;
++
++-- Nota: purchase_price (custo) já vinha sem IVA (pvr = custo sem IVA da
++-- ALL.TO), por isso NÃO é alterado.
++
++NOTIFY pgrst, 'reload schema';

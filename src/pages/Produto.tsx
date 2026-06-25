@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2,
   MessageCircle, Copy, Truck, Clock, Info, ChevronLeft, ChevronRight,
@@ -13,7 +13,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { CartDrawer } from "@/components/CartDrawer";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
+import { UserMenuButton } from "@/components/UserMenuButton";
+import { GlobalSearchBar } from "@/components/GlobalSearchBar";
+import { addToRecentlyViewed } from "@/pages/Index";
 import ContactFloatingBubble from "@/components/ContactFloatingBubble";
+import { StockAlertButton } from "@/components/StockAlertButton";
+import { QueryError } from "@/components/QueryError";
+import { QuantitySelector } from "@/components/QuantitySelector";
 import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
@@ -23,6 +29,7 @@ const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }
   high:       { label: "Em stock",           color: "bg-emerald-500/12 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
   low:        { label: "Últimas unidades",   color: "bg-amber-500/12 text-amber-700 border-amber-500/30",    dot: "bg-amber-500" },
   out:        { label: "Sob encomenda",       color: "bg-blue-500/12 text-blue-700 border-blue-500/30",       dot: "bg-blue-500" },
+  on_request: { label: "Sob encomenda",       color: "bg-blue-500/12 text-blue-700 border-blue-500/30",       dot: "bg-blue-500" },
 };
 
 // Tradução de chaves de specs para português legível
@@ -32,15 +39,18 @@ const Produto = () => {
   const [imgIdx, setImgIdx] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading, isError, refetch } = useQuery({
     queryKey: ["product-slug", slug],
     queryFn: async () => {
-      const { data: bySlug } = await supabase.from("products").select("*").eq("slug", slug!).maybeSingle();
+      const { data: bySlug, error: e1 } = await supabase.from("products").select("*").eq("slug", slug!).maybeSingle();
+      if (e1) throw e1;
       if (bySlug) return bySlug;
-      const { data: byId } = await supabase.from("products").select("*").eq("id", slug!).maybeSingle();
+      const { data: byId, error: e2 } = await supabase.from("products").select("*").eq("id", slug!).maybeSingle();
+      if (e2) throw e2;
       return byId;
     },
     enabled: !!slug,
+    retry: 2,
   });
 
   const { data: dbImages = [] } = useQuery({
@@ -53,7 +63,63 @@ const Produto = () => {
     enabled: !!product?.id,
   });
 
+  // Produtos relacionados — mesma família/categoria, excluindo o actual.
+  // Prioriza: (1) mesma família, (2) mesma categoria. Limita a 4.
+  const { data: related = [] } = useQuery({
+    queryKey: ["related-products", product?.id, product?.family_id, product?.category],
+    queryFn: async () => {
+      if (!product) return [];
+      // Tenta primeiro por família
+      if (product.family_id) {
+        const { data } = await supabase
+          .from("products")
+          .select("id,name,slug,price,image_url,stock_status,category,brand")
+          .eq("family_id", product.family_id)
+          .eq("include_in_catalog", true)
+          .neq("id", product.id)
+          .order("featured", { ascending: false })
+          .limit(4);
+        if (data && data.length >= 2) return data;
+      }
+      // Fallback: mesma categoria
+      if (product.category) {
+        const { data } = await supabase
+          .from("products")
+          .select("id,name,slug,price,image_url,stock_status,category,brand")
+          .eq("category", product.category)
+          .eq("mundo", product.mundo)
+          .eq("include_in_catalog", true)
+          .neq("id", product.id)
+          .order("featured", { ascending: false })
+          .limit(4);
+        return data ?? [];
+      }
+      return [];
+    },
+    enabled: !!product?.id,
+  });
+
+  // Guardar em "vistos recentemente" (localStorage) — ANTES de qualquer early return
+  useEffect(() => {
+    if (product) {
+      addToRecentlyViewed({
+        id: product.id, name: product.name, slug: product.slug,
+        price: product.price, image_url: product.image_url,
+        stock_status: product.stock_status, category: product.category,
+        brand: product.brand, mundo: product.mundo,
+        min_sale_qty: product.min_sale_qty, sku: product.sku,
+      });
+    }
+  }, [product?.id]);
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  if (isError) return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-sm w-full">
+        <QueryError message="Não foi possível carregar o produto. Verifique a sua ligação." onRetry={() => refetch()} />
+      </div>
+    </div>
+  );
   if (!product) return <Navigate to="/404" replace />;
 
   // Imagens — db images + imagens_extra do produto
@@ -65,9 +131,17 @@ const Produto = () => {
       : extraImgs;
   const currentImage = allImages[imgIdx] || null;
 
-  const specs = (typeof product.especificacoes === "string"
-    ? JSON.parse(product.especificacoes || "{}")
-    : product.especificacoes ?? {}) as Record<string, string>;
+  let specs: Record<string, string> = {};
+  if (typeof product.especificacoes === "string") {
+    try {
+      specs = JSON.parse(product.especificacoes || "{}");
+    } catch (e) {
+      console.error("especificacoes JSON malformado para produto", product.id, product.sku, e);
+      specs = {};
+    }
+  } else if (product.especificacoes && typeof product.especificacoes === "object") {
+    specs = product.especificacoes as Record<string, string>;
+  }
 
   // Mapear valores de teclado para texto legível
   const TECLADO_DISPLAY: Record<string, string> = {
@@ -96,6 +170,7 @@ const Produto = () => {
   };
   const worldInfo = WORLD_INFO[product.mundo ?? ""] ?? WORLD_INFO.seguranca;
   const worldPath = worldInfo.path;
+
   const worldLabel = worldInfo.label;
   const priceWithVat = product.price ? product.price * 1.23 : null;
   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
@@ -103,7 +178,7 @@ const Produto = () => {
   const minSaleQty = product.min_sale_qty && product.min_sale_qty > 1 ? product.min_sale_qty : 1;
 
   const handleAddToCart = () => {
-    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category }, minSaleQty);
+    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category, weight: product.weight ?? null, fornecedor: product.fornecedor ?? null, envio_especial: envio_especial, minSaleQty }, minSaleQty);
     toast.success(
       minSaleQty > 1
         ? `${minSaleQty}x ${product.name} adicionado ao orçamento (embalagem mínima)`
@@ -123,13 +198,15 @@ const Produto = () => {
 
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-lg">
-        <div className="container mx-auto flex items-center justify-between px-3 py-2 sm:px-4">
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4">
+          <div className="flex items-center gap-2 shrink-0">
             <Link to={worldPath} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
             <Link to="/"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
           </div>
-          <div className="flex items-center gap-2">
+          <GlobalSearchBar />
+          <div className="flex items-center gap-2 shrink-0">
             <DarkModeToggle />
+            <UserMenuButton />
             <Button variant="outline" size="sm" onClick={() => setIsOpen(true)} className="gap-1.5 h-9 relative">
               <ShoppingCart className="h-4 w-4" />
               <span className="hidden sm:inline text-sm">Orçamento</span>
@@ -139,11 +216,32 @@ const Produto = () => {
       </header>
 
       {/* Breadcrumb */}
-      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-        <Link to="/" className="hover:text-foreground">Início</Link>
+      <nav className="container mx-auto px-4 py-3 text-xs text-muted-foreground flex items-center gap-1 flex-wrap" aria-label="Breadcrumb">
+        <Link to="/" className="hover:text-foreground transition-colors">Início</Link>
         <span>/</span>
-        <Link to={worldPath} className="hover:text-foreground">{worldLabel}</Link>
-        {product.category && <><span>/</span><span>{product.category}</span></>}
+        <Link to={worldPath} className="hover:text-foreground transition-colors">{worldLabel}</Link>
+        {product.category && (
+          <>
+            <span>/</span>
+            <Link
+              to={`${worldPath}?categoria=${encodeURIComponent(product.category)}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {product.category}
+            </Link>
+          </>
+        )}
+        {product.family && (
+          <>
+            <span>/</span>
+            <Link
+              to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}${product.family_id ? `familia=${product.family_id}` : ""}`}
+              className="hover:text-foreground transition-colors"
+            >
+              {product.family}
+            </Link>
+          </>
+        )}
       </nav>
 
       {/* Produto */}
@@ -187,10 +285,36 @@ const Produto = () => {
 
         {/* Info */}
         <div className="space-y-5">
-          {/* Badges */}
+          {/* Badges (clicáveis) */}
           <div className="flex flex-wrap gap-2">
-            {product.category && <Badge variant="secondary" className="text-xs">{product.category}</Badge>}
-            {product.brand && <Badge variant="outline" className="text-xs">{product.brand}</Badge>}
+            {product.category && (
+              <Link to={`${worldPath}?categoria=${encodeURIComponent(product.category)}`}>
+                <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors" title={`Ver tudo em ${product.category}`}>
+                  {product.category}
+                </Badge>
+              </Link>
+            )}
+            {product.family && product.family_id && (
+              <Link to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}familia=${product.family_id}`}>
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent transition-colors" title={`Ver tudo em ${product.family}`}>
+                  {product.family}
+                </Badge>
+              </Link>
+            )}
+            {product.type && product.type_id && product.family_id && (
+              <Link to={`${worldPath}?${product.category ? `categoria=${encodeURIComponent(product.category)}&` : ""}familia=${product.family_id}&tipo=${product.type_id}`}>
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent transition-colors" title={`Ver tudo em ${product.type}`}>
+                  {product.type}
+                </Badge>
+              </Link>
+            )}
+            {product.brand && (
+              <Link to={`${worldPath}?marca=${product.brand_id ?? encodeURIComponent(product.brand)}`}>
+                <Badge variant="outline" className="text-xs cursor-pointer hover:bg-accent transition-colors" title={`Ver tudo da marca ${product.brand}`}>
+                  {product.brand}
+                </Badge>
+              </Link>
+            )}
             {product.featured && <Badge className="bg-primary text-primary-foreground text-xs gap-1"><Star className="h-3 w-3 fill-current" /> Destaque</Badge>}
           </div>
 
@@ -227,7 +351,11 @@ const Produto = () => {
                 <Truck className="h-3.5 w-3.5" /> Envio especial
               </div>
             )}
+            {(product.stock_status === "out" || product.stock_status === "on_request") && (
+              <StockAlertButton productId={product.id} productName={product.name} />
+            )}
           </div>
+
 
           {/* Entrega */}
           <div className={`rounded-xl border p-3 space-y-1.5 ${envio_especial ? "border-amber-500/30 bg-amber-500/5" : "border-border bg-muted/30"}`}>
@@ -244,11 +372,11 @@ const Produto = () => {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3.5 w-3.5 text-primary" />
-                  <span>Entrega em <strong className="text-foreground">48h a 72h úteis</strong> após confirmação de pagamento</span>
+                  <span>Prazo de entrega confirmado no orçamento</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Info className="h-3.5 w-3.5 text-primary" />
-                  <span>Stock referente ao armazém online — pode diferir do stock em loja física</span>
+                  <span>Stock sujeito a disponibilidade</span>
                 </div>
               </>
             )}
@@ -288,15 +416,37 @@ const Produto = () => {
 
           {/* CTA */}
           <div className="grid grid-cols-1 gap-2 pt-2">
-            {minSaleQty > 1 && (
-              <p className="text-sm text-muted-foreground -mb-1">
-                Vendido em embalagens de <strong>{minSaleQty} unidades</strong> — o preço indicado é por unidade.
-              </p>
+            <QuantitySelector
+              minQty={minSaleQty}
+              onAdd={(qty) => {
+                addItem({
+                  id: product.id, name: product.name, price: product.price,
+                  imageUrl: currentImage, category: product.category,
+                  weight: product.weight ?? null,
+                  fornecedor: product.fornecedor ?? null,
+                  envio_especial: envio_especial,
+                  minSaleQty,
+                }, qty);
+                toast.success(
+                  qty > 1
+                    ? `${qty}× ${product.name} adicionado ao orçamento`
+                    : `${product.name} adicionado ao orçamento`
+                );
+                setIsOpen(true);
+              }}
+              label={`Adicionar ao Orçamento${minSaleQty > 1 ? ` (mín. ${minSaleQty} un.)` : ""}`}
+            />
+            {/* Por encomenda — CTA discreto */}
+            {(product.stock_status === "out" || product.stock_status === "on_request") && (
+              <a
+                href={`mailto:info@vrcf.pt?subject=Consulta%20sobre%20produto%20por%20encomenda&body=Olá,%0A%0AGostaria%20de%20saber%20mais%20sobre%20o%20produto%20por%20encomenda:%0A%0A${encodeURIComponent(product.name)}%0AREF:%20${encodeURIComponent(product.sku ?? product.id)}%0A%0AObrigado`}
+                className="flex items-center justify-center gap-2 h-10 rounded-xl border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 transition-colors text-sm font-medium text-blue-700 dark:text-blue-400"
+              >
+                <MessageCircle className="h-4 w-4" /> Por encomenda — saber mais, consulte-nos
+              </a>
             )}
-            <Button size="lg" className="gap-2 h-12 text-base font-bold rounded-xl" onClick={handleAddToCart}>
-              <ShoppingCart className="h-5 w-5" /> Adicionar ao Orçamento{minSaleQty > 1 ? ` (${minSaleQty} un.)` : ""}
-            </Button>
             <div className="grid grid-cols-2 gap-2">
+
               <a href={`https://wa.me/351911564243?text=${waText}`} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 h-10 rounded-xl border border-border bg-card hover:bg-accent transition-colors text-sm font-medium">
                 <MessageCircle className="h-4 w-4 text-green-600" /> WhatsApp
@@ -351,6 +501,45 @@ const Produto = () => {
           <img src={currentImage} alt="" className="max-w-[90vw] max-h-[90vh] object-contain" onClick={e => e.stopPropagation()} />
           <button className="absolute top-4 right-4 text-white/70 hover:text-white text-2xl">&times;</button>
         </div>
+      )}
+
+      {/* Produtos relacionados */}
+      {related.length > 0 && (
+        <section className="container mx-auto px-4 pb-12 max-w-4xl">
+          <h2 className="font-heading text-lg font-bold mb-4">
+            {(product.stock_status === "out" || product.stock_status === "on_request") ? "Alternativas disponíveis" : "Produtos relacionados"}
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {related.map((r: any) => {
+              const rPriceVat = r.price ? r.price * 1.23 : null;
+              return (
+                <Link key={r.id} to={`/produto/${r.slug ?? r.id}`}
+                  className="group rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md transition-all overflow-hidden">
+                  <div className="aspect-square bg-muted/30 overflow-hidden">
+                    {r.image_url
+                      ? <img src={r.image_url} alt={r.name} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
+                      : <div className="w-full h-full flex items-center justify-center"><Package2 className="h-8 w-8 text-muted-foreground/30" /></div>
+                    }
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <p className="text-xs font-medium leading-tight line-clamp-2 group-hover:text-primary transition-colors">{r.name}</p>
+                    {r.brand && <p className="text-[10px] text-muted-foreground">{r.brand}</p>}
+                    <div className="flex items-center justify-between pt-0.5">
+                      {rPriceVat
+                        ? <span className="text-xs font-bold">{rPriceVat.toFixed(2).replace(".", ",")} €</span>
+                        : <span className="text-[10px] text-muted-foreground italic">Sob consulta</span>
+                      }
+                      {(r.stock_status === "out" || r.stock_status === "on_request")
+                        ? <span className="text-[10px] text-blue-600">Enc.</span>
+                        : <span className="text-[10px] text-emerald-600">✓ Stock</span>
+                      }
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <SiteFooter />

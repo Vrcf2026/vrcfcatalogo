@@ -24,10 +24,13 @@ export function CookieConsentBanner() {
   const handleAccept = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "accepted");
     setVisible(false);
+    // Recarrega para que o CartContext leia o consentimento atualizado
+    window.location.reload();
   };
 
   const handleReject = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "rejected");
+    localStorage.removeItem("vrcf_cart");
     setVisible(false);
   };
 
@@ -41,12 +44,17 @@ export function CookieConsentBanner() {
             <Cookie className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
             <div className="flex-1 space-y-3">
               <p className="text-sm text-foreground leading-relaxed">
-                Utilizamos cookies essenciais para o funcionamento do website e cookies funcionais para melhorar a sua experiência. 
-                Consulte a nossa{" "}
+                Utilizamos cookies essenciais para o funcionamento do website e cookies funcionais
+                para manter a sua sessão e guardar o seu carrinho de orçamento entre visitas.{" "}
                 <Link to="/politica-de-cookies" className="text-primary hover:underline font-medium">
                   Política de Cookies
-                </Link>{" "}
-                para mais informações.
+                </Link>
+                .
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Se recusar os cookies funcionais, o carrinho de orçamento não será guardado ao fechar o browser.
+                Pode alterar a sua escolha a qualquer momento clicando em{" "}
+                <span className="font-medium text-foreground">Gerir Cookies</span> no rodapé.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={handleAccept} className="gap-1.5">

@@ -141,19 +141,31 @@ const TermosCondicoes = () => {
 
             <h3 className="font-heading text-lg font-semibold text-foreground mt-4">6.1 Responsável pelo Tratamento</h3>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              A VRCF é a Responsável pelo Tratamento dos dados pessoais recolhidos no âmbito da utilização do Catálogo 
-              e do processo de pedido de orçamento, nos termos do Regulamento (UE) 2016/679 (RGPD) e da Lei n.º 58/2019, de 8 de agosto.
+              A VRCF é a Responsável pelo Tratamento dos dados pessoais recolhidos no âmbito da utilização do Catálogo,
+              da criação e gestão de conta de utilizador, do processo de pedido de orçamento e dos pedidos de RMA
+              (devolução/reparação), nos termos do Regulamento (UE) 2016/679 (RGPD) e da Lei n.º 58/2019, de 8 de agosto.
+              Para uma descrição completa do tratamento de dados pessoais, consulte a nossa{" "}
+              <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">
+                Política de Privacidade
+              </a>, que prevalece em caso de divergência com o presente resumo.
             </p>
 
             <h3 className="font-heading text-lg font-semibold text-foreground mt-4">6.2 Dados Recolhidos e Finalidades</h3>
             <p className="text-muted-foreground leading-relaxed mt-2">
-              Os dados pessoais recolhidos no âmbito dos pedidos de orçamento são tratados para as seguintes finalidades:
+              Os dados pessoais recolhidos são tratados para as seguintes finalidades:
             </p>
             <ul className="list-disc pl-6 text-muted-foreground space-y-1 mt-2">
+              <li>Criação e gestão da conta de utilizador (email, palavra-passe, dados de perfil como nome, telefone, empresa, NIF e morada);</li>
               <li>Processamento e resposta ao pedido de orçamento;</li>
-              <li>Comunicações relacionadas com a proposta comercial;</li>
+              <li>Processamento de pedidos de RMA (devolução/reparação), incluindo número de série, número de fatura e descrição do problema;</li>
+              <li>Comunicações relacionadas com a proposta comercial ou com o pedido de RMA;</li>
               <li>Cumprimento de obrigações legais e fiscais.</li>
             </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              A conta de utilizador, os dados de perfil e o histórico de orçamentos e RMAs são armazenados através
+              de um fornecedor de infraestrutura cloud ("backend-as-a-service"), que atua como subcontratado da VRCF
+              e está sujeito a obrigações contratuais de confidencialidade e segurança.
+            </p>
 
             <h3 className="font-heading text-lg font-semibold text-foreground mt-4">6.3 Base Legal</h3>
             <p className="text-muted-foreground leading-relaxed mt-2">
