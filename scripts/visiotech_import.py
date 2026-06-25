@@ -331,7 +331,19 @@ VALORES_VAZIOS = {
     "", "-", "n/a", "na", "não", "nao", "no",
     "não dispõe", "nao dispoe", "no disponible", "não disponível", "nao disponivel",
     "sin información", "sem informação",
+    # "Se tiveres" — placeholder do fornecedor (Visiotech/UNI-TREND) para
+    # campos de especificação não aplicáveis/preenchidos (ex: "Alarme
+    # sonoro: Se tiveres", "Modo silencioso: Se tiveres"). Não é um valor
+    # real, por isso é tratado como vazio (campo é omitido).
+    "se tiveres",
 }
+
+# Prefixos de valores que começam por um placeholder do fornecedor mas têm
+# texto adicional a seguir (ex: "Se tiveres: A luz indicadora muda de cor
+# de acordo com a voltagem") — também tratados como vazios, porque o
+# "Se tiveres" inicial indica que o campo não é aplicável independentemente
+# do texto que se segue.
+VALORES_VAZIOS_PREFIXOS = ("se tiveres",)
 
 SPECS_IGNORAR_HTML = {"marca", "modelo"}
 
@@ -348,7 +360,8 @@ def extrair_specs_params(params_json: str) -> dict:
         if sk is None:
             continue
         val = str(params.get(pk, "")).strip()
-        if val.lower() in VALORES_VAZIOS:
+        val_lower = val.lower()
+        if val_lower in VALORES_VAZIOS or val_lower.startswith(VALORES_VAZIOS_PREFIXOS):
             continue
         if sk == "instalacao":
             val = INSTALACAO_MAP.get(val, val)
@@ -379,7 +392,7 @@ def extrair_specs_html(specs_html: str) -> dict:
         v = re.sub(r'<[^>]+>', ' ', v)
         v = unescape(v)
         v = re.sub(r'\s+', ' ', v).strip()
-        if not v or v.lower() in VALORES_VAZIOS:
+        if not v or v.lower() in VALORES_VAZIOS or v.lower().startswith(VALORES_VAZIOS_PREFIXOS):
             continue
         key_slug = slugify(k, separator="_")
         if not key_slug or key_slug in SPECS_IGNORAR_HTML:
@@ -456,6 +469,25 @@ def supabase_upsert(produtos: list, fornecedor: str = "visiotech"):
     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
     total = len(produtos)
     inseridos = 0
+
+    # ── Deduplicação de slugs antes de enviar ──────────────────────────────
+    # Se dois produtos do mesmo lote gerarem o mesmo slug (marca+sku normalizados
+    # podem colidir), o upsert rebenta com duplicate key em products_slug_key e
+    # bloqueia o lote inteiro. Aqui garantimos unicidade dentro do lote acrescentando
+    # sufixo numérico aos slugs duplicados (ex: "hikvision-ds-2cd" → "hikvision-ds-2cd-2").
+    slugs_vistos: dict[str, int] = {}
+    for p in produtos:
+        slug_original = p.get("slug", "")
+        if not slug_original:
+            continue
+        if slug_original in slugs_vistos:
+            slugs_vistos[slug_original] += 1
+            p["slug"] = f"{slug_original}-{slugs_vistos[slug_original]}"
+            print(f"  ⚠ Slug duplicado no lote: {slug_original!r} → {p['slug']!r} (SKU {p.get('sku','')})")
+        else:
+            slugs_vistos[slug_original] = 1
+    # ──────────────────────────────────────────────────────────────────────
+
     for i in range(0, total, 200):
         batch = produtos[i:i+200]
         resp = requests.post(IMPORT_URL, headers=headers,
@@ -582,28 +614,32 @@ def main(local=False):
         # Verificar variação de preço
         preco_actual = precos_actuais.get(sku)
         if preco_actual and preco_actual.get("price"):
-            preco_ant = float(preco_actual["price"])
-            preco_nov = precos["price"]
-            variacao = abs(preco_nov - preco_ant) / preco_ant if preco_ant > 0 else 0
-
-            if variacao > LIMIAR_VARIACAO:
-                # Registar alteração
-                alteracoes_preco.append({
-                    "sku": sku,
-                    "fornecedor": "visiotech",
-                    "purchase_price_old": float(preco_actual.get("purchase_price") or 0),
-                    "purchase_price_new": precos["purchase_price"],
-                    "price_old": preco_ant,
-                    "price_new": preco_nov,
-                    "variacao_pct": round(variacao * 100, 1),
-                })
-                stats["preco_actualizado"] += 1
-            else:
-                # Manter preço actual — não actualizar
-                precos["price"]       = preco_ant
-                precos["price_tier2"] = round(preco_ant * (1 - DESCONTO_TIER2), 2)
-                precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
+            if preco_actual.get("price_locked"):
+                precos["price"]       = float(preco_actual["price"])
+                precos["price_tier2"] = round(float(preco_actual["price"]) * (1 - DESCONTO_TIER2), 2)
+                precos["price_tier3"] = round(float(preco_actual["price"]) * (1 - DESCONTO_TIER3), 2)
                 stats["preco_estavel"] += 1
+            else:
+                preco_ant = float(preco_actual["price"])
+                preco_nov = precos["price"]
+                variacao = abs(preco_nov - preco_ant) / preco_ant if preco_ant > 0 else 0
+
+                if variacao > LIMIAR_VARIACAO:
+                    alteracoes_preco.append({
+                        "sku": sku,
+                        "fornecedor": "visiotech",
+                        "purchase_price_old": float(preco_actual.get("purchase_price") or 0),
+                        "purchase_price_new": precos["purchase_price"],
+                        "price_old": preco_ant,
+                        "price_new": preco_nov,
+                        "variacao_pct": round(variacao * 100, 1),
+                    })
+                    stats["preco_actualizado"] += 1
+                else:
+                    precos["price"]       = preco_ant
+                    precos["price_tier2"] = round(preco_ant * (1 - DESCONTO_TIER2), 2)
+                    precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
+                    stats["preco_estavel"] += 1
 
         # Stock
         stock_status, sob_encomenda = mapear_stock(
@@ -716,12 +752,10 @@ def main(local=False):
     print(f"  Preço actualizado:      {stats['preco_actualizado']}")
     print(f"  Preço estável (<{int(LIMIAR_VARIACAO*100)}%): {stats['preco_estavel']}")
     if alteracoes_preco:
-        print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}%:")
-        for a in sorted(alteracoes_preco, key=lambda x: abs(x['variacao_pct']), reverse=True)[:5]:
+        print(f"\n  ⚠ Variações > {int(LIMIAR_VARIACAO*100)}% ({len(alteracoes_preco)} produtos):")
+        for a in sorted(alteracoes_preco, key=lambda x: abs(x['variacao_pct']), reverse=True):
             sinal = "+" if a['price_new'] > a['price_old'] else ""
             print(f"    {a['sku']:30s} {a['price_old']:.2f}€ → {a['price_new']:.2f}€ ({sinal}{a['variacao_pct']}%)")
-        if len(alteracoes_preco) > 5:
-            print(f"    ... e mais {len(alteracoes_preco)-5} produtos")
 
     if not IMPORT_API_KEY:
         print("\n⚠️  IMPORT_API_KEY não definida — a guardar preview local")

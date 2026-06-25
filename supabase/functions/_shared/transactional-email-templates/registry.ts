@@ -11,12 +11,21 @@ export interface TemplateEntry {
 
 import { template as quoteRequestAdmin } from './quote-request-admin.tsx'
 import { template as quoteRequestCustomer } from './quote-request-customer.tsx'
+import { template as quoteFinalCustomer } from './quote-final-customer.tsx'
+import { template as quoteStatusUpdate } from './quote-status-update.tsx'
 import { template as suggestionAdmin } from './suggestion-admin.tsx'
 import { template as suggestionCustomer } from './suggestion-customer.tsx'
+import { template as rmaStatusUpdate } from './rma-status-update.tsx'
+import { template as quoteCustomerDecisionGestor } from './quote-customer-decision-gestor.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'quote-request-admin': quoteRequestAdmin,
   'quote-request-customer': quoteRequestCustomer,
+  'quote-final-customer': quoteFinalCustomer,
+  'quote-status-update': quoteStatusUpdate,
   'suggestion-admin': suggestionAdmin,
   'suggestion-customer': suggestionCustomer,
+  'rma-status-update': rmaStatusUpdate,
+  'quote-customer-decision-gestor': quoteCustomerDecisionGestor,
 }
+

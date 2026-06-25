@@ -26,7 +26,6 @@ ANTHROPIC_KEY  = os.environ.get("ANTHROPIC_API_KEY", "")
 URL_CSV_PRESTA  = "https://www.diginova.es/csv_presta.php?c=14489&u=spacedata25&p=C16BA86B32F5E58EB92DBE7D2B2F421F"
 URL_CSV_SIMPLES = "https://www.diginova.es/csv.php?c=14489&u=spacedata25&p=C16BA86B32F5E58EB92DBE7D2B2F421F"
 
-IVA_ES             = 1.21
 DESCONTO_DIGINOVA  = 0.0
 MARGEM             = 0.15
 
@@ -563,21 +562,21 @@ def extrair_specs(nome_es: str, desc_es: str, familia: str, teclado_personalizav
 # ─────────────────────────────────────────────
 def calcular_precos(precio_es: str, familia: str) -> dict:
     try:
-        pvp_es = float(precio_es)
+        custo = float(precio_es)   # PRECIO já é sem IVA (preço de custo)
     except (ValueError, TypeError):
         return None
 
-    compra_sem_iva = round(pvp_es / IVA_ES, 2)
-    compra_com_iva = round(pvp_es, 2)
-    custo = round(compra_sem_iva * (1 - DESCONTO_DIGINOVA), 2)
+    if custo <= 0:
+        return None
+
     margem = custo * MARGEM
     grupo = FAMILIA_GRUPO.get(familia.strip(), "componentes")
     margem = max(margem, MARGEM_MINIMA[grupo])
     preco_venda = round(custo + margem, 2)
 
     return {
-        "purchase_price":     compra_sem_iva,
-        "purchase_price_vat": compra_com_iva,
+        "purchase_price":     round(custo, 2),
+        "purchase_price_vat": round(custo * 1.23, 2),  # IVA PT (informativo)
         "price":              preco_venda,
     }
 
@@ -609,6 +608,18 @@ def carregar_csv_simples(src: str) -> dict:
 # ─────────────────────────────────────────────
 # EDGE FUNCTION
 # ─────────────────────────────────────────────
+def buscar_precos_actuais(fornecedor: str) -> dict:
+    headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
+    try:
+        resp = requests.post(IMPORT_URL, headers=headers,
+                             json={"action": "get_prices", "fornecedor": fornecedor}, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json().get("prices", [])
+            return {p["sku"]: p for p in data}
+    except Exception:
+        pass
+    return {}
+
 def supabase_upsert(produtos: list, fornecedor: str = "diginova"):
     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
     total = len(produtos)
@@ -673,6 +684,10 @@ def main(local=False):
     rows_presta  = carregar_csv_presta("diginova_presta_50181.csv" if local else URL_CSV_PRESTA)
     rows_simples = carregar_csv_simples("diginova_59931.csv" if local else URL_CSV_SIMPLES)
 
+    print("\n💰 A buscar preços actuais...")
+    precos_actuais = buscar_precos_actuais("diginova") if IMPORT_API_KEY else {}
+    print(f"  {len(precos_actuais)} produtos com preço actual no Supabase")
+
     print("\n⚙️  A processar produtos...")
     produtos = []
     refs_activas = []
@@ -704,6 +719,11 @@ def main(local=False):
         precos = calcular_precos(precio, familia)
         if precos is None:
             continue
+
+        # Verificar price_locked
+        preco_actual = precos_actuais.get(ref)
+        if preco_actual and preco_actual.get("price_locked") and preco_actual.get("price"):
+            precos["price"] = float(preco_actual["price"])
 
         # Stock
         try:
