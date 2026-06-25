@@ -318,8 +318,6 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
               weight={weight} setWeight={setWeight}
               margem={margem}
               fornecedor={product?.fornecedor}
-              priceHistory={priceHistory}
-              loadingHistory={loadingHistory}
             />
           </TabsContent>
 
@@ -345,7 +343,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
           </TabsContent>
 
           <TabsContent value="info">
-            <EditProductInfo product={product} />
+            <EditProductInfo product={product} priceHistory={priceHistory} loadingHistory={loadingHistory} />
           </TabsContent>
         </Tabs>
 
