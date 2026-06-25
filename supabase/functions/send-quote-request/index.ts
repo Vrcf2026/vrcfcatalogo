@@ -1,4 +1,35 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+async function resolveRecipientEmail(): Promise<string> {
+  const fallback = "geral@vrcf.pt";
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) return fallback;
+
+    const admin = createClient(supabaseUrl, serviceKey);
+    const priorities = ["gestor", "admin", "super_admin"] as const;
+
+    for (const role of priorities) {
+      const { data: roleRows } = await admin
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", role);
+      if (!roleRows || roleRows.length === 0) continue;
+
+      for (const row of roleRows) {
+        const { data: userData } = await admin.auth.admin.getUserById(row.user_id);
+        const email = userData?.user?.email;
+        if (email) return email;
+      }
+    }
+  } catch (e) {
+    console.error("resolveRecipientEmail error:", e);
+  }
+  return fallback;
+}
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
