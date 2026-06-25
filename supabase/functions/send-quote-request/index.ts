@@ -89,9 +89,12 @@ serve(async (req) => {
       price: i.price != null ? Number(i.price) : null,
     }));
 
+    const recipientEmail = await resolveRecipientEmail();
+
     await invokeTransactionalEmail({
       templateName: "quote-request-admin",
-      recipientEmail: "geral@vrcf.pt",
+      recipientEmail,
+
       idempotencyKey: `quote-admin-${requestId}`,
       templateData: {
         customerName: String(customerName),
