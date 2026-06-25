@@ -583,6 +583,7 @@ export type Database = {
           mundo: string | null
           name: string
           price: number | null
+          price_locked: boolean | null
           price_tier2: number | null
           price_tier3: number | null
           produtos_relacionados: string[] | null
@@ -596,6 +597,9 @@ export type Database = {
           sob_encomenda: boolean | null
           specs_locked: string[]
           stock_status: string | null
+          store_price: number | null
+          store_price_vat: number | null
+          taxa_iva: number | null
           type: string | null
           type_id: string | null
           updated_at: string
@@ -626,6 +630,7 @@ export type Database = {
           mundo?: string | null
           name: string
           price?: number | null
+          price_locked?: boolean | null
           price_tier2?: number | null
           price_tier3?: number | null
           produtos_relacionados?: string[] | null
@@ -639,6 +644,9 @@ export type Database = {
           sob_encomenda?: boolean | null
           specs_locked?: string[]
           stock_status?: string | null
+          store_price?: number | null
+          store_price_vat?: number | null
+          taxa_iva?: number | null
           type?: string | null
           type_id?: string | null
           updated_at?: string
@@ -669,6 +677,7 @@ export type Database = {
           mundo?: string | null
           name?: string
           price?: number | null
+          price_locked?: boolean | null
           price_tier2?: number | null
           price_tier3?: number | null
           produtos_relacionados?: string[] | null
@@ -682,6 +691,9 @@ export type Database = {
           sob_encomenda?: boolean | null
           specs_locked?: string[]
           stock_status?: string | null
+          store_price?: number | null
+          store_price_vat?: number | null
+          taxa_iva?: number | null
           type?: string | null
           type_id?: string | null
           updated_at?: string
