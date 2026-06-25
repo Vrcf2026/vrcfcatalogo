@@ -205,7 +205,6 @@ const Admin = () => {
           brands={brands}
         />
       )}
-      </div>
     </div>
   </>);
 };
