@@ -14,6 +14,7 @@ import { ShieldCheck, LogOut, Loader2, Package, Image, Truck, Users, HeartPulse 
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { EditProductSheet } from "@/components/EditProductSheet";
 
 // Tabs carregados sob demanda — não pesam no bundle até o admin abrir o separador.
 const AdminProductsTab = lazy(() => import("@/components/admin/AdminProductsTab"));
@@ -30,6 +31,7 @@ const TabFallback = () => (
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState("produtos");
+  const [healthEditProduct, setHealthEditProduct] = useState<any>(null);
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -132,12 +134,16 @@ const Admin = () => {
 
           <TabsContent value="produtos" className="mt-4">
             <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-border">
-              <ManageCategoriesDialog categories={dbCategories} />
-              <ManageFamiliesDialog families={families} categories={categoryNames} />
-              <ManageBrandsDialog brands={brands} />
-              <ManageTypesDialog types={types} families={families as any} />
-              <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
-              <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
+              <div className="flex flex-wrap gap-1.5">
+                <ManageCategoriesDialog categories={dbCategories} />
+                <ManageFamiliesDialog families={families} categories={categoryNames} />
+                <ManageBrandsDialog brands={brands} />
+                <ManageTypesDialog types={types} families={families as any} />
+                <HomepageHighlightsDialog brands={brands} categories={categoryNames} />
+              </div>
+              <div className="ml-auto">
+                <AddProductDialog families={families} types={types} categories={categoryNames} brands={brands} />
+              </div>
             </div>
             <Suspense fallback={<TabFallback />}>
               <AdminProductsTab
@@ -164,11 +170,24 @@ const Admin = () => {
 
           <TabsContent value="saude" className="mt-4">
             <Suspense fallback={<TabFallback />}>
-              <AdminHealthTab onEditProduct={() => {}} />
+              <AdminHealthTab onEditProduct={(p) => setHealthEditProduct(p)} />
             </Suspense>
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Editor de produto — aberto a partir do painel de saúde */}
+      {healthEditProduct && (
+        <EditProductSheet
+          open={!!healthEditProduct}
+          onOpenChange={(open) => !open && setHealthEditProduct(null)}
+          product={healthEditProduct}
+          families={families}
+          types={types}
+          categories={categoryNames}
+          brands={brands}
+        />
+      )}
     </div>
   );
 };
