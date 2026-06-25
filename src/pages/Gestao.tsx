@@ -7,11 +7,19 @@ import { SiteFooter } from "@/components/SiteFooter";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { cn } from "@/lib/utils";
 
-const tabs = [
-  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",      end: true },
-  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"              },
-  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                    },
-  { to: "/gestao/clientes",   icon: Users,            label: "Clientes"                },
+// Tabs desktop/tablet — sidebar completa
+const tabsDesktop = [
+  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true  },
+  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"            },
+  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                  },
+  { to: "/gestao/clientes",   icon: Users,            label: "Clientes"              },
+];
+
+// Tabs mobile — só o essencial para resposta rápida
+const tabsMobile = [
+  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true  },
+  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"            },
+  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                  },
 ];
 
 export default function Gestao() {
@@ -38,29 +46,34 @@ export default function Gestao() {
       </Helmet>
 
       <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
         <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-30">
-          <div className="max-w-[1600px] mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <img src={vrcfLogo} alt="VRCF" className="h-8 w-auto" />
+              <img src={vrcfLogo} alt="VRCF" className="h-7 w-auto" />
               <span className="font-heading font-bold hidden sm:inline text-sm text-muted-foreground">
                 Gestão Comercial
               </span>
             </Link>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" asChild>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
                 <Link to="/"><ArrowLeft className="h-4 w-4 mr-1" />Catálogo</Link>
               </Button>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-1" /> Sair
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1">Sair</span>
               </Button>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-6 grid md:grid-cols-[220px_1fr] gap-6">
-          <aside>
-            <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-              {tabs.map((t) => (
+        {/* Layout principal */}
+        <div className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-4 sm:py-6 grid md:grid-cols-[200px_1fr] gap-6">
+
+          {/* Sidebar — só em md+ */}
+          <aside className="hidden md:block">
+            <nav className="flex flex-col gap-1 sticky top-20">
+              {tabsDesktop.map((t) => (
                 <NavLink
                   key={t.to}
                   to={t.to}
@@ -81,12 +94,38 @@ export default function Gestao() {
             </nav>
           </aside>
 
-          <main className="min-w-0">
+          {/* Conteúdo */}
+          <main className="min-w-0 pb-20 md:pb-0">
             <Outlet />
           </main>
         </div>
 
-        <SiteFooter />
+        {/* Footer — só em md+ */}
+        <div className="hidden md:block">
+          <SiteFooter />
+        </div>
+
+        {/* Bottom nav mobile — só tabs essenciais */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+          <div className="grid grid-cols-3 h-14">
+            {tabsMobile.map((t) => (
+              <NavLink
+                key={t.to}
+                to={t.to}
+                end={t.end}
+                className={({ isActive }) =>
+                  cn(
+                    "flex flex-col items-center justify-center gap-0.5 transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )
+                }
+              >
+                <t.icon className="h-5 w-5" />
+                <span className="text-[9px] font-medium">{t.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </nav>
       </div>
     </>
   );

@@ -10,7 +10,7 @@ import { AdminDashboard } from "@/components/AdminDashboard";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, LogOut, Loader2, Package, Image, Truck, Users, HeartPulse } from "lucide-react";
+import { ShieldCheck, LogOut, Loader2, Package, Image, Truck, Users, HeartPulse, ArrowLeft } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
@@ -90,7 +90,24 @@ const Admin = () => {
   const categoryNames = dbCategories.map((c: any) => c.name);
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      {/* Bloqueio mobile */}
+      <div className="sm:hidden min-h-screen flex flex-col items-center justify-center gap-6 px-6 text-center bg-background">
+        <ShieldCheck className="h-14 w-14 text-primary/40" />
+        <div>
+          <h1 className="font-heading text-xl font-bold mb-2">Área de Administração</h1>
+          <p className="text-muted-foreground text-sm">
+            Esta área requer um ecrã maior.<br />
+            Acede através de um computador ou tablet.
+          </p>
+        </div>
+        <button onClick={() => navigate("/")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" /> Voltar ao catálogo
+        </button>
+      </div>
+
+      {/* Conteúdo normal — visível apenas em sm+ */}
+      <div className="hidden sm:block min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
@@ -188,8 +205,9 @@ const Admin = () => {
           brands={brands}
         />
       )}
+      </div>
     </div>
-  );
+  </>);
 };
 
 export default Admin;
