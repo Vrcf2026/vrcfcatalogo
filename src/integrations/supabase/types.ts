@@ -805,10 +805,12 @@ export type Database = {
           customer_name: string | null
           customer_phone: string | null
           customer_tax_id: string | null
+          decided_at: string | null
           id: string
           notes: string | null
           prazo_entrega: string | null
           quote_number: string
+          rejection_reason: string | null
           sent_final_at: string | null
           shipping_address: string | null
           shipping_total: number | null
@@ -826,10 +828,12 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_tax_id?: string | null
+          decided_at?: string | null
           id?: string
           notes?: string | null
           prazo_entrega?: string | null
           quote_number?: string
+          rejection_reason?: string | null
           sent_final_at?: string | null
           shipping_address?: string | null
           shipping_total?: number | null
@@ -847,10 +851,12 @@ export type Database = {
           customer_name?: string | null
           customer_phone?: string | null
           customer_tax_id?: string | null
+          decided_at?: string | null
           id?: string
           notes?: string | null
           prazo_entrega?: string | null
           quote_number?: string
+          rejection_reason?: string | null
           sent_final_at?: string | null
           shipping_address?: string | null
           shipping_total?: number | null
