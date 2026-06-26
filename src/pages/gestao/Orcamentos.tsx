@@ -50,7 +50,7 @@ function OrcamentosList() {
     queryFn: async () => {
       let q = supabase
         .from("quotes")
-        .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,customer_profiles!left(full_name,company,phone,tax_id)")
+        .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,shipping_total")
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
       const { data, error } = await q;
@@ -66,8 +66,6 @@ function OrcamentosList() {
       const s = search.toLowerCase();
       return (
         q.quote_number?.toLowerCase().includes(s) ||
-        q.customer_profiles?.full_name?.toLowerCase().includes(s) ||
-        q.customer_profiles?.company?.toLowerCase().includes(s) ||
         q.customer_name?.toLowerCase().includes(s) ||
         q.customer_email?.toLowerCase().includes(s)
       );
@@ -128,8 +126,8 @@ function OrcamentosList() {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {q.customer_profiles?.company || q.customer_profiles?.full_name || q.customer_name || "—"}
-                    {(q.customer_profiles?.phone || q.customer_phone) && ` · ${q.customer_profiles?.phone || q.customer_phone}`}
+                    {q.customer_name || q.customer_email || "—"}
+                    {q.customer_phone && ` · ${q.customer_phone}`}
                     {" · "}
                     {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
                   </p>
@@ -181,7 +179,7 @@ function OrcamentoDetalhe() {
     queryKey: ["gestao-quote", id],
     queryFn: async () => {
       const [q, items, shipCfg] = await Promise.all([
-        supabase.from("quotes").select("*,customer_profiles!left(*)").eq("id", id!).maybeSingle(),
+        supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
         supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight)").eq("quote_id", id!),
         supabase.from("shipping_config").select("*").eq("ativo", true),
       ]);
@@ -296,7 +294,7 @@ function OrcamentoDetalhe() {
   if (!data?.quote) return <Card><CardContent className="py-12 text-center text-muted-foreground">Orçamento não encontrado.</CardContent></Card>;
 
   const { quote, items } = data;
-  const profile = (quote as any).customer_profiles;
+  const profile = null; // customer_profiles requer FK explícita — usar campos diretos
   const sentFinalAt = (quote as any).sent_final_at;
 
   return (
@@ -316,22 +314,11 @@ function OrcamentoDetalhe() {
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Dados do cliente */}
-            {(profile || quote.customer_name) && (
+            {quote.customer_name && (
               <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
-                <p className="font-medium">{profile?.full_name || quote.customer_name || "—"}</p>
-                {profile?.company && <p className="text-muted-foreground">{profile.company}</p>}
-                {profile?.tax_id && <p className="text-muted-foreground">NIF: {profile.tax_id}</p>}
-                {(profile?.phone || quote.customer_phone) && (
-                  <p className="text-muted-foreground">{profile?.phone || quote.customer_phone}</p>
-                )}
-                {(quote.customer_email) && (
-                  <p className="text-muted-foreground">{quote.customer_email}</p>
-                )}
-                {profile?.address_line1 && (
-                  <p className="text-muted-foreground">
-                    {profile.address_line1}{profile.city ? `, ${profile.city}` : ""}{profile.postal_code ? ` ${profile.postal_code}` : ""}
-                  </p>
-                )}
+                <p className="font-medium">{quote.customer_name}</p>
+                {quote.customer_phone && <p className="text-muted-foreground">{quote.customer_phone}</p>}
+                {quote.customer_email && <p className="text-muted-foreground">{quote.customer_email}</p>}
               </div>
             )}
 
