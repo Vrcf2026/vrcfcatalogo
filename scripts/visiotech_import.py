@@ -614,28 +614,32 @@ def main(local=False):
         # Verificar variação de preço
         preco_actual = precos_actuais.get(sku)
         if preco_actual and preco_actual.get("price"):
-            preco_ant = float(preco_actual["price"])
-            preco_nov = precos["price"]
-            variacao = abs(preco_nov - preco_ant) / preco_ant if preco_ant > 0 else 0
-
-            if variacao > LIMIAR_VARIACAO:
-                # Registar alteração
-                alteracoes_preco.append({
-                    "sku": sku,
-                    "fornecedor": "visiotech",
-                    "purchase_price_old": float(preco_actual.get("purchase_price") or 0),
-                    "purchase_price_new": precos["purchase_price"],
-                    "price_old": preco_ant,
-                    "price_new": preco_nov,
-                    "variacao_pct": round(variacao * 100, 1),
-                })
-                stats["preco_actualizado"] += 1
-            else:
-                # Manter preço actual — não actualizar
-                precos["price"]       = preco_ant
-                precos["price_tier2"] = round(preco_ant * (1 - DESCONTO_TIER2), 2)
-                precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
+            if preco_actual.get("price_locked"):
+                precos["price"]       = float(preco_actual["price"])
+                precos["price_tier2"] = round(float(preco_actual["price"]) * (1 - DESCONTO_TIER2), 2)
+                precos["price_tier3"] = round(float(preco_actual["price"]) * (1 - DESCONTO_TIER3), 2)
                 stats["preco_estavel"] += 1
+            else:
+                preco_ant = float(preco_actual["price"])
+                preco_nov = precos["price"]
+                variacao = abs(preco_nov - preco_ant) / preco_ant if preco_ant > 0 else 0
+
+                if variacao > LIMIAR_VARIACAO:
+                    alteracoes_preco.append({
+                        "sku": sku,
+                        "fornecedor": "visiotech",
+                        "purchase_price_old": float(preco_actual.get("purchase_price") or 0),
+                        "purchase_price_new": precos["purchase_price"],
+                        "price_old": preco_ant,
+                        "price_new": preco_nov,
+                        "variacao_pct": round(variacao * 100, 1),
+                    })
+                    stats["preco_actualizado"] += 1
+                else:
+                    precos["price"]       = preco_ant
+                    precos["price_tier2"] = round(preco_ant * (1 - DESCONTO_TIER2), 2)
+                    precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
+                    stats["preco_estavel"] += 1
 
         # Stock
         stock_status, sob_encomenda = mapear_stock(

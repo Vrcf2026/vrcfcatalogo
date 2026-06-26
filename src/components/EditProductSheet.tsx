@@ -40,6 +40,9 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
   const [price, setPrice] = useState("");
   const [purchasePrice, setPurchasePrice] = useState("");
   const [purchasePriceVat, setPurchasePriceVat] = useState("");
+  const [storePrice, setStorePrice]             = useState("");
+  const [storePriceVat, setStorePriceVat]       = useState("");
+  const [taxaIva, setTaxaIva]                   = useState("23");
   const [weight, setWeight] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [mundo, setMundo] = useState("escritorio");
@@ -49,7 +52,8 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
   const [featured, setFeatured] = useState(false);
   const [showOnHomepage, setShowOnHomepage] = useState(false);
   const [specs, setSpecs] = useState<Record<string, string>>({});
-  const [specsLocked, setSpecsLocked] = useState<string[]>([]);
+  const [specsLocked, setSpecsLocked]           = useState<string[]>([]);
+  const [priceLocked, setPriceLocked]           = useState(false);
   const [newSpecKey, setNewSpecKey] = useState("");
   const [newSpecValue, setNewSpecValue] = useState("");
   const [upgrades, setUpgrades] = useState<Upgrade[]>([]);
@@ -77,18 +81,27 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
     (t) => t.family_id === familyId && (!t.mundo || t.mundo === "todos" || t.mundo === mundo)
   );
 
+  const ivaRate = (parseFloat(taxaIva) || 23) / 100;
   const margem = purchasePrice && price
     ? ((parseFloat(price) - parseFloat(purchasePrice)) / parseFloat(purchasePrice) * 100).toFixed(1)
     : null;
-
-  const priceWithVat = price ? (parseFloat(price) * 1.23).toFixed(2) : null;
+  const priceWithVat = price ? (parseFloat(price) * (1 + ivaRate)).toFixed(2) : null;
 
   const handlePurchasePriceChange = (val: string) => {
     setPurchasePrice(val);
     if (val && !isNaN(parseFloat(val))) {
-      setPurchasePriceVat((parseFloat(val) * 1.23).toFixed(2));
+      setPurchasePriceVat((parseFloat(val) * (1 + ivaRate)).toFixed(2));
     } else {
       setPurchasePriceVat("");
+    }
+  };
+
+  const handleStorePriceChange = (val: string) => {
+    setStorePrice(val);
+    if (val && !isNaN(parseFloat(val))) {
+      setStorePriceVat((parseFloat(val) * (1 + ivaRate)).toFixed(2));
+    } else {
+      setStorePriceVat("");
     }
   };
 
@@ -106,6 +119,10 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
     setPrice(product.price?.toString() || "");
     setPurchasePrice(product.purchase_price?.toString() || "");
     setPurchasePriceVat(product.purchase_price_vat?.toString() || "");
+    setTaxaIva((product as any).taxa_iva?.toString() || "23");
+    setStorePrice((product as any).store_price?.toString() || "");
+    setStorePriceVat((product as any).store_price_vat?.toString() || "");
+    setPriceLocked(!!(product as any).price_locked);
     setWeight(product.weight?.toString() || "");
     setImageUrl(product.image_url || "");
     setMundo(product.mundo || "escritorio");
@@ -152,6 +169,10 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
         show_on_homepage: showOnHomepage,
         especificacoes: specs,
         specs_locked: specsLocked,
+        price_locked: priceLocked,
+        taxa_iva: taxaIva ? parseFloat(taxaIva) : 23,
+        store_price: storePrice ? parseFloat(storePrice) : null,
+        store_price_vat: storePriceVat ? parseFloat(storePriceVat) : null,
         upgrades: upgrades.filter(u => u.tipo || u.descricao) as any,
       }).eq("id", product.id);
       if (error) throw error;
@@ -290,11 +311,13 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
               purchasePriceVat={purchasePriceVat} setPurchasePriceVat={setPurchasePriceVat}
               price={price} setPrice={setPrice}
               priceWithVat={priceWithVat}
+              storePrice={storePrice} setStorePrice={handleStorePriceChange}
+              storePriceVat={storePriceVat} setStorePriceVat={setStorePriceVat}
+              taxaIva={taxaIva} setTaxaIva={setTaxaIva}
+              priceLocked={priceLocked} setPriceLocked={setPriceLocked}
               weight={weight} setWeight={setWeight}
               margem={margem}
               fornecedor={product?.fornecedor}
-              priceHistory={priceHistory}
-              loadingHistory={loadingHistory}
             />
           </TabsContent>
 
@@ -320,7 +343,7 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
           </TabsContent>
 
           <TabsContent value="info">
-            <EditProductInfo product={product} />
+            <EditProductInfo product={product} priceHistory={priceHistory} loadingHistory={loadingHistory} />
           </TabsContent>
         </Tabs>
 

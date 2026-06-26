@@ -249,7 +249,7 @@ def calcular_precos(pvr: float, primeiro_preco: float, categoria: str = "",
     pvp = calcular_pvp(pvr, categoria, tipo_produto, marca, (taxa_iva or 23) / 100)
     preco_venda = pvp["pvp_sem_iva"]   # s/IVA — o site aplica ×1.23 ao mostrar
     return {
-        "purchase_price":     round(primeiro_preco if primeiro_preco > 0 else pvr, 2),
+        "purchase_price":     round(pvr, 2),          # custo base (PVR) — sempre
         "price":              preco_venda,
         "price_tier2":        round(preco_venda * (1 - DESCONTO_TIER2), 2),
         "price_tier3":        round(preco_venda * (1 - DESCONTO_TIER3), 2),
@@ -521,7 +521,13 @@ def main():
         # Verificar variação de preço
         preco_actual = precos_actuais.get(sku)
         if preco_actual and preco_actual.get("price"):
-            preco_ant = float(preco_actual["price"])
+            if preco_actual.get("price_locked"):
+                precos["price"]       = float(preco_actual["price"])
+                precos["price_tier2"] = round(float(preco_actual["price"]) * (1 - DESCONTO_TIER2), 2)
+                precos["price_tier3"] = round(float(preco_actual["price"]) * (1 - DESCONTO_TIER3), 2)
+                stats["preco_estavel"] += 1
+            else:
+                preco_ant = float(preco_actual["price"])
             preco_nov = precos["price"]
             variacao = abs(preco_nov - preco_ant) / preco_ant if preco_ant > 0 else 0
             if variacao > LIMIAR_VARIACAO:
@@ -534,10 +540,10 @@ def main():
                 })
                 stats["preco_actualizado"] += 1
             else:
-                precos["price"]       = preco_ant
-                precos["price_tier2"] = round(preco_ant * (1 - DESCONTO_TIER2), 2)
-                precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
-                stats["preco_estavel"] += 1
+                    precos["price"]       = preco_ant
+                    precos["price_tier2"] = round(preco_ant * (1 - DESCONTO_TIER2), 2)
+                    precos["price_tier3"] = round(preco_ant * (1 - DESCONTO_TIER3), 2)
+                    stats["preco_estavel"] += 1
 
         # Stock — campo pode ser número ou intervalo ("101-1000", "1.000", ">1000", etc.)
         stock_qty = parse_stock_allto(row.get("Stock"), sku)
@@ -549,8 +555,12 @@ def main():
         if stock_qty == 0: stats["sem_stock"] += 1
 
         # Peso e portes
-        peso = parse_float(row.get("Peso"))
-        porte = calcular_porte_dhl(peso)
+        # O campo Peso do ALL.TO é o peso do LOTE completo.
+        # NCopias indica quantas unidades estão no lote.
+        peso_lote  = parse_float(row.get("Peso"))
+        ncopias    = parse_float(row.get("NCopias") or 0)
+        peso       = round(peso_lote / ncopias, 4) if ncopias > 1 else peso_lote
+        porte      = calcular_porte_dhl(peso)
         taxa_transporte = parse_float(row.get("Taxa_Adicional_Transporte"))
         envio_especial = taxa_transporte > 0 or porte is None
         if envio_especial: stats["envio_especial"] += 1
@@ -658,6 +668,7 @@ def main():
             "ean":                ean,
             "weight":             peso,
             "min_sale_qty":       min_sale_qty,
+            "taxa_iva":           taxa_iva or 23,
             "fornecedor":         "allto",
             "mundo":              "economato",
             "especificacoes":     specs,

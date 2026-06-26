@@ -364,7 +364,7 @@ async function handleGetPrices(supabase: SupabaseClient, fornecedor: string) {
   while (true) {
     const { data, error } = await supabase
       .from("products")
-      .select("sku, price, purchase_price")
+      .select("sku, price, purchase_price, price_locked")
       .eq("fornecedor", fornecedor)
       .not("sku", "is", null)
       .range(from, from + pageSize - 1);
@@ -374,7 +374,7 @@ async function handleGetPrices(supabase: SupabaseClient, fornecedor: string) {
     }
     if (!data || data.length === 0) break;
     for (const r of data) {
-      prices.push({ sku: r.sku, price: r.price, purchase_price: r.purchase_price });
+      prices.push({ sku: r.sku, price: r.price, purchase_price: r.purchase_price, price_locked: r.price_locked });
     }
     if (data.length < pageSize) break;
     from += pageSize;

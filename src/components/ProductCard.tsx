@@ -1,5 +1,5 @@
 import { useState, forwardRef } from "react";
-import { ImageOff, Star, Zap } from "lucide-react";
+import { ImageOff, Star, Zap, ShoppingCart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import { trackEvent } from "@/lib/trackEvent";
@@ -115,20 +115,31 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
               <ImageOff className="h-10 w-10" />
             </div>
           )}
-          {/* Quick add overlay — seletor de quantidade direto no hover */}
+          {/* Quick add — desktop: hover | mobile: botão fixo */}
           {!isAdmin && (
-            <div
-              className={`absolute inset-x-0 bottom-0 transition-transform duration-200 p-2 ${showSelector ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`}
-              onClick={(e) => e.stopPropagation()}
-              onMouseEnter={() => setShowSelector(true)}
-            >
-              <QuantitySelector
-                compact
-                minQty={step}
-                onAdd={handleAdd}
-                onCancel={() => setShowSelector(false)}
-              />
-            </div>
+            <>
+              {/* Desktop: seletor no hover */}
+              <div
+                className={`hidden sm:block absolute inset-x-0 bottom-0 transition-transform duration-200 p-2 ${showSelector ? "translate-y-0" : "translate-y-full group-hover:translate-y-0"}`}
+                onClick={(e) => e.stopPropagation()}
+                onMouseEnter={() => setShowSelector(true)}
+              >
+                <QuantitySelector
+                  compact
+                  minQty={step}
+                  onAdd={handleAdd}
+                  onCancel={() => setShowSelector(false)}
+                />
+              </div>
+              {/* Mobile: botão + direto no canto */}
+              <button
+                className="sm:hidden absolute bottom-2 right-2 z-10 h-9 w-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-md active:scale-95 transition-all"
+                onClick={(e) => { e.stopPropagation(); handleAdd(step); }}
+                aria-label="Adicionar ao orçamento"
+              >
+                <ShoppingCart className="h-4 w-4" />
+              </button>
+            </>
           )}
         </div>
 
