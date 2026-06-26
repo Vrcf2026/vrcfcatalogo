@@ -140,9 +140,17 @@ function OrcamentosList() {
                       {Number(q.total).toFixed(2).replace(".", ",")} €
                     </span>
                   )}
-                  <Button variant="outline" size="sm" asChild>
+                  {q.status === "accepted" && (
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">✓ Cliente aceitou</span>
+                  )}
+                  {q.status === "rejected" && (
+                    <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 shrink-0">✗ Cliente rejeitou</span>
+                  )}
+                  <Button variant={q.status === "pending" ? "default" : "outline"} size="sm" asChild>
                     <Link to={`/gestao/orcamentos/${q.id}`}>
-                      <Eye className="h-4 w-4 mr-1" /> Ver
+                      {q.status === "pending"
+                        ? <><Send className="h-4 w-4 mr-1" /> Responder</>
+                        : <><Eye className="h-4 w-4 mr-1" /> Ver</>}
                     </Link>
                   </Button>
                 </div>

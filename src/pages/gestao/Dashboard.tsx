@@ -152,7 +152,7 @@ export default function GestaoDashboard() {
 
       {/* Evolução temporal */}
       {overtime.length > 0 && (
-        <Card>
+        <Card className="hidden md:block">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <CalendarDays className="h-4 w-4" /> Evolução de orçamentos

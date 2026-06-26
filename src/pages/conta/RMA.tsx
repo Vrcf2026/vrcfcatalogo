@@ -18,6 +18,17 @@ const STATUS_LABEL: Record<string, string> = {
   completed: "Concluído", cancelled: "Cancelado",
 };
 
+const STATUS_DESC: Record<string, string> = {
+  submitted:    "O seu pedido foi recebido e será analisado brevemente.",
+  in_review:    "Estamos a analisar o seu pedido. Entraremos em contacto.",
+  approved:     "O RMA foi aprovado. Aguarde instruções de envio.",
+  rejected:     "O RMA não foi aprovado. Consulte as notas de resolução.",
+  in_repair:    "O equipamento está em reparação.",
+  shipped_back: "O equipamento foi devolvido. Verifique os dados de envio.",
+  completed:    "Pedido concluído com sucesso.",
+  cancelled:    "Pedido cancelado.",
+};
+
 export default function ContaRMA() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -97,7 +108,15 @@ export default function ContaRMA() {
                   <div className="text-xs text-muted-foreground">
                     {new Date(r.created_at).toLocaleDateString("pt-PT")} · {r.reason}
                   </div>
-                  {r.resolution_notes && <p className="text-xs mt-1 text-foreground"><strong>Resolução:</strong> {r.resolution_notes}</p>}
+                  {STATUS_DESC[r.status] && (
+                    <p className="text-xs text-muted-foreground/80 italic mt-1">{STATUS_DESC[r.status]}</p>
+                  )}
+                  {r.resolution_notes && (
+                    <div className="mt-2 rounded-lg bg-muted/60 px-3 py-2">
+                      <p className="text-xs font-semibold mb-0.5">Resposta VRCF:</p>
+                      <p className="text-xs">{r.resolution_notes}</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

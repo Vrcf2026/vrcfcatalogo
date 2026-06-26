@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Eye, Loader2 } from "lucide-react";
+import { FileText, Eye, Loader2, AlertTriangle, ArrowRight } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente",
@@ -35,7 +35,7 @@ export default function ContaOrcamentos() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id,quote_number,status,total,created_at")
+        .select("id,quote_number,status,total,created_at,shipping_total,notes")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -43,9 +43,31 @@ export default function ContaOrcamentos() {
     },
   });
 
+  const pendingDecision = data?.filter(q => q.status === "sent") ?? [];
+
   return (
     <div className="space-y-4">
       <h1 className="font-heading text-2xl font-bold">Histórico de Orçamentos</h1>
+
+      {/* Alertas — orçamentos que aguardam resposta */}
+      {pendingDecision.map(q => (
+        <Card key={q.id} className="border-blue-200 bg-blue-50/60 dark:bg-blue-950/20">
+          <CardContent className="py-3 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-blue-600 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold">
+                Orçamento <span className="font-mono">{q.quote_number}</span> aguarda a tua resposta
+              </p>
+              <p className="text-xs text-muted-foreground">Aceita ou rejeita para prosseguirmos.</p>
+            </div>
+            <Button size="sm" asChild className="shrink-0">
+              <Link to={`/conta/orcamentos/${q.id}`}>
+                Responder <ArrowRight className="ml-1 h-3 w-3" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ))}
 
       {isLoading ? (
         <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
