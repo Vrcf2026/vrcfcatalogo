@@ -26,7 +26,7 @@ const Login = () => {
       if (redirect) navigate(redirect, { replace: true });
       else if (isAdmin) navigate("/admin", { replace: true });
       else if (isGestor) navigate("/gestao", { replace: true });
-      else navigate("/conta", { replace: true });
+      else navigate("/", { replace: true });
     }
   }, [authLoading, user, isAdmin, isGestor, navigate, redirect]);
 
