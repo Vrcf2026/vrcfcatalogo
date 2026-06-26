@@ -55,7 +55,7 @@ jobs:
 
             ---
             VRCF — Informática & Segurança
-            showroom.vrcf.info
+            catalogo.vrcf.pt
 
       - name: Enviar email de erro
         if: failure()
