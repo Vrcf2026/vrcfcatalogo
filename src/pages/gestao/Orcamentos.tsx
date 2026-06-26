@@ -50,7 +50,7 @@ function OrcamentosList() {
     queryFn: async () => {
       let q = supabase
         .from("quotes")
-        .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,customer_profiles(full_name,company,phone,tax_id)")
+        .select("id,quote_number,status,total,created_at,notes,customer_name,customer_email,customer_phone,customer_profiles!left(full_name,company,phone,tax_id)")
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter as any);
       const { data, error } = await q;
@@ -181,7 +181,7 @@ function OrcamentoDetalhe() {
     queryKey: ["gestao-quote", id],
     queryFn: async () => {
       const [q, items, shipCfg] = await Promise.all([
-        supabase.from("quotes").select("*,customer_profiles(*)").eq("id", id!).maybeSingle(),
+        supabase.from("quotes").select("*,customer_profiles!left(*)").eq("id", id!).maybeSingle(),
         supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight)").eq("quote_id", id!),
         supabase.from("shipping_config").select("*").eq("ativo", true),
       ]);
