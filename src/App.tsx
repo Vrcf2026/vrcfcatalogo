@@ -19,6 +19,7 @@ import Produto from "./pages/Produto.tsx";
 import TermosCondicoes from "./pages/TermosCondicoes.tsx";
 import PoliticaCookies from "./pages/PoliticaCookies.tsx";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade.tsx";
+import CondicoesVenda from "./pages/CondicoesVenda.tsx";
 import Pesquisa from "./pages/Pesquisa.tsx";
 import { CookieConsentBanner } from "./components/CookieConsentBanner.tsx";
 import { Loader2 } from "lucide-react";
@@ -79,6 +80,7 @@ const App = () => (
                   <Route path="/termos-e-condicoes" element={<TermosCondicoes />} />
                   <Route path="/politica-de-cookies" element={<PoliticaCookies />} />
                   <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
+                  <Route path="/condicoes-de-venda" element={<CondicoesVenda />} />
                   <Route path="/pesquisa" element={<Pesquisa />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/registo" element={<Registo />} />

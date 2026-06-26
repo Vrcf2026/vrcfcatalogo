@@ -53,6 +53,7 @@ export function SiteFooter() {
             <div className="flex flex-col gap-2.5">
               <p className="text-xs font-semibold text-foreground uppercase tracking-wide mb-1">Informações</p>
               <Link to="/termos-e-condicoes" className="text-xs text-muted-foreground hover:text-primary transition-colors">Termos e Condições</Link>
+              <Link to="/condicoes-de-venda" className="text-xs text-muted-foreground hover:text-primary transition-colors">Condições de Venda</Link>
               <Link to="/politica-de-privacidade" className="text-xs text-muted-foreground hover:text-primary transition-colors">Política de Privacidade</Link>
               <Link to="/politica-de-cookies" className="text-xs text-muted-foreground hover:text-primary transition-colors">Política de Cookies</Link>
               <button type="button" onClick={openCookiePreferences}

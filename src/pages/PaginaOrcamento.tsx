@@ -370,6 +370,8 @@ export default function PaginaOrcamento() {
                 <label htmlFor="terms" className="text-xs text-muted-foreground leading-tight cursor-pointer">
                   Li e aceito os{" "}
                   <a href="/termos-e-condicoes" target="_blank" className="text-primary hover:underline">Termos e Condições</a>
+                  {" "}, as{" "}
+                  <a href="/condicoes-de-venda" target="_blank" className="text-primary hover:underline">Condições de Venda</a>
                   {" "}e a{" "}
                   <a href="/politica-de-privacidade" target="_blank" className="text-primary hover:underline">Política de Privacidade</a>.
                 </label>
