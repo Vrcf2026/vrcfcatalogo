@@ -90,7 +90,7 @@ export default function GestaoDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id,quote_number,status,total,created_at,customer_profiles(full_name,company)")
+        .select("id,quote_number,status,total,created_at,customer_profiles!left(full_name,company)")
         .order("created_at", { ascending: false })
         .limit(8);
       if (error) throw error;
@@ -105,7 +105,7 @@ export default function GestaoDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rma_requests")
-        .select("id,rma_number,status,product_name,created_at,customer_profiles(full_name,company)")
+        .select("id,rma_number,status,product_name,created_at,customer_profiles!left(full_name,company)")
         .in("status", ["submitted", "in_review"])
         .order("created_at", { ascending: true })
         .limit(5);
