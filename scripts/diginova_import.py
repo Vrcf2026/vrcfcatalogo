@@ -608,6 +608,18 @@ def carregar_csv_simples(src: str) -> dict:
 # ─────────────────────────────────────────────
 # EDGE FUNCTION
 # ─────────────────────────────────────────────
+def buscar_precos_actuais(fornecedor: str) -> dict:
+    headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
+    try:
+        resp = requests.post(IMPORT_URL, headers=headers,
+                             json={"action": "get_prices", "fornecedor": fornecedor}, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json().get("prices", [])
+            return {p["sku"]: p for p in data}
+    except Exception:
+        pass
+    return {}
+
 def supabase_upsert(produtos: list, fornecedor: str = "diginova"):
     headers = {"x-import-key": IMPORT_API_KEY, "Content-Type": "application/json"}
     total = len(produtos)
@@ -672,6 +684,10 @@ def main(local=False):
     rows_presta  = carregar_csv_presta("diginova_presta_50181.csv" if local else URL_CSV_PRESTA)
     rows_simples = carregar_csv_simples("diginova_59931.csv" if local else URL_CSV_SIMPLES)
 
+    print("\n💰 A buscar preços actuais...")
+    precos_actuais = buscar_precos_actuais("diginova") if IMPORT_API_KEY else {}
+    print(f"  {len(precos_actuais)} produtos com preço actual no Supabase")
+
     print("\n⚙️  A processar produtos...")
     produtos = []
     refs_activas = []
@@ -703,6 +719,11 @@ def main(local=False):
         precos = calcular_precos(precio, familia)
         if precos is None:
             continue
+
+        # Verificar price_locked
+        preco_actual = precos_actuais.get(ref)
+        if preco_actual and preco_actual.get("price_locked") and preco_actual.get("price"):
+            precos["price"] = float(preco_actual["price"])
 
         # Stock
         try:
@@ -792,6 +813,31 @@ def main(local=False):
         else:
             desc_intro_limpa = FRASE_PADRAO
 
+        # Título SEO otimizado para recondicionados
+        def construir_nome_seo(nome_orig: str, marca_prod: str, specs_dict: dict) -> str:
+            partes = []
+            tipo = specs_dict.get("tipo", "")
+            if tipo and tipo not in nome_orig: partes.append(tipo)
+            if marca_prod and marca_prod.upper() not in nome_orig.upper(): partes.append(marca_prod)
+            proc = specs_dict.get("processador", "")
+            if proc:
+                proc_curto = proc.replace("Intel Core ", "").replace("AMD Ryzen ", "Ryzen ")
+                partes.append(proc_curto[:15])
+            ecra = specs_dict.get("ecra_polegadas", "")
+            if ecra: partes.append(f'{ecra}"')
+            ram = specs_dict.get("ram_gb", "")
+            if ram: partes.append(f"{ram}GB")
+            arm_gb = specs_dict.get("armazenamento_gb", "")
+            arm_tipo = specs_dict.get("armazenamento_tipo", "")
+            if arm_gb: partes.append(f"{arm_gb}GB {arm_tipo}".strip() if arm_tipo else f"{arm_gb}GB")
+            grau = specs_dict.get("grau", "")
+            if grau: partes.append(f"Grau {grau}")
+            partes.append("Recondicionado")
+            titulo = " ".join(partes)
+            return titulo if len(titulo) > 20 else nome_orig
+
+        nome_seo = construir_nome_seo(nome_pt, marca, specs)
+
         # Categoria e família PT
         cat_familia = CATEGORIA_MAP.get(familia.strip(), ("Computadores", familia))
         categoria_pt = cat_familia[0]
@@ -803,7 +849,7 @@ def main(local=False):
         produto = {
             "sku":                ref,
             "slug":               slug,
-            "name":               nome_pt,
+            "name":               nome_seo,
             "short_description":  nome_pt,
             "description":        desc_intro_limpa,
             "brand_id":           None,

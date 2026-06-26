@@ -58,7 +58,7 @@ export default function Conta() {
 
         <div className="flex-1 max-w-[1600px] w-full mx-auto px-4 py-6 grid md:grid-cols-[220px_1fr] gap-6">
           <aside>
-            <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+            <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible scrollbar-hide pb-1 md:pb-0">
               {tabs.map((t) => (
                 <NavLink
                   key={t.to}

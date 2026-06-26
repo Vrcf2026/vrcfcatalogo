@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle } from "lucide-react";
+import { Loader2, Package, ShieldCheck, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -252,6 +252,30 @@ const Pesquisa = () => {
       </section>
 
       <SiteFooter />
+
+      {/* Mobile bottom nav */}
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+        <div className="grid grid-cols-4 h-14">
+          <Link to="/" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
+            <span className="text-[9px] font-medium">Início</span>
+          </Link>
+          <Link to="/seguranca" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <ShieldCheck className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Segurança</span>
+          </Link>
+          <Link to="/economato" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <Package className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Economato</span>
+          </Link>
+          <button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground relative">
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && <span className="absolute top-1.5 right-3 bg-primary text-primary-foreground text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center">{totalItems}</span>}
+            <span className="text-[9px] font-medium">Orçamento</span>
+          </button>
+        </div>
+      </nav>
+      <div className="h-14 sm:hidden" />
 
       <CartDrawer />
       <ContactFloatingBubble />

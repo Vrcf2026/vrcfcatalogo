@@ -193,8 +193,37 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Helmet>
-        <title>VRCF Showroom — Segurança, Redes, Informática & Tecnologia | Montijo</title>
-        <meta name="description" content="Catálogo VRCF: câmaras, alarmes, redes, computadores recondicionados. Peça orçamento online." />
+        <title>VRCF Showroom — Segurança, Redes, Informática & Economato | Montijo</title>
+        <meta name="description" content="Catálogo B2B VRCF: câmaras IP, alarmes, redes, informática recondicionada e material de escritório. +27.000 produtos. Peça orçamento online — Montijo." />
+        <link rel="canonical" href="https://showroom.vrcf.info/" />
+        <meta property="og:type"        content="website" />
+        <meta property="og:site_name"   content="VRCF Showroom" />
+        <meta property="og:title"       content="VRCF Showroom — Segurança, Redes, Informática & Economato | Montijo" />
+        <meta property="og:description" content="Catálogo B2B VRCF: câmaras IP, alarmes, redes, informática recondicionada e material de escritório. +27.000 produtos. Peça orçamento online." />
+        <meta property="og:url"         content="https://showroom.vrcf.info/" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Store",
+          "name": "VRCF — Informática & Segurança",
+          "description": "Catálogo B2B de segurança, informática e economato. Peça orçamento online.",
+          "url": "https://showroom.vrcf.info/",
+          "telephone": "+351911564243",
+          "email": "geral@vrcf.pt",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Rua Luís Calado Nunes 15 Loja B",
+            "addressLocality": "Montijo",
+            "postalCode": "2870-350",
+            "addressCountry": "PT"
+          },
+          "openingHours": "Mo-Fr 09:00-18:00",
+          "priceRange": "€€",
+          "hasOfferCatalog": {
+            "@type": "OfferCatalog",
+            "name": "Catálogo VRCF",
+            "numberOfItems": 27000
+          }
+        })}</script>
       </Helmet>
 
       <WelcomeBanner />
@@ -232,7 +261,7 @@ const Index = () => {
 
       {/* ── WORLD SELECTOR ── */}
       <section className="px-3 pt-4 pb-2 max-w-[1600px] mx-auto w-full">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <WorldBtn
             active={activeMundo === "seguranca"}
             onClick={() => setActiveMundo("seguranca")}
@@ -296,7 +325,7 @@ const Index = () => {
       {/* ── BANNERS ── */}
       {banners.data && banners.data.length > 0 && (
         <section className="px-3 py-3 max-w-[1600px] mx-auto w-full">
-          <div className="relative overflow-hidden bg-black w-full" style={{ height: "clamp(160px, 25vw, 280px)" }}>
+          <div className="relative overflow-hidden bg-black w-full rounded-xl" style={{ aspectRatio: "16/5", maxHeight: "320px" }}>
           {banners.data.map((b: any, i: number) => (
             <div key={b.id} className={`absolute inset-0 transition-opacity duration-500 ${i === bannerIdx ? "opacity-100" : "opacity-0"}`}>
               {b.link
@@ -407,9 +436,9 @@ const Index = () => {
             <Monitor className="h-5 w-5" />
             <span className="text-[9px] font-medium">Informática</span>
           </Link>
-          <Link to="/pesquisa" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
-            <Search className="h-5 w-5" />
-            <span className="text-[9px] font-medium">Pesquisa</span>
+          <Link to="/economato" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors">
+            <Package className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Economato</span>
           </Link>
           <button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors relative">
             <ShoppingCart className="h-5 w-5" />
@@ -614,7 +643,7 @@ function HeroRotativo() {
         style={{ backgroundImage: "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
 
       {/* Ícones de fundo — lado direito */}
-      <div aria-hidden className={`absolute inset-0 pointer-events-none transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}>
+      <div aria-hidden className={`hidden sm:block absolute inset-0 pointer-events-none transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}>
         {s.bgIcons.map(({ Icon, size, top, right, opacity, rotate }, i) => (
           <Icon
             key={i}

@@ -475,9 +475,27 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>{title} — VRCF Showroom</title>
-        <meta name="description" content={subtitle} />
-        <link rel="canonical" href={`https://showroom.vrcf.info/${mundo}`} />
+        <title>{categoryFilter !== "all" ? `${categoryFilter} — ${title} | VRCF Montijo` : `${title} | VRCF Montijo`}</title>
+        <meta name="description" content={categoryFilter !== "all" ? `${categoryFilter} em ${title} — VRCF Montijo. Peça orçamento online.` : `${subtitle} Catálogo online com mais de 27.000 produtos. Peça orçamento online — VRCF Montijo.`} />
+        <link rel="canonical" href={`https://showroom.vrcf.info/${mundo}${categoryFilter !== "all" ? `?categoria=${encodeURIComponent(categoryFilter)}` : ""}`} />
+        <meta property="og:title"       content={`${title} — VRCF Showroom`} />
+        <meta property="og:description" content={subtitle} />
+        <meta property="og:type"        content="website" />
+        <meta property="og:url"         content={`https://showroom.vrcf.info/${mundo}`} />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          "name": title,
+          "description": subtitle,
+          "url": `https://showroom.vrcf.info/${mundo}`,
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://showroom.vrcf.info/" },
+              { "@type": "ListItem", "position": 2, "name": title,    "item": `https://showroom.vrcf.info/${mundo}` }
+            ]
+          }
+        })}</script>
       </Helmet>
 
       {/* Header */}
@@ -596,7 +614,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
 
         {/* Sidebar filtros — desktop (só aparece após escolher uma categoria) */}
         {categoryFilter !== "all" && (
-          <aside className="hidden lg:block w-64 shrink-0 pt-4">
+          <aside className="hidden md:block w-56 shrink-0 pt-4">
             <div className="sticky top-20 rounded-2xl border border-border bg-card p-5 max-h-[calc(100vh-6rem)] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-bold">Filtrar</h2>
@@ -623,7 +641,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
             {categoryFilter !== "all" && (
               <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="lg:hidden gap-1.5 h-9 relative">
+                  <Button variant="outline" size="sm" className="md:hidden gap-1.5 h-9 relative">
                     <SlidersHorizontal className="h-4 w-4" /> Filtros
                     {activeFiltersCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full h-4 w-4 flex items-center justify-center">{activeFiltersCount}</span>
@@ -721,7 +739,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
             <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
           ) : products.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {products.map((product: any) => (
                   <ProductCard
                     key={product.id}

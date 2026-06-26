@@ -11,11 +11,14 @@ const corsHeaders = {
 };
 
 const STATIC_PATHS = [
-  { path: "/", priority: "1.0" },
-  { path: "/seguranca", priority: "0.9" },
-  { path: "/escritorio", priority: "0.9" },
-  { path: "/termos-e-condicoes", priority: "0.3" },
-  { path: "/politica-de-cookies", priority: "0.3" },
+  { path: "/",                        priority: "1.0", changefreq: "daily"   },
+  { path: "/seguranca",               priority: "0.9", changefreq: "daily"   },
+  { path: "/escritorio",              priority: "0.9", changefreq: "daily"   },
+  { path: "/economato",               priority: "0.9", changefreq: "daily"   },
+  { path: "/pesquisa",                priority: "0.5", changefreq: "weekly"  },
+  { path: "/termos-e-condicoes",      priority: "0.3", changefreq: "monthly" },
+  { path: "/politica-de-cookies",     priority: "0.3", changefreq: "monthly" },
+  { path: "/politica-de-privacidade", priority: "0.3", changefreq: "monthly" },
 ];
 
 serve(async (req) => {

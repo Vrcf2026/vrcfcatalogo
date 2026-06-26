@@ -90,11 +90,40 @@ const ContactFloatingBubble = () => {
   return (
     <>
       <div
-        className="fixed bottom-4 right-4 z-40 max-w-[19rem] animate-fade-in"
+        className="fixed right-4 z-40 max-w-[19rem] animate-fade-in"
+        style={{ bottom: "calc(3.5rem + 0.75rem)" }}
         role="complementary"
         aria-label="Mensagem de contacto"
       >
-        <div className="relative rounded-2xl border border-primary/30 bg-background/95 backdrop-blur-md shadow-2xl p-4 pr-8">
+        {/* Mobile compacto */}
+        <div className="sm:hidden relative rounded-2xl border border-primary/30 bg-background/95 backdrop-blur-md shadow-2xl p-3 pr-7">
+          <button type="button" onClick={dismiss} aria-label="Fechar"
+            className="absolute top-2 right-2 p-1 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+            <X className="h-3 w-3" />
+          </button>
+          <div className="flex gap-2 items-center mb-2">
+            <div className="shrink-0 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+            </div>
+            <p className="text-[11px] leading-tight text-foreground">
+              <strong>Não encontra um produto?</strong><br />
+              <span className="text-muted-foreground">Fale connosco.</span>
+            </p>
+          </div>
+          <div className="flex gap-1.5">
+            <Button size="sm" className="h-7 text-xs gap-1 flex-1" onClick={() => setDialogOpen(true)}>
+              <Phone className="h-3 w-3" /> Contactar
+            </Button>
+            <Button size="sm" variant="outline"
+              className="h-7 w-7 p-0 border-green-500 text-green-600 hover:bg-green-50 shrink-0"
+              onClick={() => window.open(WHATSAPP_URL, "_blank", "noopener,noreferrer")}>
+              <MessageCircle className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Desktop/tablet */}
+        <div className="hidden sm:block relative rounded-2xl border border-primary/30 bg-background/95 backdrop-blur-md shadow-2xl p-4 pr-8">
           <button
             type="button"
             onClick={dismiss}

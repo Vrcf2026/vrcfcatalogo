@@ -3,7 +3,7 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
 import {
-  Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2,
+  Loader2, ArrowLeft, ShoppingCart, ShieldCheck, Package2, Search,
   MessageCircle, Copy, Truck, Clock, Info, ChevronLeft, ChevronRight,
   ZoomIn, Star,
 } from "lucide-react";
@@ -35,7 +35,7 @@ const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }
 // Tradução de chaves de specs para português legível
 const Produto = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { addItem, setIsOpen } = useCart();
+  const { addItem, setIsOpen, totalItems } = useCart();
   const [imgIdx, setImgIdx] = useState(0);
   const [lightbox, setLightbox] = useState(false);
 
@@ -122,6 +122,14 @@ const Produto = () => {
   );
   if (!product) return <Navigate to="/404" replace />;
 
+  // Produto inativo — redirect para categoria
+  if (product.include_in_catalog === false) {
+    const destino = product.mundo
+      ? `/${product.mundo}${product.category ? `?categoria=${encodeURIComponent(product.category)}` : ""}`
+      : "/";
+    return <Navigate to={destino} replace />;
+  }
+
   // Imagens — db images + imagens_extra do produto
   const extraImgs = Array.isArray(product.imagens_extra) ? product.imagens_extra : [];
   const allImages = dbImages.length > 0
@@ -190,10 +198,48 @@ const Produto = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>{product.name} — VRCF Showroom</title>
-        <meta name="description" content={product.short_description ?? product.description?.slice(0, 160) ?? product.name} />
+        <title>{[product.brand, product.name, product.category, "VRCF Montijo"].filter(Boolean).join(" — ")}</title>
+        <meta name="description" content={(product.short_description ?? product.description?.slice(0, 155) ?? product.name) + " | VRCF Montijo"} />
         <link rel="canonical" href={`https://showroom.vrcf.info/produto/${product.slug ?? product.id}`} />
+        <meta property="og:type"        content="product" />
+        <meta property="og:site_name"   content="VRCF Showroom" />
+        <meta property="og:title"       content={`${product.name}${product.brand ? ` — ${product.brand}` : ""}`} />
+        <meta property="og:description" content={product.short_description ?? product.description?.slice(0, 155) ?? product.name} />
+        <meta property="og:url"         content={`https://showroom.vrcf.info/produto/${product.slug ?? product.id}`} />
         {currentImage && <meta property="og:image" content={currentImage} />}
+        {product.brand && <meta property="product:brand" content={product.brand} />}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": product.name,
+          "description": product.short_description ?? product.description?.slice(0, 300) ?? product.name,
+          "image": currentImage ? [currentImage] : undefined,
+          "sku": product.sku ?? undefined,
+          "brand": product.brand ? { "@type": "Brand", "name": product.brand } : undefined,
+          "category": product.category ?? undefined,
+          "itemCondition": product.fornecedor === "diginova"
+            ? "https://schema.org/RefurbishedCondition"
+            : "https://schema.org/NewCondition",
+          "offers": product.price && Number(product.price) > 0 ? {
+            "@type": "Offer",
+            "url": `https://showroom.vrcf.info/produto/${product.slug ?? product.id}`,
+            "priceCurrency": "EUR",
+            "price": (Number(product.price) * 1.23).toFixed(2),
+            "availability": (product.stock_status === "high" || product.stock_status === "low")
+              ? "https://schema.org/InStock"
+              : "https://schema.org/PreOrder",
+            "seller": { "@type": "Organization", "name": "VRCF - Informática & Segurança" }
+          } : undefined,
+          "breadcrumb": {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://showroom.vrcf.info/" },
+              product.mundo ? { "@type": "ListItem", "position": 2, "name": product.mundo === "seguranca" ? "Segurança" : product.mundo === "escritorio" ? "Informática" : "Economato", "item": `https://showroom.vrcf.info/${product.mundo}` } : null,
+              product.category ? { "@type": "ListItem", "position": 3, "name": product.category, "item": `https://showroom.vrcf.info/${product.mundo}?categoria=${encodeURIComponent(product.category)}` } : null,
+              { "@type": "ListItem", "position": 4, "name": product.name, "item": `https://showroom.vrcf.info/produto/${product.slug ?? product.id}` }
+            ].filter(Boolean)
+          }
+        })}</script>
       </Helmet>
 
       {/* Header */}
@@ -245,7 +291,7 @@ const Produto = () => {
       </nav>
 
       {/* Produto */}
-      <section className="container mx-auto px-4 pb-10 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+      <section className="container mx-auto px-4 pb-10 grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
 
         {/* Imagens */}
         <div className="space-y-3">
@@ -543,6 +589,26 @@ const Produto = () => {
       )}
 
       <SiteFooter />
+
+      {/* Mobile bottom nav */}
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+        <div className="grid grid-cols-3 h-14">
+          <Link to="/" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" /></svg>
+            <span className="text-[9px] font-medium">Início</span>
+          </Link>
+          <Link to="/pesquisa" className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground">
+            <Search className="h-5 w-5" />
+            <span className="text-[9px] font-medium">Pesquisa</span>
+          </Link>
+          <button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground relative">
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && <span className="absolute top-1.5 right-3 bg-primary text-primary-foreground text-[8px] font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center">{totalItems}</span>}
+            <span className="text-[9px] font-medium">Orçamento</span>
+          </button>
+        </div>
+      </nav>
+      <div className="h-14 sm:hidden" />
 
       <CartDrawer />
       <ContactFloatingBubble />
