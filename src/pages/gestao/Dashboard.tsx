@@ -90,7 +90,7 @@ export default function GestaoDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")
-        .select("id,quote_number,status,total,created_at,customer_profiles!left(full_name,company)")
+        .select("id,quote_number,status,total,created_at,customer_name,customer_email")
         .order("created_at", { ascending: false })
         .limit(8);
       if (error) throw error;
@@ -105,7 +105,7 @@ export default function GestaoDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("rma_requests")
-        .select("id,rma_number,status,product_name,created_at,customer_profiles!left(full_name,company)")
+        .select("id,rma_number,status,product_name,created_at")
         .in("status", ["submitted", "in_review"])
         .order("created_at", { ascending: true })
         .limit(5);
@@ -219,7 +219,7 @@ export default function GestaoDashboard() {
                     <div className="min-w-0">
                       <span className="font-mono text-xs font-semibold">{q.quote_number}</span>
                       <p className="text-xs text-muted-foreground truncate">
-                        {q.customer_profiles?.company || q.customer_profiles?.full_name || "—"}
+                        {q.customer_name || q.customer_email || "—"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -267,7 +267,7 @@ export default function GestaoDashboard() {
                     </div>
                     <p className="text-xs text-foreground mt-0.5 truncate">{r.product_name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {r.customer_profiles?.company || r.customer_profiles?.full_name || "—"}
+                      {"RMA"}
                       {" · "}
                       {new Date(r.created_at).toLocaleDateString("pt-PT", { dateStyle: "short" })}
                     </p>
