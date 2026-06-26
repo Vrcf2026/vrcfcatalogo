@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-const SITE_URL = 'https://showroom.vrcf.info'
+const SITE_URL = 'https://catalogo.vrcf.pt'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

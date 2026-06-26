@@ -37,8 +37,8 @@ const TermosCondicoes = () => {
             </h2>
             <p className="text-muted-foreground leading-relaxed mt-3">
               O presente catálogo online, disponível em{" "}
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>{" "}
               (doravante "Catálogo"), é propriedade e é gerido por{" "}
               <strong className="text-foreground">VALTER ROBERTO CRUZ FRANCISCO UNI. LDA</strong>, 
@@ -254,8 +254,8 @@ const TermosCondicoes = () => {
           <div className="border-t border-border pt-6 mt-10 text-center space-y-2">
             <p className="text-sm font-semibold text-foreground">VRCF — Catálogo Online de Informática & Segurança</p>
             <p className="text-xs text-muted-foreground">
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>{" "}
               | Atualizado em 27/03/2026
             </p>

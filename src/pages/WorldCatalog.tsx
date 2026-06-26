@@ -477,22 +477,22 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       <Helmet>
         <title>{categoryFilter !== "all" ? `${categoryFilter} — ${title} | VRCF Montijo` : `${title} | VRCF Montijo`}</title>
         <meta name="description" content={categoryFilter !== "all" ? `${categoryFilter} em ${title} — VRCF Montijo. Peça orçamento online.` : `${subtitle} Catálogo online com mais de 27.000 produtos. Peça orçamento online — VRCF Montijo.`} />
-        <link rel="canonical" href={`https://showroom.vrcf.info/${mundo}${categoryFilter !== "all" ? `?categoria=${encodeURIComponent(categoryFilter)}` : ""}`} />
+        <link rel="canonical" href={`https://catalogo.vrcf.pt/${mundo}${categoryFilter !== "all" ? `?categoria=${encodeURIComponent(categoryFilter)}` : ""}`} />
         <meta property="og:title"       content={`${title} — VRCF Showroom`} />
         <meta property="og:description" content={subtitle} />
         <meta property="og:type"        content="website" />
-        <meta property="og:url"         content={`https://showroom.vrcf.info/${mundo}`} />
+        <meta property="og:url"         content={`https://catalogo.vrcf.pt/${mundo}`} />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "CollectionPage",
           "name": title,
           "description": subtitle,
-          "url": `https://showroom.vrcf.info/${mundo}`,
+          "url": `https://catalogo.vrcf.pt/${mundo}`,
           "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://showroom.vrcf.info/" },
-              { "@type": "ListItem", "position": 2, "name": title,    "item": `https://showroom.vrcf.info/${mundo}` }
+              { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://catalogo.vrcf.pt/" },
+              { "@type": "ListItem", "position": 2, "name": title,    "item": `https://catalogo.vrcf.pt/${mundo}` }
             ]
           }
         })}</script>

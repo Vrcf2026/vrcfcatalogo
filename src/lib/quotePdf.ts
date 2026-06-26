@@ -44,7 +44,7 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
   doc.setTextColor(100);
   doc.text("Rua Luis Calado Nunes 15 LJ B · 2870-350 Montijo · NIF PT515237205", 15, y);
   y += 4;
-  doc.text("geral@vrcf.pt · +351 911 564 243 · showroom.vrcf.info", 15, y);
+  doc.text("geral@vrcf.pt · +351 911 564 243 · catalogo.vrcf.pt", 15, y);
 
   // Linha
   y += 6;

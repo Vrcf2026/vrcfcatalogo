@@ -200,12 +200,12 @@ const Produto = () => {
       <Helmet>
         <title>{[product.brand, product.name, product.category, "VRCF Montijo"].filter(Boolean).join(" — ")}</title>
         <meta name="description" content={(product.short_description ?? product.description?.slice(0, 155) ?? product.name) + " | VRCF Montijo"} />
-        <link rel="canonical" href={`https://showroom.vrcf.info/produto/${product.slug ?? product.id}`} />
+        <link rel="canonical" href={`https://catalogo.vrcf.pt/produto/${product.slug ?? product.id}`} />
         <meta property="og:type"        content="product" />
         <meta property="og:site_name"   content="VRCF Showroom" />
         <meta property="og:title"       content={`${product.name}${product.brand ? ` — ${product.brand}` : ""}`} />
         <meta property="og:description" content={product.short_description ?? product.description?.slice(0, 155) ?? product.name} />
-        <meta property="og:url"         content={`https://showroom.vrcf.info/produto/${product.slug ?? product.id}`} />
+        <meta property="og:url"         content={`https://catalogo.vrcf.pt/produto/${product.slug ?? product.id}`} />
         {currentImage && <meta property="og:image" content={currentImage} />}
         {product.brand && <meta property="product:brand" content={product.brand} />}
         <script type="application/ld+json">{JSON.stringify({
@@ -222,7 +222,7 @@ const Produto = () => {
             : "https://schema.org/NewCondition",
           "offers": product.price && Number(product.price) > 0 ? {
             "@type": "Offer",
-            "url": `https://showroom.vrcf.info/produto/${product.slug ?? product.id}`,
+            "url": `https://catalogo.vrcf.pt/produto/${product.slug ?? product.id}`,
             "priceCurrency": "EUR",
             "price": (Number(product.price) * 1.23).toFixed(2),
             "availability": (product.stock_status === "high" || product.stock_status === "low")
@@ -233,10 +233,10 @@ const Produto = () => {
           "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://showroom.vrcf.info/" },
-              product.mundo ? { "@type": "ListItem", "position": 2, "name": product.mundo === "seguranca" ? "Segurança" : product.mundo === "escritorio" ? "Informática" : "Economato", "item": `https://showroom.vrcf.info/${product.mundo}` } : null,
-              product.category ? { "@type": "ListItem", "position": 3, "name": product.category, "item": `https://showroom.vrcf.info/${product.mundo}?categoria=${encodeURIComponent(product.category)}` } : null,
-              { "@type": "ListItem", "position": 4, "name": product.name, "item": `https://showroom.vrcf.info/produto/${product.slug ?? product.id}` }
+              { "@type": "ListItem", "position": 1, "name": "Início", "item": "https://catalogo.vrcf.pt/" },
+              product.mundo ? { "@type": "ListItem", "position": 2, "name": product.mundo === "seguranca" ? "Segurança" : product.mundo === "escritorio" ? "Informática" : "Economato", "item": `https://catalogo.vrcf.pt/${product.mundo}` } : null,
+              product.category ? { "@type": "ListItem", "position": 3, "name": product.category, "item": `https://catalogo.vrcf.pt/${product.mundo}?categoria=${encodeURIComponent(product.category)}` } : null,
+              { "@type": "ListItem", "position": 4, "name": product.name, "item": `https://catalogo.vrcf.pt/produto/${product.slug ?? product.id}` }
             ].filter(Boolean)
           }
         })}</script>

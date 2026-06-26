@@ -62,8 +62,8 @@ const CondicoesVenda = () => {
             <p className="text-muted-foreground leading-relaxed mt-3">
               As presentes CGV aplicam-se a todas as vendas de produtos e serviços realizadas pela VRCF,
               incluindo as decorrentes de pedidos de orçamento submetidos através do catálogo online em{" "}
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>.
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
@@ -476,8 +476,8 @@ const CondicoesVenda = () => {
           <div className="border-t border-border pt-6 mt-10 text-center space-y-2">
             <p className="text-sm font-semibold text-foreground">VRCF – Informática & Segurança</p>
             <p className="text-xs text-muted-foreground">
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>{" "}
               | Atualizado em 15/06/2026
             </p>

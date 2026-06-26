@@ -57,8 +57,8 @@ const PoliticaPrivacidade = () => {
             <p className="text-muted-foreground leading-relaxed mt-3">
               Esta Política de Privacidade aplica-se ao tratamento de dados pessoais recolhidos através do catálogo
               online{" "}
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>{" "}
               (doravante "Catálogo"), incluindo a navegação no Catálogo, a criação e utilização de conta de
               utilizador, pedidos de orçamento, pedidos de RMA (devolução/reparação) e comunicações com a VRCF.
@@ -382,8 +382,8 @@ const PoliticaPrivacidade = () => {
           <div className="border-t border-border pt-6 mt-10 text-center space-y-2">
             <p className="text-sm font-semibold text-foreground">VRCF — Catálogo Online de Informática & Segurança</p>
             <p className="text-xs text-muted-foreground">
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>{" "}
               | Atualizado em 15/06/2026
             </p>

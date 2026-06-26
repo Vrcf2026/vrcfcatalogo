@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const BASE_URL = "https://showroom.vrcf.info";
+const BASE_URL = "https://catalogo.vrcf.pt";
 const FUNCTION_URL = `${Deno.env.get("SUPABASE_URL")}/functions/v1/sitemap`;
 const PAGE_SIZE = 1000;
 

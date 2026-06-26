@@ -195,18 +195,18 @@ const Index = () => {
       <Helmet>
         <title>VRCF Showroom — Segurança, Redes, Informática & Economato | Montijo</title>
         <meta name="description" content="Catálogo B2B VRCF: câmaras IP, alarmes, redes, informática recondicionada e material de escritório. +27.000 produtos. Peça orçamento online — Montijo." />
-        <link rel="canonical" href="https://showroom.vrcf.info/" />
+        <link rel="canonical" href="https://catalogo.vrcf.pt/" />
         <meta property="og:type"        content="website" />
         <meta property="og:site_name"   content="VRCF Showroom" />
         <meta property="og:title"       content="VRCF Showroom — Segurança, Redes, Informática & Economato | Montijo" />
         <meta property="og:description" content="Catálogo B2B VRCF: câmaras IP, alarmes, redes, informática recondicionada e material de escritório. +27.000 produtos. Peça orçamento online." />
-        <meta property="og:url"         content="https://showroom.vrcf.info/" />
+        <meta property="og:url"         content="https://catalogo.vrcf.pt/" />
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "Store",
           "name": "VRCF — Informática & Segurança",
           "description": "Catálogo B2B de segurança, informática e economato. Peça orçamento online.",
-          "url": "https://showroom.vrcf.info/",
+          "url": "https://catalogo.vrcf.pt/",
           "telephone": "+351911564243",
           "email": "geral@vrcf.pt",
           "address": {

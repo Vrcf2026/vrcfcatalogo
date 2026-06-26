@@ -47,7 +47,7 @@ export const template = {
   displayName: 'Alerta de stock disponível',
   previewData: {
     productName: 'Câmara IP Hikvision DS-2CD2143G2-I 4MP',
-    productUrl:  'https://showroom.vrcf.info/produto/camara-ip-hikvision',
+    productUrl:  'https://catalogo.vrcf.pt/produto/camara-ip-hikvision',
   },
 } satisfies TemplateEntry
 

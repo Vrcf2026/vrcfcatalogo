@@ -51,8 +51,8 @@ const PoliticaCookies = () => {
               <strong className="text-foreground">VALTER ROBERTO CRUZ FRANCISCO UNI. LDA</strong>, 
               com o NIF <strong className="text-foreground">515237205</strong> (doravante "VRCF"), 
               acessível em{" "}
-              <a href="https://showroom.vrcf.info" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                showroom.vrcf.info
+              <a href="https://catalogo.vrcf.pt" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                catalogo.vrcf.pt
               </a>.
             </p>
           </section>
