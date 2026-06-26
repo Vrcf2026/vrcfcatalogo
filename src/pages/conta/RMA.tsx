@@ -53,8 +53,8 @@ export default function ContaRMA() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    if (!form.product_name.trim() || !form.reason.trim()) {
-      toast.error("Indique o produto e o motivo.");
+    if (!form.product_name.trim() || !form.reason.trim() || !form.invoice_number.trim() || !form.purchase_date) {
+      toast.error("Produto, motivo, nº de fatura e data de compra são obrigatórios.");
       return;
     }
     setSubmitting(true);
@@ -134,9 +134,9 @@ export default function ContaRMA() {
             <div className="space-y-2"><Label>Produto *</Label><Input value={form.product_name} onChange={(e) => setForm({ ...form, product_name: e.target.value })} required /></div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2"><Label>Nº de série</Label><Input value={form.serial_number} onChange={(e) => setForm({ ...form, serial_number: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Nº fatura</Label><Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Nº fatura *</Label><Input value={form.invoice_number} onChange={(e) => setForm({ ...form, invoice_number: e.target.value })} placeholder="Ex: FT2026/1234" required /></div>
             </div>
-            <div className="space-y-2"><Label>Data de compra</Label><Input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} /></div>
+            <div className="space-y-2"><Label>Data de compra *</Label><Input type="date" value={form.purchase_date} onChange={(e) => setForm({ ...form, purchase_date: e.target.value })} required /></div>
             <div className="space-y-2"><Label>Motivo *</Label><Input value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Ex: não liga, ecrã partido..." required /></div>
             <div className="space-y-2"><Label>Descrição detalhada</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={4} /></div>
             <Button type="submit" disabled={submitting} className="w-full gap-2">
