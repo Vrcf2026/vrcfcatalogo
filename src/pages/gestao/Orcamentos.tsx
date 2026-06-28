@@ -1,45 +1,66 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Loader2, FileText, Eye, Search, Truck, PackageX, Send, CheckCircle2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import {
+  ArrowLeft, Loader2, Send, CheckCircle2, Truck, FileText,
+  Eye, Search, PackageX, Download, Edit2, Save, X,
+} from "lucide-react";
 import { toast } from "sonner";
-import { calcularPortesPorFornecedor, totalPortesComIva } from "@/lib/calcularPortes";
+import { generateQuotePdf } from "@/lib/quotePdf";
 
-// Ordem de urgência para a lista: pendentes/sent primeiro, depois por data
 const URGENCIA: Record<string, number> = {
   pending: 0, sent: 1, in_review: 2, accepted: 3,
-  rejected: 4, completed: 5, cancelled: 6,
+  paid: 4, in_preparation: 5, shipped: 6,
+  rejected: 7, cancelled: 8, completed: 9,
 };
 
 const STATUS_OPTIONS = [
-  { value: "sent",      label: "Enviado — por responder" },
-  { value: "in_review", label: "Em análise" },
-  { value: "accepted",  label: "Aceite" },
-  { value: "rejected",  label: "Rejeitado" },
-  { value: "cancelled", label: "Cancelado" },
-  { value: "completed", label: "Concluído" },
+  { value: "pending",        label: "Pendente — por analisar" },
+  { value: "in_review",     label: "Em análise" },
+  { value: "sent",          label: "Orçamento enviado" },
+  { value: "accepted",      label: "Aceite pelo cliente" },
+  { value: "paid",          label: "Pago" },
+  { value: "in_preparation",label: "Em preparação" },
+  { value: "shipped",       label: "Enviado / Expedido" },
+  { value: "completed",     label: "Concluído" },
+  { value: "rejected",      label: "Rejeitado" },
+  { value: "cancelled",     label: "Cancelado" },
 ];
 
 const STATUS_COLOR: Record<string, string> = {
-  pending:   "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  sent:      "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  in_review: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400",
-  accepted:  "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  rejected:  "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
-  completed: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+  pending:        "bg-amber-100 text-amber-800",
+  in_review:      "bg-purple-100 text-purple-800",
+  sent:           "bg-blue-100 text-blue-800",
+  accepted:       "bg-emerald-100 text-emerald-800",
+  paid:           "bg-emerald-100 text-emerald-800",
+  in_preparation: "bg-cyan-100 text-cyan-800",
+  shipped:        "bg-indigo-100 text-indigo-800",
+  completed:      "bg-gray-100 text-gray-700",
+  rejected:       "bg-red-100 text-red-800",
+  cancelled:      "bg-gray-100 text-gray-500",
 };
 
 const PRAZO_OPCOES = ["24-48h", "3-5 dias úteis", "5-10 dias úteis", "Sob consulta"];
 
-// ─── Lista de orçamentos ───────────────────────────────────────────────────
+const FORMAS_PAGAMENTO = [
+  "Transferência bancária (IBAN: PT50 XXXX XXXX XXXX XXXX XXXX X)",
+  "MB Way (+351 911 564 243)",
+  "Multibanco (referência enviada por email)",
+  "Numerário (pagamento em loja)",
+];
+
+const IVA_RATE = 0.23;
+
+// ─── Lista ────────────────────────────────────────────────────────────────────
 
 function OrcamentosList() {
   const [statusFilter, setStatusFilter] = useState("all");
@@ -84,22 +105,13 @@ function OrcamentosList() {
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar por nº, cliente, empresa..."
-            className="pl-9 h-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Input placeholder="Pesquisar por nº, cliente..." className="pl-9 h-9" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40 h-9">
-            <SelectValue placeholder="Estado" />
-          </SelectTrigger>
+          <SelectTrigger className="w-48 h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
-            {STATUS_OPTIONS.map((s) => (
-              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-            ))}
+            {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -107,12 +119,10 @@ function OrcamentosList() {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
       ) : filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
-            <p>Nenhum orçamento encontrado.</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="py-12 text-center text-muted-foreground">
+          <FileText className="h-10 w-10 mx-auto mb-3 opacity-40" />
+          <p>Nenhum orçamento encontrado.</p>
+        </CardContent></Card>
       ) : (
         <div className="space-y-2">
           {filtered.map((q: any) => (
@@ -128,21 +138,18 @@ function OrcamentosList() {
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {q.customer_name || q.customer_email || "—"}
                     {q.customer_phone && ` · ${q.customer_phone}`}
-                    {" · "}
-                    {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
+                    {" · "}{new Date(q.created_at).toLocaleDateString("pt-PT")}
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 shrink-0">
                   {Number(q.total) > 0 && (
-                    <span className="text-sm font-semibold">
-                      {Number(q.total).toFixed(2).replace(".", ",")} €
-                    </span>
+                    <span className="text-sm font-semibold">{Number(q.total).toFixed(2).replace(".", ",")} €</span>
                   )}
                   {q.status === "accepted" && (
-                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">✓ Cliente aceitou</span>
+                    <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">✓ Cliente aceitou</span>
                   )}
                   {q.status === "rejected" && (
-                    <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200 shrink-0">✗ Cliente rejeitou</span>
+                    <span className="text-[10px] font-semibold text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">✗ Cliente rejeitou</span>
                   )}
                   <Button variant={q.status === "pending" ? "default" : "outline"} size="sm" asChild>
                     <Link to={`/gestao/orcamentos/${q.id}`}>
@@ -161,340 +168,434 @@ function OrcamentosList() {
   );
 }
 
-// ─── Detalhe / edição de orçamento ────────────────────────────────────────
+// ─── Detalhe ──────────────────────────────────────────────────────────────────
 
 function OrcamentoDetalhe() {
   const { id } = useParams<{ id: string }>();
-  const qc = useQueryClient();
   const navigate = useNavigate();
+  const qc = useQueryClient();
+
   const [saving, setSaving] = useState(false);
   const [sendingFinal, setSendingFinal] = useState(false);
   const [status, setStatus] = useState("");
   const [notes, setNotes] = useState("");
+  const [adminNotes, setAdminNotes] = useState("");
   const [total, setTotal] = useState("");
   const [shippingTotal, setShippingTotal] = useState("");
   const [prazoEntrega, setPrazoEntrega] = useState("");
+  const [trackingCode, setTrackingCode] = useState("");
+  const [validade, setValidade] = useState("30 dias");
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [itemEdits, setItemEdits] = useState<Record<string, { qty: number; unit_price: string; description: string }>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["gestao-quote", id],
+    enabled: !!id,
     queryFn: async () => {
-      const [q, items, shipCfg] = await Promise.all([
+      const [q, i] = await Promise.all([
         supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
         supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight)").eq("quote_id", id!),
-        supabase.from("shipping_config").select("*").eq("ativo", true),
       ]);
       if (q.error) throw q.error;
-      if (q.data) {
-        setStatus(q.data.status);
-        setNotes(q.data.notes ?? "");
-        setTotal(q.data.total != null ? String(q.data.total) : "");
-        setShippingTotal((q.data as any).shipping_total != null ? String((q.data as any).shipping_total) : "");
-        setPrazoEntrega((q.data as any).prazo_entrega ?? "");
-
-        // Auto-avançar estado: se está "sent" (por responder), marca como "in_review"
-        // ao abrir — sinaliza que está a ser tratado, aparece correctamente no Resumo.
-        if (q.data.status === "sent") {
-          supabase.from("quotes").update({ status: "in_review" as any }).eq("id", id!).then(() => {
-            setStatus("in_review");
-          });
-        }
-      }
-      return { quote: q.data, items: items.data ?? [], shippingConfigs: shipCfg.data ?? [] };
+      return { quote: q.data, items: i.data ?? [] };
     },
-    enabled: !!id,
   });
 
-  const portesSugeridos = data ? calcularPortesPorFornecedor(
-    data.items.map((it: any) => ({
-      fornecedor: it.products?.fornecedor,
-      quantity: it.quantity,
-      weight: it.products?.weight,
-    })),
-    data.shippingConfigs as any,
-  ) : [];
-  const sugestaoTotal = totalPortesComIva(portesSugeridos);
+  useEffect(() => {
+    if (!data?.quote) return;
+    const q = data.quote as any;
+    if (q.status === "sent") {
+      supabase.from("quotes").update({ status: "in_review" as any }).eq("id", id!).then(() => {
+        qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+      });
+    }
+    setStatus(q.status);
+    setNotes(q.notes ?? "");
+    setAdminNotes(q.admin_notes ?? "");
+    setTotal(q.total != null ? String(q.total) : "");
+    setShippingTotal(q.shipping_total != null ? String(q.shipping_total) : "");
+    setPrazoEntrega(q.prazo_entrega ?? "");
+    setTrackingCode((q as any).tracking_code ?? "");
+  }, [data?.quote]);
+
+  const items = data?.items ?? [];
+
+  // Calcular subtotal dos itens editados
+  const subtotalItens = items.reduce((s: number, it: any) => {
+    const edit = itemEdits[it.id];
+    const qty = edit?.qty ?? it.quantity;
+    const price = edit ? parseFloat(edit.unit_price) || 0 : (it.unit_price ?? 0);
+    return s + qty * price;
+  }, 0);
+
+  const shippingNum = parseFloat(shippingTotal.replace(",", ".")) || 0;
+  const totalCalc = subtotalItens + shippingNum;
+  const subtotalSemIva = totalCalc / (1 + IVA_RATE);
+  const ivaValor = totalCalc - subtotalSemIva;
 
   const handleSave = async () => {
-    if (!id) return;
     setSaving(true);
+    try {
+      // Gravar edições de itens
+      for (const [itemId, edit] of Object.entries(itemEdits)) {
+        const qty = edit.qty;
+        const unitPrice = parseFloat(edit.unit_price) || 0;
+        await supabase.from("quote_items").update({
+          quantity: qty,
+          unit_price: unitPrice,
+          line_total: qty * unitPrice,
+          product_name_snapshot: edit.description,
+        }).eq("id", itemId);
+      }
+      setItemEdits({});
+      setEditingItem(null);
 
-    // Guardar o estado anterior para saber se mudou
-    const estadoAnterior = data?.quote?.status;
+      await supabase.from("quotes").update({
+        status: status as any,
+        notes: notes.trim() || null,
+        admin_notes: adminNotes.trim() || null,
+        total: totalCalc > 0 ? totalCalc : null,
+        shipping_total: shippingNum > 0 ? shippingNum : null,
+        prazo_entrega: prazoEntrega.trim() || null,
+      } as any).eq("id", id!);
 
-    const { error } = await supabase.from("quotes").update({
-      status: status as any,
-      notes: notes.trim() || null,
-      total: total ? parseFloat(total.replace(",", ".")) : null,
-      shipping_total: shippingTotal ? parseFloat(shippingTotal.replace(",", ".")) : null,
-      prazo_entrega: prazoEntrega.trim() || null,
-    } as any).eq("id", id);
-    setSaving(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Orçamento atualizado.");
-
-    // Notificar cliente se o estado mudou para um estado relevante.
-    // (accepted é tratado pelo send-quote-final; in_review é transição interna)
-    if (status !== estadoAnterior && ["rejected", "cancelled", "completed"].includes(status)) {
-      supabase.functions
-        .invoke("send-quote-status-update", { body: { quoteId: id, newStatus: status } })
-        .then(({ error: emailErr }) => {
-          if (emailErr) {
-            console.warn("[Orçamento] email notification failed:", emailErr);
-            toast.warning("Estado guardado, mas falhou o envio do email ao cliente.");
-          } else {
-            toast.info("Cliente notificado por email.");
-          }
-        });
+      qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
+      qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+      toast.success("Guardado.");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao guardar.");
+    } finally {
+      setSaving(false);
     }
-
-    qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
-    qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
-    qc.invalidateQueries({ queryKey: ["gestao-stats"] });
-    qc.invalidateQueries({ queryKey: ["gestao-recent-quotes"] });
   };
 
   const handleSendFinal = async () => {
     if (!id) return;
     if (!shippingTotal.trim() || !prazoEntrega.trim()) {
-      toast.error("Preenche portes e prazo de entrega antes de enviar o orçamento final.");
+      toast.error("Preenche portes e prazo de entrega antes de enviar.");
       return;
     }
     setSendingFinal(true);
     try {
-      // Garante que o que está no ecrã fica gravado antes de enviar.
       await supabase.from("quotes").update({
         status: status as any,
         notes: notes.trim() || null,
-        total: total ? parseFloat(total.replace(",", ".")) : null,
-        shipping_total: parseFloat(shippingTotal.replace(",", ".")),
-        prazo_entrega: prazoEntrega.trim(),
+        total: totalCalc > 0 ? totalCalc : null,
+        shipping_total: shippingNum > 0 ? shippingNum : null,
+        prazo_entrega: prazoEntrega.trim() || null,
       } as any).eq("id", id);
 
       const { data: result, error } = await supabase.functions.invoke("send-quote-final", { body: { quoteId: id } });
       if (error) throw error;
       if (result?.error) throw new Error(result.error);
-      if (result?.skipped) {
-        toast.warning("Orçamento gravado, mas o cliente não tem email associado — não foi possível enviar.");
-      } else {
-        // Auto-avançar para "accepted" — o orçamento final foi enviado, está na mão do cliente.
-        await supabase.from("quotes").update({ status: "accepted" as any }).eq("id", id!);
-        setStatus("accepted");
-        toast.success("Orçamento final enviado ao cliente.");
-      }
+
+      await supabase.from("quotes").update({ status: "sent" as any }).eq("id", id!);
+      setStatus("sent");
+      toast.success("Orçamento enviado ao cliente — aguarda resposta.");
       qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
       qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
     } catch (e: any) {
-      toast.error(e.message ?? "Erro ao enviar orçamento final.");
+      toast.error(e.message ?? "Erro ao enviar.");
     } finally {
       setSendingFinal(false);
     }
   };
 
+  const handleUpdateStatus = async (newStatus: string) => {
+    setStatus(newStatus);
+    await supabase.from("quotes").update({ status: newStatus as any }).eq("id", id!);
+    // Notificar cliente nos estados relevantes
+    if (["shipped", "in_preparation", "paid", "completed"].includes(newStatus)) {
+      await supabase.functions.invoke("send-quote-status-update", {
+        body: { quoteId: id, newStatus, triggeredBy: "gestor" },
+      });
+    }
+    qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+    toast.success(`Estado actualizado para "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label ?? newStatus}".`);
+  };
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
   if (!data?.quote) return <Card><CardContent className="py-12 text-center text-muted-foreground">Orçamento não encontrado.</CardContent></Card>;
 
-  const { quote, items } = data;
-  const profile = null; // customer_profiles requer FK explícita — usar campos diretos
+  const { quote } = data;
   const sentFinalAt = (quote as any).sent_final_at;
+  const canSendFinal = !["completed", "cancelled", "rejected"].includes(status);
 
   return (
     <div className="space-y-4">
-      <Button variant="ghost" size="sm" onClick={() => navigate("/gestao/orcamentos")}>
-        <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-      </Button>
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/gestao/orcamentos")}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+        </Button>
+        <span className="font-mono font-bold text-lg">{quote.quote_number}</span>
+        <Badge className={STATUS_COLOR[status] ?? ""}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
+        <div className="ml-auto flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => generateQuotePdf(
+            { ...quote, notes, prazo_entrega: prazoEntrega, total: totalCalc, shipping_total: shippingNum, validade } as any,
+            items.map((it: any) => ({
+              ...it,
+              quantity: itemEdits[it.id]?.qty ?? it.quantity,
+              unit_price: itemEdits[it.id] ? parseFloat(itemEdits[it.id].unit_price) : it.unit_price,
+              line_total: (itemEdits[it.id]?.qty ?? it.quantity) * (itemEdits[it.id] ? parseFloat(itemEdits[it.id].unit_price) || 0 : it.unit_price ?? 0),
+              product_name_snapshot: itemEdits[it.id]?.description ?? it.product_name_snapshot,
+            }))
+          )} className="gap-1.5">
+            <Download className="h-4 w-4" /> PDF
+          </Button>
+        </div>
+      </div>
 
-      <div className="grid md:grid-cols-[1fr_320px] gap-4">
-        {/* Itens do orçamento */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-mono">{quote.quote_number}</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {new Date(quote.created_at).toLocaleString("pt-PT")}
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {/* Dados do cliente */}
-            {quote.customer_name && (
-              <div className="rounded-lg bg-muted/50 p-3 text-sm space-y-1">
-                <p className="font-medium">{quote.customer_name}</p>
-                {quote.customer_phone && <p className="text-muted-foreground">{quote.customer_phone}</p>}
-                {quote.customer_email && <p className="text-muted-foreground">{quote.customer_email}</p>}
-              </div>
-            )}
+      <div className="grid md:grid-cols-[1fr_300px] gap-4 items-start">
 
-            {/* Linhas de produto */}
-            <div className="divide-y divide-border">
-              {items.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">Sem itens registados.</p>
-              ) : items.map((it: any) => (
-                <div key={it.id} className="flex items-center gap-3 py-3">
-                  {it.product_image_snapshot && (
-                    <img src={it.product_image_snapshot} alt="" className="h-12 w-12 object-cover rounded bg-secondary flex-shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                      {it.product_name_snapshot}
-                      {it.products?.stock_status === "on_request" && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                          <PackageX className="h-2.5 w-2.5" /> Sem stock — confirmar c/ fornecedor
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Qtd: {it.quantity}
-                      {it.unit_price != null && ` · ${Number(it.unit_price).toFixed(2).replace(".", ",")} €/un`}
-                      {it.products?.fornecedor && ` · ${it.products.fornecedor}`}
-                    </p>
-                  </div>
-                  {it.line_total != null && Number(it.line_total) > 0 && (
-                    <span className="text-sm font-semibold flex-shrink-0">
-                      {Number(it.line_total).toFixed(2).replace(".", ",")} €
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Painel de gestão */}
+        {/* ── Coluna principal ── */}
         <div className="space-y-4">
+
+          {/* Dados do cliente */}
           <Card>
-            <CardHeader><CardTitle className="text-base">Gestão</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Cliente</CardTitle></CardHeader>
+            <CardContent className="text-sm space-y-1">
+              <p className="font-semibold">{quote.customer_name || "—"}</p>
+              {(quote as any).customer_company && <p className="text-muted-foreground">{(quote as any).customer_company}</p>}
+              {(quote as any).customer_tax_id && <p className="text-muted-foreground">NIF: {(quote as any).customer_tax_id}</p>}
+              {quote.customer_phone && <p className="text-muted-foreground">{quote.customer_phone}</p>}
+              {quote.customer_email && <p className="text-muted-foreground">{quote.customer_email}</p>}
+              {(quote as any).shipping_address && (
+                <p className="text-muted-foreground mt-1">{(quote as any).shipping_address}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Produtos — editáveis */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                Produtos
+                <span className="text-xs font-normal text-muted-foreground">Clica em ✏️ para editar</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="divide-y divide-border">
+                {items.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">Sem itens registados.</p>
+                ) : items.map((it: any) => {
+                  const edit = itemEdits[it.id];
+                  const isEditing = editingItem === it.id;
+                  const qty = edit?.qty ?? it.quantity;
+                  const unitPrice = edit ? parseFloat(edit.unit_price) || 0 : (it.unit_price ?? 0);
+                  const lineTotal = qty * unitPrice;
+                  const name = edit?.description ?? it.product_name_snapshot;
+
+                  return (
+                    <div key={it.id} className="py-3">
+                      {isEditing ? (
+                        <div className="space-y-2">
+                          <Input
+                            value={edit?.description ?? it.product_name_snapshot}
+                            onChange={e => setItemEdits(p => ({ ...p, [it.id]: { ...p[it.id], description: e.target.value } }))}
+                            className="h-8 text-sm"
+                          />
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <Label className="text-[10px]">Qtd</Label>
+                              <Input type="number" min={1} value={edit?.qty ?? it.quantity}
+                                onChange={e => setItemEdits(p => ({ ...p, [it.id]: { ...p[it.id], qty: parseInt(e.target.value) || 1 } }))}
+                                className="h-8 text-sm" />
+                            </div>
+                            <div>
+                              <Label className="text-[10px]">Preço unit. c/IVA (€)</Label>
+                              <Input value={edit?.unit_price ?? (it.unit_price != null ? String(it.unit_price) : "")}
+                                onChange={e => setItemEdits(p => ({ ...p, [it.id]: { ...p[it.id], unit_price: e.target.value } }))}
+                                className="h-8 text-sm" placeholder="0.00" />
+                            </div>
+                            <div>
+                              <Label className="text-[10px]">Total (€)</Label>
+                              <Input value={lineTotal > 0 ? lineTotal.toFixed(2) : ""} readOnly className="h-8 text-sm bg-muted/30" />
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => setEditingItem(null)} className="h-7 gap-1"><Save className="h-3 w-3" /> OK</Button>
+                            <Button size="sm" variant="ghost" onClick={() => { setEditingItem(null); setItemEdits(p => { const n = { ...p }; delete n[it.id]; return n; }); }} className="h-7"><X className="h-3 w-3" /></Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          {it.product_image_snapshot && (
+                            <img src={it.product_image_snapshot} alt="" className="h-10 w-10 object-cover rounded bg-secondary flex-shrink-0" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {qty}× {unitPrice > 0 ? `${unitPrice.toFixed(2).replace(".", ",")} €/un` : "—"}
+                              {it.products?.fornecedor && ` · ${it.products.fornecedor}`}
+                              {it.products?.stock_status === "on_request" && (
+                                <span className="ml-1 text-amber-600">⚠ Confirmar stock</span>
+                              )}
+                            </p>
+                          </div>
+                          {lineTotal > 0 && (
+                            <span className="text-sm font-semibold flex-shrink-0">{lineTotal.toFixed(2).replace(".", ",")} €</span>
+                          )}
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0"
+                            onClick={() => {
+                              setEditingItem(it.id);
+                              if (!itemEdits[it.id]) {
+                                setItemEdits(p => ({ ...p, [it.id]: {
+                                  qty: it.quantity,
+                                  unit_price: it.unit_price != null ? String(it.unit_price) : "",
+                                  description: it.product_name_snapshot,
+                                }}));
+                              }
+                            }}>
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Totais */}
+              <Separator className="my-3" />
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal s/ IVA</span>
+                  <span>{subtotalSemIva > 0 ? subtotalSemIva.toFixed(2).replace(".", ",") + " €" : "—"}</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>IVA (23%)</span>
+                  <span>{ivaValor > 0 ? ivaValor.toFixed(2).replace(".", ",") + " €" : "—"}</span>
+                </div>
+                {shippingNum > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Portes</span>
+                    <span>{shippingNum.toFixed(2).replace(".", ",")} €</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-base pt-1 border-t">
+                  <span>Total c/ IVA</span>
+                  <span className="text-primary">{totalCalc > 0 ? totalCalc.toFixed(2).replace(".", ",") + " €" : "—"}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notas para o cliente */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Notas para o cliente</CardTitle></CardHeader>
+            <CardContent>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+                placeholder="Condições, observações, informações que saem no email e PDF..." />
+            </CardContent>
+          </Card>
+
+          {/* Notas internas */}
+          <Card className="border-amber-200/60 bg-amber-50/30 dark:bg-amber-950/10">
+            <CardHeader className="pb-2"><CardTitle className="text-sm text-amber-700">🔒 Notas internas</CardTitle></CardHeader>
+            <CardContent>
+              <Textarea value={adminNotes} onChange={(e) => setAdminNotes(e.target.value)} rows={2}
+                placeholder="Notas internas — não saem no email nem no PDF..." />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ── Painel lateral ── */}
+        <div className="space-y-4">
+
+          {/* Estado */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Estado</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <Select value={status} onValueChange={handleUpdateStatus}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+
+              {/* Campo de tracking quando expedido */}
+              {status === "shipped" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Nº de tracking / transportadora</Label>
+                  <Input value={trackingCode} onChange={e => setTrackingCode(e.target.value)} placeholder="ex: CTT123456789PT" className="h-9" />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Orçamento */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Proposta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Estado</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className="text-xs flex items-center gap-1"><Truck className="h-3 w-3" /> Portes c/ IVA (€)</Label>
+                <Input value={shippingTotal} onChange={(e) => setShippingTotal(e.target.value)} placeholder="0.00" className="h-9" />
               </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Total (€)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={total}
-                    onChange={(e) => setTotal(e.target.value)}
-                    placeholder="0.00"
-                    className="h-9"
-                  />
-                  <Button
-                    type="button" variant="outline" size="sm" className="h-9 whitespace-nowrap text-xs"
-                    onClick={() => {
-                      const subtotalItens = items.reduce((s: number, it: any) => s + (Number(it.line_total) || 0), 0);
-                      const portes = shippingTotal ? parseFloat(shippingTotal.replace(",", ".")) || 0 : 0;
-                      setTotal((subtotalItens + portes).toFixed(2));
-                    }}
-                  >
-                    Recalcular
-                  </Button>
-                </div>
-                <p className="text-[11px] text-muted-foreground">Soma dos produtos + portes preenchidos acima.</p>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs flex items-center gap-1"><Truck className="h-3 w-3" /> Portes (€, c/ IVA)</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={shippingTotal}
-                    onChange={(e) => setShippingTotal(e.target.value)}
-                    placeholder="0.00"
-                    className="h-9"
-                  />
-                  {sugestaoTotal > 0 && (
-                    <Button
-                      type="button" variant="outline" size="sm" className="h-9 whitespace-nowrap text-xs"
-                      onClick={() => setShippingTotal(sugestaoTotal.toFixed(2))}
-                    >
-                      Sugestão: {sugestaoTotal.toFixed(2).replace(".", ",")} €
-                    </Button>
-                  )}
-                </div>
-                {portesSugeridos.length > 0 && (
-                  <p className="text-[11px] text-muted-foreground">
-                    {portesSugeridos.map(p => `${p.fornecedor}: ${p.portesComIva.toFixed(2).replace(".", ",")}€ (${p.descricao})`).join(" · ")}
-                  </p>
-                )}
-              </div>
-
               <div className="space-y-1.5">
                 <Label className="text-xs">Prazo de entrega</Label>
-                <Input
-                  value={prazoEntrega}
-                  onChange={(e) => setPrazoEntrega(e.target.value)}
-                  placeholder="ex: 3-5 dias úteis"
-                  className="h-9"
-                />
-                <div className="flex flex-wrap gap-1.5">
+                <Input value={prazoEntrega} onChange={(e) => setPrazoEntrega(e.target.value)} placeholder="ex: 3-5 dias úteis" className="h-9" />
+                <div className="flex flex-wrap gap-1">
                   {PRAZO_OPCOES.map(opt => (
-                    <Button
-                      key={opt} type="button" variant="secondary" size="sm" className="h-7 text-[11px] px-2"
-                      onClick={() => setPrazoEntrega(opt)}
-                    >
-                      {opt}
-                    </Button>
+                    <Button key={opt} type="button" variant="secondary" size="sm" className="h-6 text-[10px] px-2"
+                      onClick={() => setPrazoEntrega(opt)}>{opt}</Button>
                   ))}
                 </div>
               </div>
-
               <div className="space-y-1.5">
-                <Label className="text-xs">Notas internas / resposta ao cliente</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={4}
-                  placeholder="Observações, condições de pagamento..."
-                />
+                <Label className="text-xs">Validade do orçamento</Label>
+                <Input value={validade} onChange={(e) => setValidade(e.target.value)} placeholder="30 dias" className="h-9" />
               </div>
+            </CardContent>
+          </Card>
 
+          {/* Ações */}
+          <Card>
+            <CardContent className="pt-4 space-y-2">
               <Button className="w-full" onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 Guardar alterações
               </Button>
 
-              {quote.customer_email && (
+              {canSendFinal && quote.customer_email && (
                 <Button className="w-full" variant="default" onClick={handleSendFinal} disabled={sendingFinal}>
                   {sendingFinal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                  Enviar Orçamento Final
+                  Enviar Orçamento ao Cliente
                 </Button>
               )}
+
               {sentFinalAt && (
                 <p className="text-[11px] text-muted-foreground flex items-center gap-1 justify-center">
                   <CheckCircle2 className="h-3 w-3 text-green-600" />
                   Enviado em {new Date(sentFinalAt).toLocaleString("pt-PT")}
                 </p>
               )}
-            </CardContent>
-          </Card>
 
-          {/* Acções rápidas */}
-          {(profile?.phone || quote.customer_phone) && (
-            <Card>
-              <CardHeader><CardTitle className="text-base">Acções rápidas</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                <Button variant="outline" size="sm" className="w-full justify-start gap-2" asChild>
-                  <a
-                    href={`https://wa.me/351${(profile?.phone || quote.customer_phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${(profile?.full_name || quote.customer_name) ? " " + (profile?.full_name || quote.customer_name || "").split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
-                    target="_blank" rel="noopener noreferrer"
-                  >
+              {/* WhatsApp */}
+              {quote.customer_phone && (
+                <Button variant="outline" size="sm" className="w-full gap-2" asChild>
+                  <a href={`https://wa.me/351${quote.customer_phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Olá${quote.customer_name ? " " + quote.customer_name.split(" ")[0] : ""}, sobre o orçamento ${quote.quote_number}:`)}`}
+                    target="_blank" rel="noopener noreferrer">
                     💬 WhatsApp
                   </a>
                 </Button>
-              </CardContent>
-            </Card>
-          )}
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Info */}
+          <Card>
+            <CardContent className="pt-4 text-xs text-muted-foreground space-y-1">
+              <p>Criado: {new Date(quote.created_at).toLocaleString("pt-PT")}</p>
+              <p>Ref: <span className="font-mono">{quote.quote_number}</span></p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Router interno ───────────────────────────────────────────────────────
+// ─── Router ───────────────────────────────────────────────────────────────────
 
 export default function GestaoOrcamentos() {
   return (
