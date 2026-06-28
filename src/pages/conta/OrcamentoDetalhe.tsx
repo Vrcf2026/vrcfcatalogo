@@ -13,18 +13,41 @@ import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Pendente", sent: "Enviado", in_review: "Em análise",
-  accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
+  pending:        "Pedido recebido",
+  in_review:      "A preparar orçamento",
+  sent:           "Orçamento enviado",
+  accepted:       "Aceite",
+  paid:           "Pago",
+  in_preparation: "Em preparação",
+  shipped:        "Expedido",
+  completed:      "Concluído",
+  rejected:       "Rejeitado",
+  cancelled:      "Cancelado",
+};
+
+// Mensagem contextual por estado — o que o cliente precisa de saber
+const STATUS_INFO: Record<string, { msg: string; color: string }> = {
+  pending:        { msg: "O seu pedido foi recebido. Estamos a preparar o orçamento.", color: "bg-amber-50 border-amber-200 text-amber-800" },
+  in_review:      { msg: "Estamos a analisar o seu pedido e a preparar o orçamento. Receberá um email quando estiver pronto.", color: "bg-purple-50 border-purple-200 text-purple-800" },
+  accepted:       { msg: "Orçamento aceite. Aguarde contacto para confirmação do pagamento.", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
+  paid:           { msg: "Pagamento recebido. O pedido vai ser processado em breve.", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
+  in_preparation: { msg: "O seu pedido está em preparação.", color: "bg-cyan-50 border-cyan-200 text-cyan-800" },
+  shipped:        { msg: "O seu pedido foi expedido.", color: "bg-indigo-50 border-indigo-200 text-indigo-800" },
+  completed:      { msg: "Pedido concluído. Obrigado pela preferência!", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
+  rejected:       { msg: "Orçamento rejeitado.", color: "bg-red-50 border-red-200 text-red-800" },
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending:   "bg-amber-100 text-amber-800 border-amber-200",
-  sent:      "bg-blue-100 text-blue-800 border-blue-200",
-  in_review: "bg-purple-100 text-purple-800 border-purple-200",
-  accepted:  "bg-emerald-100 text-emerald-800 border-emerald-200",
-  rejected:  "bg-red-100 text-red-800 border-red-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
-  completed: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  pending:        "bg-amber-100 text-amber-800 border-amber-200",
+  in_review:      "bg-purple-100 text-purple-800 border-purple-200",
+  sent:           "bg-blue-100 text-blue-800 border-blue-200",
+  accepted:       "bg-emerald-100 text-emerald-800 border-emerald-200",
+  paid:           "bg-emerald-100 text-emerald-800 border-emerald-200",
+  in_preparation: "bg-cyan-100 text-cyan-800 border-cyan-200",
+  shipped:        "bg-indigo-100 text-indigo-800 border-indigo-200",
+  completed:      "bg-gray-100 text-gray-700 border-gray-200",
+  rejected:       "bg-red-100 text-red-800 border-red-200",
+  cancelled:      "bg-gray-100 text-gray-600 border-gray-200",
 };
 
 export default function OrcamentoDetalhe() {
@@ -126,7 +149,22 @@ export default function OrcamentoDetalhe() {
         <Link to="/conta/orcamentos"><ArrowLeft className="h-4 w-4 mr-1" />Voltar</Link>
       </Button>
 
-      {/* Bloco de decisão */}
+      {/* Bloco informativo para estados de espera */}
+      {["pending", "in_review"].includes(quote?.status ?? "") && STATUS_INFO[quote?.status ?? ""] && (
+        <Card className={`border ${STATUS_INFO[quote!.status].color}`}>
+          <CardContent className="py-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-current/10 flex items-center justify-center shrink-0">
+              <Loader2 className="h-4 w-4 animate-spin opacity-60" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">{STATUS_LABEL[quote!.status]}</p>
+              <p className="text-xs opacity-80 mt-0.5">{STATUS_INFO[quote!.status].msg}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bloco de decisão — só quando gestor enviou orçamento */}
       {canDecide && !showRejectForm && (
         <Card className="border-blue-200 bg-blue-50/60 dark:bg-blue-950/20 dark:border-blue-900/40">
           <CardContent className="py-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -263,6 +301,21 @@ export default function OrcamentoDetalhe() {
               <div className="flex justify-between font-semibold">
                 <span>Total c/ IVA</span><span>{Number(quote.total).toFixed(2).replace(".", ",")} €</span>
               </div>
+            </div>
+          )}
+
+          {/* Tracking quando expedido */}
+          {quote.status === "shipped" && (quote as any).tracking_code && (
+            <div className="rounded-lg bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-200 px-3 py-2">
+              <p className="text-xs font-medium text-indigo-700 mb-0.5">Nº de seguimento / Tracking</p>
+              <p className="text-sm font-mono text-indigo-800">{(quote as any).tracking_code}</p>
+            </div>
+          )}
+
+          {/* Mensagem de estado para accepted/paid/in_preparation/shipped/completed */}
+          {STATUS_INFO[quote.status] && !["pending","in_review","sent","rejected","cancelled"].includes(quote.status) && (
+            <div className={`rounded-lg border px-3 py-2 ${STATUS_INFO[quote.status].color}`}>
+              <p className="text-xs">{STATUS_INFO[quote.status].msg}</p>
             </div>
           )}
 
