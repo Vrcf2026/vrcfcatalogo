@@ -32,6 +32,7 @@ const ContaOrcamentos = lazy(() => import("./pages/conta/Orcamentos.tsx"));
 const OrcamentoDetalhe = lazy(() => import("./pages/conta/OrcamentoDetalhe.tsx"));
 const ContaRMA = lazy(() => import("./pages/conta/RMA.tsx"));
 const ContaDados = lazy(() => import("./pages/conta/Dados.tsx"));
+const ContaMoradas = lazy(() => import("./pages/conta/Moradas.tsx"));
 const Gestao = lazy(() => import("./pages/Gestao.tsx"));
 const GestaoDashboard = lazy(() => import("./pages/gestao/Dashboard.tsx"));
 const GestaoOrcamentos = lazy(() => import("./pages/gestao/Orcamentos.tsx"));
@@ -90,6 +91,7 @@ const App = () => (
                     <Route path="orcamentos" element={<ContaOrcamentos />} />
                     <Route path="orcamentos/:id" element={<OrcamentoDetalhe />} />
                     <Route path="rma" element={<ContaRMA />} />
+                    <Route path="moradas" element={<ContaMoradas />} />
                     <Route path="dados" element={<ContaDados />} />
                   </Route>
                   <Route path="/orcamento" element={<PaginaOrcamento />} />
