@@ -184,6 +184,7 @@ export default function PaginaOrcamento() {
             product_id: i.id,
             product_name_snapshot: i.name,
             product_image_snapshot: i.imageUrl,
+            product_sku_snapshot: (i as any).sku ?? null,
             unit_price: i.price ?? 0,
             quantity: i.quantity,
             line_total: (i.price ?? 0) * i.quantity,
@@ -411,7 +412,7 @@ export default function PaginaOrcamento() {
                   onClick={() => setShippingOption("pickup")}
                   className={`text-left rounded-xl border px-3 py-2.5 text-xs transition-all ${shippingOption === "pickup" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"}`}>
                   <p className="font-semibold mb-0.5">Levantamento em loja</p>
-                  <p className="text-muted-foreground">Sem portes de envio</p>
+                  <p className="text-muted-foreground">Montijo · Seg-Sex 9h-18h</p>
                 </button>
               </div>
 
@@ -501,8 +502,8 @@ export default function PaginaOrcamento() {
               )}
             </div>
 
-            {/* Portes */}
-            {temEnvioEspecial ? (
+            {/* Portes — não mostrar quando levantamento em loja */}
+            {shippingOption !== "pickup" && temEnvioEspecial ? (
               <div className="rounded-xl bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 p-3 space-y-1">
                 <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-400">
                   <Truck className="h-3.5 w-3.5 shrink-0" /> Portes
@@ -511,7 +512,7 @@ export default function PaginaOrcamento() {
                   Um ou mais produtos têm condições especiais de envio. O valor dos portes será calculado e incluído no orçamento final.
                 </p>
               </div>
-            ) : portes.length > 0 ? (
+            ) : shippingOption !== "pickup" && portes.length > 0 ? (
               <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 space-y-1.5">
                 <div className="flex justify-between items-center text-sm">
                   <span className="flex items-center gap-1.5 font-medium">
@@ -528,9 +529,11 @@ export default function PaginaOrcamento() {
             <div className="border-t border-border pt-3 flex justify-between font-bold text-base">
               <span>Total estimado</span>
               <span className="text-primary">
-                {temEnvioEspecial
-                  ? `${subtotalComIva.toFixed(2).replace(".", ",")} € + portes`
-                  : totalGeral.toFixed(2).replace(".", ",")} €
+                {shippingOption === "pickup"
+                  ? `${subtotalComIva.toFixed(2).replace(".", ",")} €`
+                  : temEnvioEspecial
+                    ? `${subtotalComIva.toFixed(2).replace(".", ",")} € + portes`
+                    : `${totalGeral.toFixed(2).replace(".", ",")} €`}
               </span>
             </div>
 
