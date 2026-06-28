@@ -813,25 +813,25 @@ def main(local=False):
         else:
             desc_intro_limpa = FRASE_PADRAO
 
-        # Título SEO otimizado para recondicionados
+        # Título SEO otimizado — nome original + specs chave
         def construir_nome_seo(nome_orig: str, marca_prod: str, specs_dict: dict) -> str:
-            partes = []
-            tipo = specs_dict.get("tipo", "")
-            if tipo and tipo not in nome_orig: partes.append(tipo)
-            if marca_prod and marca_prod.upper() not in nome_orig.upper(): partes.append(marca_prod)
-            proc = specs_dict.get("processador", "")
-            if proc:
-                proc_curto = proc.replace("Intel Core ", "").replace("AMD Ryzen ", "Ryzen ")
-                partes.append(proc_curto[:15])
-            ecra = specs_dict.get("ecra_polegadas", "")
-            if ecra: partes.append(f'{ecra}"')
+            # Limpar "Recondicionado" e "Grau X" do nome para não duplicar
+            nome_limpo = re.sub(r'\b(?:Recondicionado|Grau\s+[AB]|GRADO\s+[AB])\b', '', nome_orig, flags=re.IGNORECASE).strip()
+            nome_limpo = re.sub(r'\s{2,}', ' ', nome_limpo).strip()
+            partes = [nome_limpo] if nome_limpo else [nome_orig]
+            # Acrescentar RAM e armazenamento se não estiverem já no nome
             ram = specs_dict.get("ram_gb", "")
-            if ram: partes.append(f"{ram}GB")
             arm_gb = specs_dict.get("armazenamento_gb", "")
             arm_tipo = specs_dict.get("armazenamento_tipo", "")
-            if arm_gb: partes.append(f"{arm_gb}GB {arm_tipo}".strip() if arm_tipo else f"{arm_gb}GB")
             grau = specs_dict.get("grau", "")
-            if grau: partes.append(f"Grau {grau}")
+            if ram and f"{ram}GB" not in nome_limpo:
+                partes.append(f"{ram}GB RAM")
+            if arm_gb:
+                arm_str = f"{arm_gb}GB {arm_tipo}".strip() if arm_tipo else f"{arm_gb}GB"
+                if arm_str not in nome_limpo:
+                    partes.append(arm_str)
+            if grau:
+                partes.append(f"Grau {grau}")
             partes.append("Recondicionado")
             titulo = " ".join(partes)
             return titulo if len(titulo) > 20 else nome_orig
