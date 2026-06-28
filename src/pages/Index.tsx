@@ -454,25 +454,34 @@ const Index = () => {
 
       {/* ── VISTOS RECENTEMENTE (primeiro para utilizadores recorrentes) ── */}
       {recentlyViewed.length > 0 && (
-        <section className="px-3 pb-5 max-w-[1600px] mx-auto w-full">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <History className="h-4 w-4 text-muted-foreground" /> Vistos Recentemente
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {recentlyViewed.slice(0, 4).map((p: any) => (
-              <ProductCard
+        <section className="px-3 pb-4 max-w-[1600px] mx-auto w-full">
+          <h2 className="text-sm font-bold text-foreground flex items-center gap-1.5 mb-2.5">
+            <History className="h-4 w-4 text-muted-foreground" /> Vistos Recentemente
+          </h2>
+          <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+            {recentlyViewed.slice(0, 8).map((p: any) => (
+              <Link
                 key={p.id}
-                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                description={p.short_description ?? null}
-                category={p.category} price={p.price}
-                imageUrl={p.image_url} images={[]}
-                familyName={null} brandName={p.brand || null}
-                featured={false} stockStatus={p.stock_status}
-                minSaleQty={p.min_sale_qty ?? null}
-                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
-              />
+                to={`/produto/${p.slug ?? p.id}`}
+                className="shrink-0 w-[110px] group"
+              >
+                <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-sm transition-all">
+                  <div className="aspect-square bg-muted/30 overflow-hidden">
+                    {p.image_url
+                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform duration-200" />
+                      : <div className="w-full h-full flex items-center justify-center opacity-30 text-2xl">📦</div>
+                    }
+                  </div>
+                  <div className="px-2 py-1.5">
+                    <p className="text-[11px] font-medium text-foreground line-clamp-2 leading-tight mb-1">{p.name}</p>
+                    {p.price != null && (
+                      <p className="text-[11px] font-bold text-primary">
+                        {(p.price * 1.23).toFixed(2).replace(".", ",")} €
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         </section>
