@@ -277,7 +277,17 @@ export default function OrcamentoDetalhe() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{it.product_name_snapshot}</div>
-                  <div className="text-xs text-muted-foreground">{it.quantity}×</div>
+                  <div className="text-xs text-muted-foreground">
+                    {it.quantity}×
+                    {it.unit_price != null && Number(it.unit_price) > 0 && (
+                      <span className="ml-1">{Number(it.unit_price).toFixed(2).replace(".", ",")} €/un</span>
+                    )}
+                  </div>
+                  {it.product_sku_snapshot && (
+                    <div className="text-[10px] font-mono text-muted-foreground/60 mt-0.5">
+                      REF: {it.product_sku_snapshot}
+                    </div>
+                  )}
                 </div>
                 {it.line_total != null && Number(it.line_total) > 0 && (
                   <div className="text-sm font-semibold">{Number(it.line_total).toFixed(2).replace(".", ",")} €</div>
