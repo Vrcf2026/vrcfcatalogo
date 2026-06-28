@@ -33,6 +33,9 @@ export default function PaginaOrcamento() {
   const [sendCopy, setSendCopy]           = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading]             = useState(false);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [shippingOption, setShippingOption] = useState<"saved" | "new" | "pickup">("new");
+  const [newAddress, setNewAddress] = useState({ line1: "", line2: "", city: "", postal_code: "", country: "Portugal" });
   const [success, setSuccess]             = useState(false);
   const submitTimestamps = useRef<number[]>([]);
 
