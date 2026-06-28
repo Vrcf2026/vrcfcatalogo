@@ -36,6 +36,22 @@ export default function PaginaOrcamento() {
   const [success, setSuccess]             = useState(false);
   const submitTimestamps = useRef<number[]>([]);
 
+  // Moradas guardadas do cliente (só se tiver conta)
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["shipping-addresses", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("shipping_addresses" as any)
+        .select("*").eq("user_id", user!.id)
+        .order("is_default", { ascending: false }).order("created_at");
+      return (data ?? []) as any[];
+    },
+    staleTime: 60 * 1000,
+  });
+
+  // Auto-selecionar morada default
+  const defaultAddr = savedAddresses.find((a: any) => a.is_default) ?? savedAddresses[0];
+
   const { data: shippingConfigs = [] } = useQuery({
     queryKey: ["shipping_config"],
     queryFn: async () => {
@@ -145,6 +161,17 @@ export default function PaginaOrcamento() {
             customer_name: name.trim(),
             customer_email: email.trim(),
             customer_phone: phone.trim(),
+            shipping_address: (() => {
+              if (shippingOption === "pickup") return "Levantamento em loja";
+              if (shippingOption === "saved" && selectedAddressId) {
+                const a = savedAddresses.find((x: any) => x.id === selectedAddressId);
+                if (a) return `${a.address_line1}${a.address_line2 ? ", " + a.address_line2 : ""}, ${a.postal_code} ${a.city}, ${a.country}`;
+              }
+              if (newAddress.line1.trim()) {
+                return `${newAddress.line1.trim()}${newAddress.line2 ? ", " + newAddress.line2 : ""}, ${newAddress.postal_code} ${newAddress.city}, ${newAddress.country}`;
+              }
+              return null;
+            })(),
           } as any)
           .select("id")
           .single();
@@ -358,6 +385,75 @@ export default function PaginaOrcamento() {
               <Label htmlFor="notes" className="text-xs">Observações</Label>
               <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Informações adicionais, referências, condições especiais..." maxLength={1000} rows={3} />
             </div>
+
+            {/* Morada de entrega */}
+            <div className="space-y-2.5">
+              <Label className="text-xs font-semibold">Morada de entrega</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {user && savedAddresses.length > 0 && (
+                  <button type="button"
+                    onClick={() => { setShippingOption("saved"); setSelectedAddressId(defaultAddr?.id ?? savedAddresses[0]?.id ?? null); }}
+                    className={`text-left rounded-xl border px-3 py-2.5 text-xs transition-all ${shippingOption === "saved" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"}`}>
+                    <p className="font-semibold mb-0.5">Morada guardada</p>
+                    <p className="text-muted-foreground">Selecionar da minha conta</p>
+                  </button>
+                )}
+                <button type="button"
+                  onClick={() => setShippingOption("new")}
+                  className={`text-left rounded-xl border px-3 py-2.5 text-xs transition-all ${shippingOption === "new" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"}`}>
+                  <p className="font-semibold mb-0.5">Nova morada</p>
+                  <p className="text-muted-foreground">Indicar endereço de entrega</p>
+                </button>
+                <button type="button"
+                  onClick={() => setShippingOption("pickup")}
+                  className={`text-left rounded-xl border px-3 py-2.5 text-xs transition-all ${shippingOption === "pickup" ? "border-primary bg-primary/5 ring-1 ring-primary/30" : "border-border hover:border-primary/30"}`}>
+                  <p className="font-semibold mb-0.5">Levantamento em loja</p>
+                  <p className="text-muted-foreground">Sem portes de envio</p>
+                </button>
+              </div>
+
+              {/* Seletor de morada guardada */}
+              {shippingOption === "saved" && user && savedAddresses.length > 0 && (
+                <div className="space-y-2">
+                  {savedAddresses.map((a: any) => (
+                    <button key={a.id} type="button"
+                      onClick={() => setSelectedAddressId(a.id)}
+                      className={`w-full text-left rounded-lg border px-3 py-2 text-xs transition-all ${selectedAddressId === a.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"}`}>
+                      <span className="font-semibold">{a.label}</span>
+                      {a.is_default && <span className="ml-1.5 text-[10px] text-primary">● Principal</span>}
+                      <p className="text-muted-foreground mt-0.5">{a.address_line1}, {a.postal_code} {a.city}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Nova morada */}
+              {shippingOption === "new" && (
+                <div className="space-y-2.5 p-3 rounded-xl border border-border bg-muted/20">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Morada</Label>
+                    <Input value={newAddress.line1} onChange={e => setNewAddress(p => ({...p, line1: e.target.value}))} placeholder="Rua, nº, andar..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Cód. Postal</Label>
+                      <Input value={newAddress.postal_code} onChange={e => setNewAddress(p => ({...p, postal_code: e.target.value}))} placeholder="0000-000" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Cidade</Label>
+                      <Input value={newAddress.city} onChange={e => setNewAddress(p => ({...p, city: e.target.value}))} placeholder="Lisboa" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {shippingOption === "pickup" && (
+                <p className="text-xs text-muted-foreground px-1">
+                  Rua Luís Calado Nunes 15 LJ B, 2870-350 Montijo · Seg-Sex 9h-18h
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2.5 pt-1">
               <div className="flex items-start gap-2">
                 <Checkbox id="sendCopy" checked={sendCopy} onCheckedChange={c => setSendCopy(c === true)} />
