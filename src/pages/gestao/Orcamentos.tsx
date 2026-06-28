@@ -3,6 +3,7 @@ import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Loader2, Send, CheckCircle2, Truck, FileText,
-  Eye, Search, PackageX, Download, Edit2, Save, X,
+  Eye, Search, PackageX, Download, Edit2, Save, X, Plus, Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
@@ -100,7 +101,12 @@ function OrcamentosList() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-heading text-2xl font-bold">Orçamentos</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-heading text-2xl font-bold">Orçamentos</h1>
+        <Button size="sm" className="gap-1.5" onClick={() => navigate("/gestao/orcamentos/novo")}>
+          <Plus className="h-4 w-4" /> Novo orçamento
+        </Button>
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
@@ -186,6 +192,9 @@ function OrcamentoDetalhe() {
   const [trackingCode, setTrackingCode] = useState("");
   const [validade, setValidade] = useState("30 dias");
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [productSearch, setProductSearch] = useState(false);
+  const [productSearchQ, setProductSearchQ] = useState("");
+  const [extraItems, setExtraItems] = useState<any[]>([]);
   const [itemEdits, setItemEdits] = useState<Record<string, { qty: number; unit_price: string; description: string }>>({});
 
   const { data, isLoading } = useQuery({
@@ -194,7 +203,7 @@ function OrcamentoDetalhe() {
     queryFn: async () => {
       const [q, i] = await Promise.all([
         supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
-        supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight)").eq("quote_id", id!),
+        supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight,purchase_price,price)").eq("quote_id", id!),
       ]);
       if (q.error) throw q.error;
       return { quote: q.data, items: i.data ?? [] };
@@ -218,7 +227,7 @@ function OrcamentoDetalhe() {
     setTrackingCode((q as any).tracking_code ?? "");
   }, [data?.quote]);
 
-  const items = data?.items ?? [];
+  const items = [...(data?.items ?? []), ...extraItems];
 
   // Calcular subtotal dos itens editados
   const subtotalItens = items.reduce((s: number, it: any) => {
@@ -369,8 +378,23 @@ function OrcamentoDetalhe() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center justify-between">
-                Produtos
-                <span className="text-xs font-normal text-muted-foreground">Clica em ✏️ para editar</span>
+                <span>Produtos</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-normal text-muted-foreground hidden sm:inline">✏️ para editar linha</span>
+                  <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                    onClick={() => setProductSearch(true)}>
+                    <Search className="h-3.5 w-3.5" /> Pesquisar produto
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                    onClick={() => {
+                      const newId = `custom-${Date.now()}`;
+                      setExtraItems(p => [...p, { id: newId, product_name_snapshot: "", product_sku_snapshot: "", quantity: 1, unit_price: "", line_total: 0, product_image_snapshot: null, products: null }]);
+                      setEditingItem(newId);
+                      setItemEdits(p => ({ ...p, [newId]: { qty: 1, unit_price: "", description: "" } }));
+                    }}>
+                    <Plus className="h-3.5 w-3.5" /> Linha
+                  </Button>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -431,6 +455,24 @@ function OrcamentoDetalhe() {
                                 <span className="ml-1 text-amber-600">⚠ Confirmar stock</span>
                               )}
                             </p>
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {(it.product_sku_snapshot || it.products?.sku) && (
+                                <span className="text-[10px] font-mono text-muted-foreground/70">
+                                  REF: {it.product_sku_snapshot}
+                                </span>
+                              )}
+                              {it.products?.purchase_price && (
+                                <span className="text-[10px] text-amber-600 font-medium">
+                                  Custo: {Number(it.products.purchase_price).toFixed(2)}€
+                                </span>
+                              )}
+                              {it.product_id && (
+                                <a href={`/produto/${it.product_id}`} target="_blank" rel="noopener noreferrer"
+                                  className="text-[10px] text-primary hover:underline">
+                                  Ver produto ↗
+                                </a>
+                              )}
+                            </div>
                           </div>
                           {lineTotal > 0 && (
                             <span className="text-sm font-semibold flex-shrink-0">{lineTotal.toFixed(2).replace(".", ",")} €</span>
@@ -591,6 +633,333 @@ function OrcamentoDetalhe() {
           </Card>
         </div>
       </div>
+
+      {/* Modal pesquisa de produto */}
+      <ProductSearchModal open={productSearch} onClose={() => setProductSearch(false)} onSelect={(p) => {
+        const iva = 0.23;
+        const unitPrice = p.price ? (Number(p.price) * (1 + iva)).toFixed(2) : "";
+        const newId = `search-${Date.now()}`;
+        setExtraItems(prev => [...prev, {
+          id: newId,
+          product_id: p.id,
+          product_name_snapshot: p.name,
+          product_sku_snapshot: p.sku ?? "",
+          product_image_snapshot: p.image_url ?? null,
+          quantity: 1,
+          unit_price: parseFloat(unitPrice) || 0,
+          line_total: parseFloat(unitPrice) || 0,
+          products: { stock_status: p.stock_status, fornecedor: p.fornecedor, purchase_price: p.purchase_price },
+        }]);
+        setItemEdits(prev => ({ ...prev, [newId]: { qty: 1, unit_price: unitPrice, description: p.name } }));
+        setEditingItem(null);
+      }} />
+    </div>
+  );
+}
+
+// ─── Pesquisa de produto (modal interno) ─────────────────────────────────────
+
+function ProductSearchModal({ open, onClose, onSelect }: {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (p: any) => void;
+}) {
+  const [q, setQ] = useState("");
+  const { data: results = [], isLoading } = useQuery({
+    queryKey: ["gestao-product-search", q],
+    enabled: q.length > 2,
+    queryFn: async () => {
+      const { data } = await supabase.from("products")
+        .select("id,name,sku,price,purchase_price,image_url,fornecedor,stock_status,taxa_iva")
+        .eq("include_in_catalog", true)
+        .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
+        .limit(20);
+      return data ?? [];
+    },
+    staleTime: 30_000,
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Pesquisar produto</DialogTitle>
+        </DialogHeader>
+        <Input autoFocus value={q} onChange={e => setQ(e.target.value)}
+          placeholder="Nome ou referência (mín. 3 letras)..." className="shrink-0" />
+        <div className="overflow-y-auto flex-1 space-y-1 mt-2">
+          {isLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+          {!isLoading && q.length > 2 && results.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto encontrado.</p>
+          )}
+          {results.map((p: any) => {
+            const iva = (Number(p.taxa_iva) || 23) / 100;
+            const priceVat = p.price ? Number(p.price) * (1 + iva) : null;
+            return (
+              <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer border border-transparent hover:border-border"
+                onClick={() => { onSelect(p); onClose(); setQ(""); }}>
+                {p.image_url
+                  ? <img src={p.image_url} alt="" className="h-10 w-10 object-cover rounded bg-muted shrink-0" />
+                  : <div className="h-10 w-10 bg-muted rounded flex items-center justify-center shrink-0"><Package className="h-4 w-4 text-muted-foreground" /></div>
+                }
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{p.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {p.sku && <span className="font-mono mr-2">REF: {p.sku}</span>}
+                    {p.fornecedor && <span className="mr-2">{p.fornecedor}</span>}
+                    {p.stock_status === "on_request" && <span className="text-amber-600">⚠ Por encomenda</span>}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  {priceVat && <p className="text-sm font-bold">{priceVat.toFixed(2).replace(".",",")} €</p>}
+                  {p.purchase_price && <p className="text-[10px] text-amber-600">Custo: {Number(p.purchase_price).toFixed(2)}€</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Novo Orçamento (criação do zero) ────────────────────────────────────────
+
+function NovoOrcamento() {
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [saving, setSaving] = useState(false);
+  const [productSearch, setProductSearch] = useState(false);
+  const [lines, setLines] = useState<any[]>([]);
+  const [customer, setCustomer] = useState({ name: "", email: "", phone: "", company: "", tax_id: "", address: "" });
+  const [notes, setNotes] = useState("");
+  const [prazoEntrega, setPrazoEntrega] = useState("");
+  const [shippingTotal, setShippingTotal] = useState("");
+  const [validade, setValidade] = useState("30 dias");
+
+  const addProduct = (p: any) => {
+    const iva = (Number(p.taxa_iva) || 23) / 100;
+    const unitPrice = p.price ? Number(p.price) * (1 + iva) : 0;
+    setLines(prev => [...prev, {
+      id: `line-${Date.now()}`,
+      product_id: p.id,
+      product_name_snapshot: p.name,
+      product_sku_snapshot: p.sku ?? "",
+      product_image_snapshot: p.image_url ?? null,
+      quantity: 1,
+      unit_price: unitPrice.toFixed(2),
+      purchase_price: p.purchase_price,
+    }]);
+  };
+
+  const updateLine = (id: string, field: string, value: any) =>
+    setLines(p => p.map(l => l.id === id ? { ...l, [field]: value } : l));
+
+  const removeLine = (id: string) =>
+    setLines(p => p.filter(l => l.id !== id));
+
+  const subtotal = lines.reduce((s, l) => s + (parseFloat(l.unit_price) || 0) * (parseInt(l.quantity) || 0), 0);
+  const shipping = parseFloat(shippingTotal.replace(",", ".")) || 0;
+  const total = subtotal + shipping;
+  const subtotalSIva = total / 1.23;
+  const ivaValor = total - subtotalSIva;
+
+  const handleSave = async () => {
+    if (!customer.name.trim() || !customer.email.trim()) {
+      toast.error("Nome e email do cliente são obrigatórios.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { data: quote, error: qErr } = await supabase.from("quotes").insert({
+        status: "sent" as any,
+        customer_name: customer.name.trim(),
+        customer_email: customer.email.trim(),
+        customer_phone: customer.phone.trim() || null,
+        customer_company: customer.company.trim() || null,
+        customer_tax_id: customer.tax_id.trim() || null,
+        shipping_address: customer.address.trim() || null,
+        notes: notes.trim() || null,
+        total: total > 0 ? total : null,
+        shipping_total: shipping > 0 ? shipping : null,
+        prazo_entrega: prazoEntrega.trim() || null,
+      } as any).select("id").single();
+      if (qErr) throw qErr;
+
+      if (lines.length > 0) {
+        const rows = lines.map(l => ({
+          quote_id: quote.id,
+          product_id: l.product_id ?? null,
+          product_name_snapshot: l.product_name_snapshot,
+          product_sku_snapshot: l.product_sku_snapshot || null,
+          product_image_snapshot: l.product_image_snapshot ?? null,
+          quantity: parseInt(l.quantity) || 1,
+          unit_price: parseFloat(l.unit_price) || 0,
+          line_total: (parseFloat(l.unit_price) || 0) * (parseInt(l.quantity) || 1),
+        }));
+        const { error: iErr } = await supabase.from("quote_items").insert(rows);
+        if (iErr) throw iErr;
+      }
+
+      qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
+      toast.success("Orçamento criado e enviado ao cliente.");
+      navigate(`/gestao/orcamentos/${quote.id}`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao criar orçamento.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={() => navigate("/gestao/orcamentos")}>
+          <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+        </Button>
+        <h1 className="font-heading text-xl font-bold">Novo Orçamento</h1>
+      </div>
+
+      <div className="grid md:grid-cols-[1fr_280px] gap-4 items-start">
+        <div className="space-y-4">
+
+          {/* Dados do cliente */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Dados do cliente</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label className="text-xs">Nome *</Label>
+                  <Input value={customer.name} onChange={e => setCustomer(p => ({...p, name: e.target.value}))} /></div>
+                <div className="space-y-1.5"><Label className="text-xs">Email *</Label>
+                  <Input type="email" value={customer.email} onChange={e => setCustomer(p => ({...p, email: e.target.value}))} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label className="text-xs">Telefone</Label>
+                  <Input value={customer.phone} onChange={e => setCustomer(p => ({...p, phone: e.target.value}))} /></div>
+                <div className="space-y-1.5"><Label className="text-xs">Empresa</Label>
+                  <Input value={customer.company} onChange={e => setCustomer(p => ({...p, company: e.target.value}))} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label className="text-xs">NIF</Label>
+                  <Input value={customer.tax_id} onChange={e => setCustomer(p => ({...p, tax_id: e.target.value}))} /></div>
+                <div className="space-y-1.5"><Label className="text-xs">Morada de entrega</Label>
+                  <Input value={customer.address} onChange={e => setCustomer(p => ({...p, address: e.target.value}))} /></div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Produtos */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Produtos / Linhas</span>
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                    onClick={() => setProductSearch(true)}>
+                    <Search className="h-3.5 w-3.5" /> Pesquisar
+                  </Button>
+                  <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                    onClick={() => setLines(p => [...p, { id: `custom-${Date.now()}`, product_id: null, product_name_snapshot: "", product_sku_snapshot: "", product_image_snapshot: null, quantity: 1, unit_price: "", purchase_price: null }])}>
+                    <Plus className="h-3.5 w-3.5" /> Linha manual
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {lines.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  <Package className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                  Adicione produtos ou linhas manuais
+                </div>
+              ) : (
+                <div className="space-y-3 divide-y divide-border">
+                  {lines.map(l => (
+                    <div key={l.id} className="pt-3 first:pt-0 space-y-2">
+                      <div className="flex items-center gap-2">
+                        {l.product_image_snapshot && <img src={l.product_image_snapshot} alt="" className="h-8 w-8 object-cover rounded shrink-0" />}
+                        <Input value={l.product_name_snapshot}
+                          onChange={e => updateLine(l.id, "product_name_snapshot", e.target.value)}
+                          placeholder="Descrição do produto/serviço" className="h-8 text-sm flex-1" />
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive shrink-0"
+                          onClick={() => removeLine(l.id)}><X className="h-4 w-4" /></Button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        <div><Label className="text-[10px]">REF/SKU</Label>
+                          <Input value={l.product_sku_snapshot} onChange={e => updateLine(l.id, "product_sku_snapshot", e.target.value)} className="h-7 text-xs font-mono" /></div>
+                        <div><Label className="text-[10px]">Qtd</Label>
+                          <Input type="number" min={1} value={l.quantity} onChange={e => updateLine(l.id, "quantity", e.target.value)} className="h-7 text-xs" /></div>
+                        <div><Label className="text-[10px]">Preço c/IVA (€)</Label>
+                          <Input value={l.unit_price} onChange={e => updateLine(l.id, "unit_price", e.target.value)} className="h-7 text-xs" placeholder="0.00" /></div>
+                        <div><Label className="text-[10px]">Total</Label>
+                          <Input readOnly className="h-7 text-xs bg-muted/30"
+                            value={((parseFloat(l.unit_price)||0)*(parseInt(l.quantity)||0)).toFixed(2)} /></div>
+                      </div>
+                      {l.purchase_price && (
+                        <p className="text-[10px] text-amber-600">Custo: {Number(l.purchase_price).toFixed(2)}€</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {lines.length > 0 && (
+                <>
+                  <Separator className="my-3" />
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Subtotal s/ IVA</span><span>{subtotalSIva.toFixed(2).replace(".",",")} €</span>
+                    </div>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>IVA (23%)</span><span>{ivaValor.toFixed(2).replace(".",",")} €</span>
+                    </div>
+                    {shipping > 0 && <div className="flex justify-between text-muted-foreground">
+                      <span>Portes</span><span>{shipping.toFixed(2).replace(".",",")} €</span>
+                    </div>}
+                    <div className="flex justify-between font-bold border-t pt-1 text-base">
+                      <span>Total c/ IVA</span><span className="text-primary">{total.toFixed(2).replace(".",",")} €</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Notas */}
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Notas para o cliente</CardTitle></CardHeader>
+            <CardContent>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3}
+                placeholder="Condições, observações..." />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Painel lateral */}
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">Proposta</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Portes c/ IVA (€)</Label>
+                <Input value={shippingTotal} onChange={e => setShippingTotal(e.target.value)} placeholder="0.00" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Prazo de entrega</Label>
+                <Input value={prazoEntrega} onChange={e => setPrazoEntrega(e.target.value)} placeholder="3-5 dias úteis" className="h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Validade</Label>
+                <Input value={validade} onChange={e => setValidade(e.target.value)} placeholder="30 dias" className="h-9" />
+              </div>
+            </CardContent>
+          </Card>
+          <Button className="w-full gap-2" onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Send className="h-4 w-4" /> Criar e enviar ao cliente
+          </Button>
+        </div>
+      </div>
+
+      <ProductSearchModal open={productSearch} onClose={() => setProductSearch(false)} onSelect={addProduct} />
     </div>
   );
 }
@@ -601,6 +970,7 @@ export default function GestaoOrcamentos() {
   return (
     <Routes>
       <Route index element={<OrcamentosList />} />
+      <Route path="novo" element={<NovoOrcamento />} />
       <Route path=":id" element={<OrcamentoDetalhe />} />
     </Routes>
   );
