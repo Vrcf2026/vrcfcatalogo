@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,28 +6,38 @@ import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { SuggestionDialog } from "@/components/SuggestionDialog";
 import {
   FileText, Wrench, UserCog, ArrowRight,
-  AlertTriangle, CheckCircle2, Clock, ShoppingCart,
+  AlertTriangle, CheckCircle2, Clock, MapPin, MessageSquare,
 } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Pendente", sent: "Enviado", in_review: "Em análise",
-  accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado", completed: "Concluído",
+  pending: "Pedido recebido", sent: "Orçamento enviado", in_review: "A preparar proposta",
+  accepted: "Aceite", rejected: "Rejeitado", cancelled: "Cancelado",
+  completed: "Concluído", paid: "Pago", in_preparation: "Em preparação", shipped: "Expedido",
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending:   "bg-amber-100 text-amber-800",
-  sent:      "bg-blue-100 text-blue-800",
-  in_review: "bg-purple-100 text-purple-800",
-  accepted:  "bg-emerald-100 text-emerald-800",
-  rejected:  "bg-red-100 text-red-800",
-  cancelled: "bg-gray-100 text-gray-600",
-  completed: "bg-emerald-100 text-emerald-800",
+  pending:        "bg-amber-100 text-amber-800",
+  sent:           "bg-blue-100 text-blue-800",
+  in_review:      "bg-purple-100 text-purple-800",
+  accepted:       "bg-emerald-100 text-emerald-800",
+  paid:           "bg-emerald-100 text-emerald-800",
+  in_preparation: "bg-cyan-100 text-cyan-800",
+  shipped:        "bg-indigo-100 text-indigo-800",
+  rejected:       "bg-red-100 text-red-800",
+  cancelled:      "bg-gray-100 text-gray-600",
+  completed:      "bg-gray-100 text-gray-700",
 };
+
+// Label dinâmico — pedido vs orçamento
+const docLabel = (status: string) =>
+  ["pending", "in_review"].includes(status) ? "Pedido" : "Orçamento";
 
 export default function ContaDashboard() {
   const { user } = useAuth();
+  const [contactOpen, setContactOpen] = useState(false);
 
   const { data: quotes } = useQuery({
     queryKey: ["conta-quotes-dash", user?.id],
@@ -69,11 +80,11 @@ export default function ContaDashboard() {
       {pendingDecision.length > 0 && (
         <div className="space-y-2">
           {pendingDecision.map(q => (
-            <Card key={q.id} className="border-blue-200 bg-blue-50/60 dark:bg-blue-950/20 dark:border-blue-900/40">
+            <Card key={q.id} className="border-blue-200 bg-blue-50/60 dark:bg-blue-950/20">
               <CardContent className="py-3 flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-blue-600 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm font-semibold">
                     Orçamento <span className="font-mono">{q.quote_number}</span> aguarda a tua resposta
                   </p>
                   <p className="text-xs text-muted-foreground">Aceita ou rejeita para continuarmos.</p>
@@ -95,7 +106,7 @@ export default function ContaDashboard() {
           <CardContent className="pt-4 pb-3 text-center">
             <FileText className="h-5 w-5 text-primary mx-auto mb-1" />
             <div className="text-2xl font-bold">{totalQuotes}</div>
-            <p className="text-xs text-muted-foreground">Orçamentos</p>
+            <p className="text-xs text-muted-foreground">Pedidos</p>
           </CardContent>
         </Card>
         <Card>
@@ -109,24 +120,29 @@ export default function ContaDashboard() {
           <CardContent className="pt-4 pb-3 text-center">
             <CheckCircle2 className="h-5 w-5 text-emerald-600 mx-auto mb-1" />
             <div className="text-2xl font-bold">
-              {quotes?.filter(q => q.status === "completed" || q.status === "accepted").length ?? "-"}
+              {quotes?.filter(q => ["completed", "accepted", "paid", "shipped"].includes(q.status)).length ?? "-"}
             </div>
             <p className="text-xs text-muted-foreground">Concluídos</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Último orçamento */}
+      {/* Último pedido/orçamento */}
       {recentQuote && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-muted-foreground" /> Último orçamento
+              <Clock className="h-4 w-4 text-muted-foreground" /> Último pedido/orçamento
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-sm font-semibold">{recentQuote.quote_number}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {docLabel(recentQuote.status)}
+                </span>
+                <span className="font-mono text-sm font-semibold">{recentQuote.quote_number}</span>
+              </div>
               <Badge className={`text-[10px] ${STATUS_COLOR[recentQuote.status] ?? ""}`}>
                 {STATUS_LABEL[recentQuote.status] ?? recentQuote.status}
               </Badge>
@@ -148,7 +164,7 @@ export default function ContaDashboard() {
         </Card>
       )}
 
-      {/* Orçamentos recentes */}
+      {/* Pedidos/orçamentos recentes */}
       {quotes && quotes.length > 1 && (
         <Card>
           <CardHeader className="pb-2">
@@ -158,9 +174,10 @@ export default function ContaDashboard() {
             {quotes.slice(1, 4).map(q => (
               <Link key={q.id} to={`/conta/orcamentos/${q.id}`}
                 className="flex items-center justify-between py-1.5 border-b border-border last:border-0 hover:text-primary transition-colors">
-                <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground uppercase">{docLabel(q.status)}</span>
                   <span className="font-mono text-xs font-medium">{q.quote_number}</span>
-                  <span className="text-xs text-muted-foreground ml-2">
+                  <span className="text-xs text-muted-foreground">
                     {new Date(q.created_at).toLocaleDateString("pt-PT")}
                   </span>
                 </div>
@@ -185,9 +202,9 @@ export default function ContaDashboard() {
           </Link>
         </Button>
         <Button variant="outline" asChild className="h-auto py-3 flex-col gap-1">
-          <Link to="/">
-            <ShoppingCart className="h-4 w-4 text-primary" />
-            <span className="text-xs">Novo orçamento</span>
+          <Link to="/conta/moradas">
+            <MapPin className="h-4 w-4 text-primary" />
+            <span className="text-xs">Moradas</span>
           </Link>
         </Button>
         <Button variant="outline" asChild className="h-auto py-3 flex-col gap-1 col-span-2">
@@ -197,6 +214,18 @@ export default function ContaDashboard() {
           </Link>
         </Button>
       </div>
+
+      {/* Botão contactar — cor diferente */}
+      <Button
+        onClick={() => setContactOpen(true)}
+        className="w-full h-auto py-3 flex-col gap-1 bg-muted hover:bg-muted/80 text-foreground border border-border"
+        variant="ghost"
+      >
+        <MessageSquare className="h-4 w-4 text-blue-500" />
+        <span className="text-xs font-medium text-blue-600">Contactar VRCF</span>
+      </Button>
+
+      <SuggestionDialog open={contactOpen} onOpenChange={setContactOpen} />
     </div>
   );
 }
