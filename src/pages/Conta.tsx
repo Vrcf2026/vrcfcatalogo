@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Loader2, LayoutDashboard, FileText, Wrench, UserCog, LogOut, ArrowLeft } from "lucide-react";
+import { Loader2, LayoutDashboard, FileText, Wrench, UserCog, LogOut, ArrowLeft, MapPin } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const tabs = [
   { to: "/conta", icon: LayoutDashboard, label: "Resumo", end: true },
   { to: "/conta/orcamentos", icon: FileText, label: "Orçamentos" },
   { to: "/conta/rma", icon: Wrench, label: "RMAs" },
+  { to: "/conta/moradas", icon: MapPin, label: "Moradas" },
   { to: "/conta/dados", icon: UserCog, label: "Dados" },
 ];
 
