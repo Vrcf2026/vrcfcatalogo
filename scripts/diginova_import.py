@@ -815,26 +815,36 @@ def main(local=False):
 
         # Título SEO otimizado — nome original + specs chave
         def construir_nome_seo(nome_orig: str, marca_prod: str, specs_dict: dict) -> str:
-            # Limpar "Recondicionado" e "Grau X" do nome para não duplicar
-            nome_limpo = re.sub(r'\b(?:Recondicionado|Grau\s+[AB]|GRADO\s+[AB])\b', '', nome_orig, flags=re.IGNORECASE).strip()
-            nome_limpo = re.sub(r'\s{2,}', ' ', nome_limpo).strip()
-            partes = [nome_limpo] if nome_limpo else [nome_orig]
-            # Acrescentar RAM e armazenamento se não estiverem já no nome
+            # Remover specs técnicas do nome — ficar só com Tipo + Marca + Modelo
+            nome_limpo = nome_orig
+            # Remover tudo a partir do processador (Intel/AMD) inclusive
+            nome_limpo = re.sub(r'\s+Intel\s+Core.*$', '', nome_limpo, flags=re.IGNORECASE)
+            nome_limpo = re.sub(r'\s+AMD\s+.*$', '', nome_limpo, flags=re.IGNORECASE)
+            # Remover blocos de specs com /
+            nome_limpo = re.sub(r'\s*/[^/]*', '', nome_limpo)
+            # Remover Grau e Recondicionado
+            nome_limpo = re.sub(r'\b(?:Recondicionado|Grau\s+[AB]|Grado\s+[AB])\b', '', nome_limpo, flags=re.IGNORECASE)
+            nome_limpo = re.sub(r'\s{2,}', ' ', nome_limpo).strip().rstrip('-').strip()
+            if len(nome_limpo) < 5:
+                nome_limpo = nome_orig
+            partes = [nome_limpo]
+            # Acrescentar processador (curto), RAM, armazenamento, grau
+            proc = specs_dict.get("processador", "")
+            if proc:
+                proc_curto = re.sub(r'^Intel Core ', '', proc)
+                proc_curto = re.sub(r'^AMD Ryzen ', 'Ryzen ', proc_curto)
+                partes.append(proc_curto[:12])
             ram = specs_dict.get("ram_gb", "")
             arm_gb = specs_dict.get("armazenamento_gb", "")
             arm_tipo = specs_dict.get("armazenamento_tipo", "")
             grau = specs_dict.get("grau", "")
-            if ram and f"{ram}GB" not in nome_limpo:
-                partes.append(f"{ram}GB RAM")
+            if ram: partes.append(f"{ram}GB RAM")
             if arm_gb:
                 arm_str = f"{arm_gb}GB {arm_tipo}".strip() if arm_tipo else f"{arm_gb}GB"
-                if arm_str not in nome_limpo:
-                    partes.append(arm_str)
-            if grau:
-                partes.append(f"Grau {grau}")
+                partes.append(arm_str)
+            if grau: partes.append(f"Grau {grau}")
             partes.append("Recondicionado")
-            titulo = " ".join(partes)
-            return titulo if len(titulo) > 20 else nome_orig
+            return " ".join(partes)
 
         nome_seo = construir_nome_seo(nome_pt, marca, specs)
 
