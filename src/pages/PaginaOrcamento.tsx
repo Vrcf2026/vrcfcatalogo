@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ import {
 
 export default function PaginaOrcamento() {
   const { items, updateQuantity, removeItem, clearCart } = useCart();
+  const qc = useQueryClient();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -36,6 +37,7 @@ export default function PaginaOrcamento() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [shippingOption, setShippingOption] = useState<"saved" | "new" | "pickup">("new");
   const [newAddress, setNewAddress] = useState({ line1: "", line2: "", city: "", postal_code: "", country: "Portugal" });
+  const [saveNewAddress, setSaveNewAddress] = useState(false);
   const [success, setSuccess]             = useState(false);
   const submitTimestamps = useRef<number[]>([]);
 
@@ -74,7 +76,7 @@ export default function PaginaOrcamento() {
       if (!itemIds.length) return [];
       const { data } = await supabase
         .from("products")
-        .select("id, slug, stock_status")
+        .select("id, slug, stock_status, fornecedor, weight, envio_especial, sku")
         .in("id", itemIds);
       return data ?? [];
     },
@@ -102,7 +104,11 @@ export default function PaginaOrcamento() {
   }, [user]);
 
   const portes = calcularPortesPorFornecedor(
-    items.map(i => ({ fornecedor: (i as any).fornecedor, quantity: i.quantity, weight: (i as any).weight })),
+    items.map(i => ({
+      fornecedor: (i as any).fornecedor ?? produtoMap[i.id]?.fornecedor ?? null,
+      quantity: i.quantity,
+      weight: (i as any).weight ?? produtoMap[i.id]?.weight ?? null,
+    })),
     shippingConfigs as any,
   );
   const totalPortes    = totalPortesComIva(portes);
@@ -110,7 +116,7 @@ export default function PaginaOrcamento() {
   const subtotalComIva = subtotalSemIva * 1.23;
   const totalGeral     = subtotalComIva + totalPortes;
   const pesoTotal      = items.reduce((s, i) => s + ((i as any).weight ?? 0) * i.quantity, 0);
-  const temEnvioEspecial = items.some(i => (i as any).envio_especial);
+  const temEnvioEspecial = items.some(i => (i as any).envio_especial ?? produtoMap[i.id]?.envio_especial);
 
   const handleSubmit = async () => {
     if (!name.trim() || !email.trim() || !phone.trim()) {
@@ -156,7 +162,7 @@ export default function PaginaOrcamento() {
           .from("quotes")
           .insert({
             ...(user ? { user_id: user.id } : {}),
-            status: "sent",
+            status: "pending",
             subtotal: subtotalSemIva,
             total: totalGeral,
             shipping_total: shippingTotal,
@@ -184,7 +190,7 @@ export default function PaginaOrcamento() {
             product_id: i.id,
             product_name_snapshot: i.name,
             product_image_snapshot: i.imageUrl,
-            product_sku_snapshot: (i as any).sku ?? null,
+            product_sku_snapshot: (i as any).sku ?? produtoMap[i.id]?.sku ?? null,
             unit_price: i.price ?? 0,
             quantity: i.quantity,
             line_total: (i.price ?? 0) * i.quantity,
@@ -196,6 +202,23 @@ export default function PaginaOrcamento() {
       }
 
       items.forEach(i => trackEvent(i.id, "quote"));
+
+      // Guardar nova morada se pedido
+      if (user && saveNewAddress && newAddress.line1.trim() && shippingOption === "new") {
+        const hasMoradas = savedAddresses.length > 0;
+        await supabase.from("shipping_addresses" as any).insert({
+          user_id: user.id,
+          label: "Entrega",
+          address_line1: newAddress.line1.trim(),
+          address_line2: newAddress.line2?.trim() || null,
+          city: newAddress.city.trim(),
+          postal_code: newAddress.postal_code.trim(),
+          country: newAddress.country || "Portugal",
+          is_default: !hasMoradas,
+        });
+        qc.invalidateQueries({ queryKey: ["shipping-addresses", user.id] });
+      }
+
       clearCart();
       setSuccess(true);
     } catch (err) {
@@ -448,6 +471,14 @@ export default function PaginaOrcamento() {
                       <Input value={newAddress.city} onChange={e => setNewAddress(p => ({...p, city: e.target.value}))} placeholder="Lisboa" />
                     </div>
                   </div>
+                  {user && newAddress.line1.trim() && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <Checkbox id="saveAddress" checked={saveNewAddress} onCheckedChange={c => setSaveNewAddress(c === true)} />
+                      <label htmlFor="saveAddress" className="text-xs text-muted-foreground cursor-pointer">
+                        Guardar esta morada na minha conta
+                      </label>
+                    </div>
+                  )}
                 </div>
               )}
 

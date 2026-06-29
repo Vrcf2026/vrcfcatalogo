@@ -17,6 +17,7 @@ export interface CartItem {
   imageUrl: string | null;
   category: string | null;
   quantity: number;
+  sku?: string | null;
   weight?: number | null;
   fornecedor?: string | null;
   envio_especial?: boolean;

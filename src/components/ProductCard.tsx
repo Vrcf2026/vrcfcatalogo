@@ -67,6 +67,7 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
         id, name, price,
         imageUrl: currentImage || imageUrl,
         category,
+        sku: sku ?? null,
         weight: weight ?? null,
         fornecedor: fornecedor ?? null,
         envio_especial: envioEspecial ?? false,

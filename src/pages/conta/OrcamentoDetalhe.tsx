@@ -223,7 +223,12 @@ export default function OrcamentoDetalhe() {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div>
-            <CardTitle className="font-mono">{quote.quote_number}</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {["pending","in_review"].includes(quote.status) ? "Pedido de Orçamento" : "Orçamento"}
+                  </span>
+                  <span className="font-mono">{quote.quote_number}</span>
+                </CardTitle>
             <p className="text-xs text-muted-foreground mt-1">{new Date(quote.created_at).toLocaleString("pt-PT")}</p>
             {(quote as any).decided_at && (
               <p className="text-xs text-muted-foreground mt-0.5">
