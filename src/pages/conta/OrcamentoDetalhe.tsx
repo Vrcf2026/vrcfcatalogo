@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Repeat2, Loader2, Download, Mail, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
+import { generateRequestPdf } from "@/lib/requestPdf";
 
 const STATUS_LABEL: Record<string, string> = {
   pending:        "Pedido recebido",
@@ -234,33 +235,27 @@ export default function OrcamentoDetalhe() {
           <div className="flex flex-col items-end gap-2">
             <Badge className={STATUS_COLOR[quote.status] ?? ""}>{STATUS_LABEL[quote.status] ?? quote.status}</Badge>
             <div className="flex flex-wrap gap-2 justify-end">
-              <Button size="sm" variant="outline" onClick={() => generateQuotePdf(quote, items)} className="gap-1">
-                <Download className="h-4 w-4" />PDF
+              {/* Pedido — sempre disponível */}
+              <Button size="sm" variant="outline" onClick={() => generateRequestPdf(quote, items)} className="gap-1">
+                <Download className="h-3.5 w-3.5" />
+                <span className="text-[11px]">Pedido</span>
               </Button>
-              <Button size="sm" variant="outline" disabled={resending || !quote.customer_email}
-                onClick={async () => {
-                  if (!quote.customer_email) return;
-                  setResending(true);
-                  const { error } = await supabase.functions.invoke("send-quote-request", {
-                    body: {
-                      customerName: quote.customer_name ?? "",
-                      customerEmail: quote.customer_email,
-                      customerPhone: quote.customer_phone ?? "",
-                      notes: `[Reenvio do orçamento ${quote.quote_number}] ${quote.notes ?? ""}`.trim(),
-                      sendCopyToCustomer: true,
-                      items: items.map((it: any) => ({
-                        name: it.product_name_snapshot, category: null,
-                        quantity: it.quantity, price: it.unit_price != null ? Number(it.unit_price) : null,
-                      })),
-                    },
-                  });
-                  setResending(false);
-                  if (error) { toast.error("Não foi possível reenviar."); return; }
-                  toast.success("Orçamento reenviado por email.");
-                }} className="gap-1">
-                {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Reenviar
-              </Button>
+              {/* Orçamento — só quando o gestor enviou */}
+              {["sent","accepted","paid","in_preparation","shipped","completed"].includes(quote.status) && (
+                <Button size="sm" variant="outline" onClick={() => generateQuotePdf(quote, items)} className="gap-1">
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="text-[11px]">Orçamento</span>
+                </Button>
+              )}
+              {/* Fatura — quando gestor a carregou */}
+              {(quote as any).invoice_url && (
+                <Button size="sm" variant="outline" asChild className="gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+                  <a href={(quote as any).invoice_url} target="_blank" rel="noopener noreferrer">
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="text-[11px]">Fatura</span>
+                  </a>
+                </Button>
+              )}
               <Button size="sm" onClick={handleRepeat} className="gap-1">
                 <Repeat2 className="h-4 w-4" />Repetir
               </Button>

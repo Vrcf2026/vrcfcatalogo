@@ -14,7 +14,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Loader2, Send, CheckCircle2, Truck, FileText,
   Eye, Search, PackageX, Download, Edit2, Save, X, Plus, Package,
+  Upload, Receipt, ExternalLink,
 } from "lucide-react";
+import { EditProductSheet } from "@/components/EditProductSheet";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
 
@@ -65,6 +67,8 @@ const IVA_RATE = 0.23;
 
 function OrcamentosList() {
   const [statusFilter, setStatusFilter] = useState("all");
+  const [produtosOpen, setProdutosOpen] = useState(false);
+  const [portesOpen, setPortesOpen] = useState(false);
   const [search, setSearch] = useState("");
 
   const { data, isLoading } = useQuery({
@@ -101,11 +105,19 @@ function OrcamentosList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="font-heading text-2xl font-bold">Orçamentos</h1>
-        <Button size="sm" className="gap-1.5" onClick={() => navigate("/gestao/orcamentos/novo")}>
-          <Plus className="h-4 w-4" /> Novo orçamento
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setProdutosOpen(true)}>
+            <Package className="h-4 w-4" /> Produtos
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setPortesOpen(true)}>
+            <Truck className="h-4 w-4" /> Portes
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => navigate("/gestao/orcamentos/novo")}>
+            <Plus className="h-4 w-4" /> Novo orçamento
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -170,6 +182,29 @@ function OrcamentosList() {
           ))}
         </div>
       )}
+      {/* Modal de produtos para consulta */}
+      <Dialog open={produtosOpen} onOpenChange={setProdutosOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" /> Catálogo de Produtos
+            </DialogTitle>
+          </DialogHeader>
+          <GestorProductList />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de portes */}
+      <Dialog open={portesOpen} onOpenChange={setPortesOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-5 w-5" /> Tabela de Portes DHL
+            </DialogTitle>
+          </DialogHeader>
+          <TabelaPortes />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -192,6 +227,8 @@ function OrcamentoDetalhe() {
   const [trackingCode, setTrackingCode] = useState("");
   const [validade, setValidade] = useState("30 dias");
   const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [uploadingInvoice, setUploadingInvoice] = useState(false);
+  const [viewProduct, setViewProduct] = useState<any>(null);
   const [productSearch, setProductSearch] = useState(false);
   const [productSearchQ, setProductSearchQ] = useState("");
   const [extraItems, setExtraItems] = useState<any[]>([]);
@@ -321,6 +358,33 @@ function OrcamentoDetalhe() {
     }
     qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
     toast.success(`Estado actualizado para "${STATUS_OPTIONS.find(s => s.value === newStatus)?.label ?? newStatus}".`);
+  };
+
+  const handleUploadInvoice = async (file: File) => {
+    if (!id) return;
+    setUploadingInvoice(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${id}/fatura-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("invoices").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("invoices").getPublicUrl(path);
+      const invoiceUrl = urlData.publicUrl;
+      await supabase.from("quotes").update({
+        invoice_url: invoiceUrl,
+        invoice_uploaded_at: new Date().toISOString(),
+      } as any).eq("id", id!);
+      // Notificar cliente por email
+      await supabase.functions.invoke("send-quote-status-update", {
+        body: { quoteId: id, newStatus: "invoice_ready", triggeredBy: "gestor", invoiceUrl },
+      });
+      qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
+      toast.success("Fatura carregada e cliente notificado por email.");
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao carregar fatura.");
+    } finally {
+      setUploadingInvoice(false);
+    }
   };
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -467,10 +531,21 @@ function OrcamentoDetalhe() {
                                 </span>
                               )}
                               {it.product_id && (
-                                <a href={`/produto/${it.product_id}`} target="_blank" rel="noopener noreferrer"
-                                  className="text-[10px] text-primary hover:underline">
-                                  Ver produto ↗
-                                </a>
+                                <>
+                                  <a href={`/produto/${it.product_id}`} target="_blank" rel="noopener noreferrer"
+                                    className="text-[10px] text-primary hover:underline flex items-center gap-0.5">
+                                    <ExternalLink className="h-2.5 w-2.5" /> Catálogo
+                                  </a>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      supabase.from("products").select("*").eq("id", it.product_id!).maybeSingle()
+                                        .then(({ data }) => { if (data) setViewProduct(data); });
+                                    }}
+                                    className="text-[10px] text-purple-600 hover:underline">
+                                    📋 Ficha produto
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -621,6 +696,34 @@ function OrcamentoDetalhe() {
                   </a>
                 </Button>
               )}
+
+              {/* Upload fatura */}
+              <div className="pt-2 border-t border-border">
+                <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                  <Receipt className="h-3.5 w-3.5" /> Fatura
+                </p>
+                {(quote as any).invoice_url ? (
+                  <div className="space-y-1.5">
+                    <Button variant="outline" size="sm" className="w-full gap-1.5 border-emerald-300 text-emerald-700" asChild>
+                      <a href={(quote as any).invoice_url} target="_blank" rel="noopener noreferrer">
+                        <Download className="h-3.5 w-3.5" /> Ver fatura
+                      </a>
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground text-center">
+                      Enviada em {new Date((quote as any).invoice_uploaded_at).toLocaleString("pt-PT")}
+                    </p>
+                  </div>
+                ) : (
+                  <label className="w-full cursor-pointer">
+                    <input type="file" accept=".pdf" className="sr-only"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadInvoice(f); }} />
+                    <Button variant="outline" size="sm" className="w-full gap-1.5 pointer-events-none" disabled={uploadingInvoice}>
+                      {uploadingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      {uploadingInvoice ? "A carregar..." : "Carregar fatura PDF"}
+                    </Button>
+                  </label>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -633,6 +736,19 @@ function OrcamentoDetalhe() {
           </Card>
         </div>
       </div>
+
+      {/* Ficha de produto (EditProductSheet) */}
+      {viewProduct && (
+        <EditProductSheet
+          open={!!viewProduct}
+          onOpenChange={(open) => !open && setViewProduct(null)}
+          product={viewProduct}
+          families={[]}
+          types={[]}
+          categories={[]}
+          brands={[]}
+        />
+      )}
 
       {/* Modal pesquisa de produto */}
       <ProductSearchModal open={productSearch} onClose={() => setProductSearch(false)} onSelect={(p) => {
@@ -653,6 +769,151 @@ function OrcamentoDetalhe() {
         setItemEdits(prev => ({ ...prev, [newId]: { qty: 1, unit_price: unitPrice, description: p.name } }));
         setEditingItem(null);
       }} />
+    </div>
+  );
+}
+
+// ─── Lista de produtos para consulta do gestor ───────────────────────────────
+
+function GestorProductList() {
+  const [q, setQ] = useState("");
+  const [fornecedor, setFornecedor] = useState("todos");
+
+  const { data: results = [], isLoading } = useQuery({
+    queryKey: ["gestor-products", q, fornecedor],
+    queryFn: async () => {
+      let query = supabase.from("products")
+        .select("id,name,sku,price,purchase_price,taxa_iva,image_url,fornecedor,stock_status,weight,category")
+        .eq("include_in_catalog", true)
+        .order("name")
+        .limit(50);
+      if (q.length > 1) query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`) as any;
+      if (fornecedor !== "todos") query = query.eq("fornecedor", fornecedor) as any;
+      const { data } = await query;
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
+
+  return (
+    <div className="flex flex-col gap-3 overflow-hidden">
+      <div className="flex gap-2 shrink-0">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input value={q} onChange={e => setQ(e.target.value)} placeholder="Nome ou REF..." className="pl-9 h-9" />
+        </div>
+        <select value={fornecedor} onChange={e => setFornecedor(e.target.value)}
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="todos">Todos</option>
+          <option value="visiotech">Segurança</option>
+          <option value="diginova">Informática</option>
+          <option value="allto">Economato</option>
+        </select>
+      </div>
+      <div className="overflow-y-auto flex-1 space-y-1">
+        {isLoading && <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin" /></div>}
+        {!isLoading && results.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto encontrado.</p>}
+        {results.map((p: any) => {
+          const iva = (Number(p.taxa_iva) || 23) / 100;
+          const priceVat = p.price ? (Number(p.price) * (1 + iva)).toFixed(2) : null;
+          return (
+            <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg border border-border hover:bg-muted/30">
+              {p.image_url
+                ? <img src={p.image_url} alt="" className="h-10 w-10 object-cover rounded bg-muted shrink-0" />
+                : <div className="h-10 w-10 bg-muted rounded flex items-center justify-center shrink-0"><Package className="h-4 w-4 text-muted-foreground" /></div>
+              }
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{p.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {p.sku && <span className="font-mono mr-2">REF: {p.sku}</span>}
+                  {p.category && <span className="mr-2">{p.category}</span>}
+                  {p.weight && <span className="mr-2">{p.weight}kg</span>}
+                  {p.stock_status === "on_request" && <span className="text-amber-600">⚠ Por encomenda</span>}
+                </p>
+              </div>
+              <div className="text-right shrink-0 space-y-0.5">
+                {priceVat && <p className="text-sm font-bold">{priceVat.replace(".",",")} €</p>}
+                {p.purchase_price && <p className="text-[10px] text-amber-600">Custo: {Number(p.purchase_price).toFixed(2)}€</p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Tabela de portes DHL ─────────────────────────────────────────────────────
+
+function TabelaPortes() {
+  const DHL_TABELA: [number, number][] = [
+    [1, 3.65], [3, 3.78], [5, 3.78], [10, 4.37], [20, 4.88],
+    [30, 5.20], [40, 6.22], [50, 7.59], [60, 9.08], [70, 10.59],
+    [80, 12.11], [90, 13.62], [100, 15.13], [125, 18.51], [150, 22.22],
+    [175, 25.92], [200, 29.62], [225, 33.33], [250, 37.03],
+  ];
+  const MARGEM = 0.15;
+
+  const { data: configs = [] } = useQuery({
+    queryKey: ["shipping_config"],
+    queryFn: async () => {
+      const { data } = await supabase.from("shipping_config").select("*").eq("ativo", true).order("fornecedor");
+      return data ?? [];
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Portes por fornecedor */}
+      {configs.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Por fornecedor</p>
+          <div className="space-y-1">
+            {configs.map((c: any) => (
+              <div key={c.id} className="flex items-center justify-between text-sm py-1.5 border-b border-border last:border-0">
+                <span className="capitalize font-medium">{c.fornecedor}</span>
+                <div className="text-right text-xs text-muted-foreground">
+                  <span>1ª un: {Number(c.preco_primeira_unidade ?? 0).toFixed(2)}€</span>
+                  <span className="ml-2">+un: {Number(c.preco_unidade_adicional ?? 0).toFixed(2)}€</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tabela DHL por peso */}
+      <div>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+          DHL por peso (Portugal Continental) — margem 15%
+        </p>
+        <div className="rounded-lg border border-border overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium">Até (kg)</th>
+                <th className="text-right px-3 py-2 font-medium">Custo s/IVA</th>
+                <th className="text-right px-3 py-2 font-medium">Cobrado s/IVA</th>
+                <th className="text-right px-3 py-2 font-medium">c/IVA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {DHL_TABELA.map(([peso, custo]) => {
+                const cobrado = custo * (1 + MARGEM);
+                const comIva = cobrado * 1.23;
+                return (
+                  <tr key={peso} className="border-t border-border">
+                    <td className="px-3 py-1.5 font-mono">{peso} kg</td>
+                    <td className="px-3 py-1.5 text-right text-muted-foreground">{custo.toFixed(2)}€</td>
+                    <td className="px-3 py-1.5 text-right">{cobrado.toFixed(2)}€</td>
+                    <td className="px-3 py-1.5 text-right font-semibold text-primary">{comIva.toFixed(2)}€</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
