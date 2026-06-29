@@ -815,33 +815,28 @@ def main(local=False):
 
         # Título SEO otimizado — nome original + specs chave
         def construir_nome_seo(nome_orig: str, marca_prod: str, specs_dict: dict) -> str:
-            # Remover specs técnicas do nome — ficar só com Tipo + Marca + Modelo
+            # Nome limpo: Tipo + Marca + Modelo + Grau + Recondicionado
+            # Specs (RAM, SSD, proc) ficam nos campos próprios
             nome_limpo = nome_orig
-            # Remover tudo a partir do processador (Intel/AMD) inclusive
+            # Remover tudo a partir do processador
             nome_limpo = re.sub(r'\s+Intel\s+Core.*$', '', nome_limpo, flags=re.IGNORECASE)
-            nome_limpo = re.sub(r'\s+AMD\s+.*$', '', nome_limpo, flags=re.IGNORECASE)
-            # Remover blocos de specs com /
+            nome_limpo = re.sub(r'\s+AMD\s+\w+.*$', '', nome_limpo, flags=re.IGNORECASE)
+            nome_limpo = re.sub(r'\s+i\d[\s-]\d{4,5}[A-Z0-9]*\b.*$', '', nome_limpo)
+            nome_limpo = re.sub(r'\s+i\d\b.*$', '', nome_limpo)
+            # Remover blocos com /
             nome_limpo = re.sub(r'\s*/[^/]*', '', nome_limpo)
+            # Remover specs soltas sem /
+            nome_limpo = re.sub(r'\b\d+\s*GB\b(?:\s+(?:RAM|SSD|HDD|NVMe|NVME|SATA|eMMC))?', '', nome_limpo, flags=re.IGNORECASE)
+            nome_limpo = re.sub(r'\b(?:NVMe|NVME|SATA|eMMC)\b', '', nome_limpo, flags=re.IGNORECASE)
+            nome_limpo = re.sub(r'\b\d+\s*TB\b', '', nome_limpo, flags=re.IGNORECASE)
             # Remover Grau e Recondicionado
-            nome_limpo = re.sub(r'\b(?:Recondicionado|Grau\s+[AB]|Grado\s+[AB])\b', '', nome_limpo, flags=re.IGNORECASE)
-            nome_limpo = re.sub(r'\s{2,}', ' ', nome_limpo).strip().rstrip('-').strip()
+            nome_limpo = re.sub(r'\b(?:Recondicionado|Reacondicionado|Grau\s+[AB]|Grado\s+[AB])\b', '', nome_limpo, flags=re.IGNORECASE)
+            nome_limpo = re.sub(r'\s*/\s*$', '', nome_limpo)
+            nome_limpo = re.sub(r'\s{2,}', ' ', nome_limpo).strip()
             if len(nome_limpo) < 5:
                 nome_limpo = nome_orig
-            partes = [nome_limpo]
-            # Acrescentar processador (curto), RAM, armazenamento, grau
-            proc = specs_dict.get("processador", "")
-            if proc:
-                proc_curto = re.sub(r'^Intel Core ', '', proc)
-                proc_curto = re.sub(r'^AMD Ryzen ', 'Ryzen ', proc_curto)
-                partes.append(proc_curto[:12])
-            ram = specs_dict.get("ram_gb", "")
-            arm_gb = specs_dict.get("armazenamento_gb", "")
-            arm_tipo = specs_dict.get("armazenamento_tipo", "")
             grau = specs_dict.get("grau", "")
-            if ram: partes.append(f"{ram}GB RAM")
-            if arm_gb:
-                arm_str = f"{arm_gb}GB {arm_tipo}".strip() if arm_tipo else f"{arm_gb}GB"
-                partes.append(arm_str)
+            partes = [nome_limpo]
             if grau: partes.append(f"Grau {grau}")
             partes.append("Recondicionado")
             return " ".join(partes)
