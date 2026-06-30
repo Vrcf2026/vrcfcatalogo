@@ -320,7 +320,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   const specsRpcQuery = useQuery({
     queryKey: ["products-specs-rpc", mundo, categoryFilter, familyFilter, typeFilter, brandFilter, techFilters],
     queryFn: async () => {
-      if (categoryFilter === "all") return [];
+      if (categoryFilter === "all" && brandFilter.length === 0) return [];
       const brandId = brandFilter.length === 1 ? brandFilter[0] : null;
       const brandName = brandId ? (brands.find((b: any) => b.id === brandId)?.name ?? null) : null;
       const brandNames = brandFilter
@@ -342,7 +342,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       return (data as any[]) ?? [];
     },
     staleTime: 5 * 60 * 1000,
-    enabled: categoryFilter !== "all",
+    enabled: categoryFilter !== "all" || brandFilter.length > 0,
   });
 
   const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => ({
@@ -398,7 +398,11 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   }
 
   const familyOptions = families
-    .filter((f: any) => f.category === categoryFilter)
+    .filter((f: any) => categoryFilter !== "all"
+      ? f.category === categoryFilter
+      : brandFilter.length > 0
+        ? (brandCategoriesQuery.data ? brandCategoriesQuery.data.has(f.category) : true)
+        : false)
     .map((f: any) => ({ id: f.id, name: f.name, count: familyCount.get(f.id) ?? 0 }))
     .filter((o: any) => o.count > 0 || familyFilter.includes(o.id))
     .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
