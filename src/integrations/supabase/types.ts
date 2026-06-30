@@ -819,6 +819,8 @@ export type Database = {
           customer_tax_id: string | null
           decided_at: string | null
           id: string
+          invoice_uploaded_at: string | null
+          invoice_url: string | null
           notes: string | null
           prazo_entrega: string | null
           quote_number: string
@@ -829,6 +831,7 @@ export type Database = {
           status: Database["public"]["Enums"]["quote_status"]
           subtotal: number
           total: number
+          tracking_code: string | null
           updated_at: string
           user_id: string | null
         }
@@ -842,6 +845,8 @@ export type Database = {
           customer_tax_id?: string | null
           decided_at?: string | null
           id?: string
+          invoice_uploaded_at?: string | null
+          invoice_url?: string | null
           notes?: string | null
           prazo_entrega?: string | null
           quote_number?: string
@@ -852,6 +857,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
           total?: number
+          tracking_code?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -865,6 +871,8 @@ export type Database = {
           customer_tax_id?: string | null
           decided_at?: string | null
           id?: string
+          invoice_uploaded_at?: string | null
+          invoice_url?: string | null
           notes?: string | null
           prazo_entrega?: string | null
           quote_number?: string
@@ -875,6 +883,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["quote_status"]
           subtotal?: number
           total?: number
+          tracking_code?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -941,6 +950,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shipping_addresses: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          city: string
+          country: string
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          phone: string | null
+          postal_code: string
+          recipient: string | null
+          user_id: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          city: string
+          country?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string | null
+          postal_code: string
+          recipient?: string | null
+          user_id: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          phone?: string | null
+          postal_code?: string
+          recipient?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       shipping_config: {
         Row: {
@@ -1215,6 +1269,9 @@ export type Database = {
         | "rejected"
         | "cancelled"
         | "completed"
+        | "paid"
+        | "in_preparation"
+        | "shipped"
       rma_status:
         | "submitted"
         | "in_review"
@@ -1361,6 +1418,9 @@ export const Constants = {
         "rejected",
         "cancelled",
         "completed",
+        "paid",
+        "in_preparation",
+        "shipped",
       ],
       rma_status: [
         "submitted",

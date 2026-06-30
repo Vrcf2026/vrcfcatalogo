@@ -48,7 +48,7 @@ export function ShippingAddresses() {
         .order("is_default", { ascending: false })
         .order("created_at");
       if (error) throw error;
-      return (data ?? []) as Address[];
+      return (data ?? []) as unknown as Address[];
     },
   });
 

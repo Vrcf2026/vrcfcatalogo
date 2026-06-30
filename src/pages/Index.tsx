@@ -189,6 +189,12 @@ const Index = () => {
 
   const cats = activeMundo === "seguranca" ? segCats.data ?? [] : activeMundo === "escritorio" ? escCats.data ?? [] : ecoCats.data ?? [];
   const worldPath = activeMundo === "seguranca" ? "/seguranca" : activeMundo === "escritorio" ? "/escritorio" : "/economato";
+  const brandLink = (brand: any) => {
+    const world = typeof brand.mundo === "string" ? brand.mundo : "";
+    return ["seguranca", "escritorio", "economato"].includes(world)
+      ? `/${world}?marca=${brand.id}`
+      : `${worldPath}?marca=${brand.id}`;
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -407,7 +413,7 @@ const Index = () => {
               {brands.data.map((b: any) => (
                 <Link
                   key={b.id}
-                  to={b.mundo ? `/${b.mundo}?marca=${b.id}` : `/pesquisa?marca=${encodeURIComponent(b.name)}`}
+                  to={brandLink(b)}
                   title={b.name}
                   className="flex items-center justify-center h-12 w-28 rounded-xl border border-border/60 bg-white dark:bg-card hover:border-border hover:shadow-md transition-all duration-200 hover:scale-105 px-3"
                 >

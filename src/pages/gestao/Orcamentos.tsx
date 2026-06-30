@@ -66,6 +66,7 @@ const IVA_RATE = 0.23;
 // ─── Lista ────────────────────────────────────────────────────────────────────
 
 function OrcamentosList() {
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState("all");
   const [produtosOpen, setProdutosOpen] = useState(false);
   const [portesOpen, setPortesOpen] = useState(false);
