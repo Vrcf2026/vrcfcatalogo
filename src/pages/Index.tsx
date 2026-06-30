@@ -82,7 +82,7 @@ const useBrands = () =>
   useQuery({
     queryKey: ["hp-brands"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("brands").select("id,name,logo_url")
+      const { data, error } = await supabase.from("brands").select("id,name,logo_url,mundo")
         .eq("show_on_homepage", true).order("name").limit(16);
       if (error) throw error;
       return data ?? [];
@@ -369,19 +369,30 @@ const Index = () => {
         {featured.isError ? (
           <QueryError message="Não foi possível carregar os produtos em destaque." onRetry={() => featured.refetch()} />
         ) : featured.data && featured.data.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {featured.data.slice(0, 6).map((p: any) => (
-              <ProductCard
+          <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+            {featured.data.slice(0, 8).map((p: any) => (
+              <Link
                 key={p.id}
-                id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                description={p.short_description ?? p.description}
-                category={p.category} price={p.price}
-                imageUrl={p.image_url} images={[]}
-                familyName={null} brandName={p.brand || null}
-                featured={p.featured} stockStatus={p.stock_status}
-                minSaleQty={p.min_sale_qty ?? null}
-                onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
-              />
+                to={`/produto/${p.slug ?? p.id}`}
+                className="shrink-0 w-[110px] group"
+              >
+                <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-sm transition-all">
+                  <div className="aspect-square bg-muted/30 overflow-hidden">
+                    {p.image_url
+                      ? <img src={p.image_url} alt={p.name} className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform duration-200" />
+                      : <div className="w-full h-full flex items-center justify-center opacity-30 text-2xl">📦</div>
+                    }
+                  </div>
+                  <div className="px-2 py-1.5">
+                    <p className="text-[11px] font-medium text-foreground line-clamp-2 leading-tight mb-1">{p.name}</p>
+                    {p.price != null && (
+                      <p className="text-[11px] font-bold text-primary">
+                        {(p.price * 1.23).toFixed(2).replace(".", ",")} €
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         ) : null}
@@ -396,7 +407,7 @@ const Index = () => {
               {brands.data.map((b: any) => (
                 <Link
                   key={b.id}
-                  to={`/pesquisa?marca=${encodeURIComponent(b.name)}`}
+                  to={b.mundo ? `/${b.mundo}?marca=${b.id}` : `/pesquisa?marca=${encodeURIComponent(b.name)}`}
                   title={b.name}
                   className="flex items-center justify-center h-12 w-28 rounded-xl border border-border/60 bg-white dark:bg-card hover:border-border hover:shadow-md transition-all duration-200 hover:scale-105 px-3"
                 >
@@ -498,20 +509,30 @@ const Index = () => {
           {maisVistos.isError ? (
             <QueryError size="sm" message="Não foi possível carregar os mais vistos." onRetry={() => maisVistos.refetch()} />
           ) : (
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-              {maisVistos.data!.slice(0, 6).map((p: any) => (
-                <div key={p.id} className="shrink-0 w-44">
-                  <ProductCard
-                    id={p.id} name={p.name} sku={p.sku} slug={p.slug}
-                    description={p.short_description ?? p.description}
-                    category={p.category} price={p.price}
-                    imageUrl={p.image_url ?? p.image_url_snapshot} images={[]}
-                    familyName={null} brandName={p.brand || null}
-                    featured={false} stockStatus={p.stock_status}
-                    minSaleQty={p.min_sale_qty ?? null}
-                    onClick={() => navigate(`/produto/${p.slug ?? p.id}`)}
-                  />
-                </div>
+            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+              {maisVistos.data!.slice(0, 8).map((p: any) => (
+                <Link
+                  key={p.id}
+                  to={`/produto/${p.slug ?? p.id}`}
+                  className="shrink-0 w-[110px] group"
+                >
+                  <div className="rounded-xl border border-border bg-card overflow-hidden hover:border-primary/40 hover:shadow-sm transition-all">
+                    <div className="aspect-square bg-muted/30 overflow-hidden">
+                      {(p.image_url ?? p.image_url_snapshot)
+                        ? <img src={p.image_url ?? p.image_url_snapshot} alt={p.name} className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform duration-200" />
+                        : <div className="w-full h-full flex items-center justify-center opacity-30 text-2xl">📦</div>
+                      }
+                    </div>
+                    <div className="px-2 py-1.5">
+                      <p className="text-[11px] font-medium text-foreground line-clamp-2 leading-tight mb-1">{p.name}</p>
+                      {p.price != null && (
+                        <p className="text-[11px] font-bold text-primary">
+                          {(p.price * 1.23).toFixed(2).replace(".", ",")} €
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </Link>
               ))}
             </div>
           )}
