@@ -151,6 +151,38 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     retry: 2,
   });
 
+  // Quando há marca seleccionada (sem categoria), restringir as categorias visíveis
+  // apenas às que têm produtos dessa(s) marca(s) — evita o efeito "0 produtos"
+  // quando o utilizador escolhe uma categoria que a marca não cobre.
+  const brandCategoriesQuery = useQuery({
+    queryKey: ["brand-categories", mundo, brandFilter, brands.length],
+    queryFn: async () => {
+      if (brandFilter.length === 0) return null;
+      const brandNames = brandFilter
+        .map(id => brands.find((b: any) => b.id === id)?.name)
+        .filter(Boolean) as string[];
+      let q = supabase.from("products")
+        .select("category")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .range(0, 9999);
+      const conds = brandFilter.map(id => `brand_id.eq.${id}`)
+        .concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
+      if (conds) q = q.or(conds);
+      const { data, error } = await q;
+      if (error) throw error;
+      const set = new Set<string>();
+      for (const r of (data ?? [])) if (r.category) set.add(r.category);
+      return set;
+    },
+    enabled: brandFilter.length > 0 && brands.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const categories = brandFilter.length > 0 && brandCategoriesQuery.data
+    ? allCategories.filter((c: any) => brandCategoriesQuery.data!.has(c.name))
+    : allCategories;
+
   // Tipos (Nível 3 — dependentes de uma família)
   const { data: types = [] } = useQuery({
     queryKey: ["types", mundo],
