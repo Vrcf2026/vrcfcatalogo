@@ -193,7 +193,7 @@ const Index = () => {
     const world = typeof brand.mundo === "string" ? brand.mundo : "";
     return ["seguranca", "escritorio", "economato"].includes(world)
       ? `/${world}?marca=${brand.id}`
-      : `/pesquisa?marca=${brand.id}`;
+      : `${worldPath}?marca=${brand.id}`;
   };
 
   return (
