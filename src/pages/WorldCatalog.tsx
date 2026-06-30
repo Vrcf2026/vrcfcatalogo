@@ -320,16 +320,22 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
   }));
 
   // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
+  // Também activo quando há filtro de marca sem categoria (entrada via homepage).
   const facetsQuery = useQuery({
-    queryKey: ["facets", mundo, categoryFilter, search],
+    queryKey: ["facets", mundo, categoryFilter, brandFilter, search],
     queryFn: async () => {
-      if (categoryFilter === "all") return [] as any[];
+      if (categoryFilter === "all" && brandFilter.length === 0) return [] as any[];
       let q = supabase.from("products")
         .select("family_id, type_id, brand_id, brand")
         .eq("mundo", mundo)
         .eq("include_in_catalog", true)
-        .eq("category", categoryFilter)
         .range(0, 9999);
+      if (categoryFilter !== "all") q = q.eq("category", categoryFilter);
+      if (brandFilter.length > 0) {
+        const brandNames = brandFilter.map(id => brands.find((b: any) => b.id === id)?.name ?? "").filter(Boolean);
+        const brandConds = brandFilter.map(id => `brand_id.eq.${id}`).concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
+        q = q.or(brandConds);
+      }
       if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%,description.ilike.%${search}%`);
       const { data, error } = await q;
       if (error) throw error;
@@ -337,7 +343,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     },
     staleTime: 2 * 60 * 1000,
     retry: 2,
-    enabled: categoryFilter !== "all",
+    enabled: categoryFilter !== "all" || brandFilter.length > 0,
   });
 
   const facetRows: any[] = (facetsQuery.data ?? []) as any[];
@@ -365,11 +371,14 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     }
   }
 
+  // Quando há categoria, restringimos a famílias dessa categoria.
+  // Quando só há marca, mostramos qualquer família com produtos da marca.
   const familyOptions = families
-    .filter((f: any) => f.category === categoryFilter)
+    .filter((f: any) => categoryFilter === "all" ? (familyCount.get(f.id) ?? 0) > 0 : f.category === categoryFilter)
     .map((f: any) => ({ id: f.id, name: f.name, count: familyCount.get(f.id) ?? 0 }))
     .filter((o: any) => o.count > 0 || familyFilter.includes(o.id))
     .sort((a: any, b: any) => b.count - a.count || a.name.localeCompare(b.name));
+
 
   // Tipos: só mostrar tipos que têm produtos nas famílias activas
   const allowedFamilyIds = familyFilter.length > 0
