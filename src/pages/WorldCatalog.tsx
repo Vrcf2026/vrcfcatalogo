@@ -614,7 +614,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
       <div className="container mx-auto px-4 pb-14 flex gap-6">
 
         {/* Sidebar filtros — desktop (só aparece após escolher uma categoria) */}
-        {categoryFilter !== "all" && (
+        {showFilters && (
           <aside className="hidden md:block w-56 shrink-0 pt-4">
             <div className="sticky top-20 rounded-2xl border border-border bg-card p-5 max-h-[calc(100vh-6rem)] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
@@ -639,7 +639,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
             </div>
 
             {/* Filtros mobile (só após escolher categoria) */}
-            {categoryFilter !== "all" && (
+            {showFilters && (
               <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm" className="md:hidden gap-1.5 h-9 relative">
