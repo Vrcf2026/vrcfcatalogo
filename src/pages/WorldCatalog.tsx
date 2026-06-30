@@ -397,6 +397,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     Object.keys(techFilters).length > 0,
     stockFilter !== "all",
   ].filter(Boolean).length;
+  const showFilters = categoryFilter !== "all" || brandFilter.length > 0;
 
   const csv = (arr: string[]) => arr.join(",");
 
