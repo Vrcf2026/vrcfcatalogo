@@ -123,7 +123,39 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     staleTime: 10 * 60 * 1000,
     retry: 2,
   });
-  const categories = categoriesQuery.data ?? [];
+  const allCategories = categoriesQuery.data ?? [];
+
+  // Quando há marca seleccionada (sem categoria), restringir as categorias visíveis
+  // apenas àquelas com produtos dessa(s) marca(s) — evita "0 produtos" ao escolher
+  // uma categoria que a marca não cobre.
+  const brandCategoriesQuery = useQuery({
+    queryKey: ["brand-categories", mundo, brandFilter],
+    queryFn: async () => {
+      if (brandFilter.length === 0) return null;
+      const brandNames = brandFilter
+        .map(id => (brandFilter && brands.find((b: any) => b.id === id)?.name) || "")
+        .filter(Boolean);
+      let q = supabase.from("products")
+        .select("category")
+        .eq("mundo", mundo)
+        .eq("include_in_catalog", true)
+        .range(0, 9999);
+      const conds = brandFilter.map(id => `brand_id.eq.${id}`)
+        .concat(brandNames.map(n => `brand.eq.${n}`)).join(",");
+      if (conds) q = q.or(conds);
+      const { data, error } = await q;
+      if (error) throw error;
+      const set = new Set<string>();
+      for (const r of (data ?? [])) if (r.category) set.add(r.category);
+      return set;
+    },
+    enabled: brandFilter.length > 0 && brands.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const categories = brandFilter.length > 0 && brandCategoriesQuery.data
+    ? allCategories.filter((c: any) => brandCategoriesQuery.data!.has(c.name))
+    : allCategories;
 
   // Families
   const { data: families = [] } = useQuery({
