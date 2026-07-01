@@ -25,6 +25,7 @@ import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CategoryTile } from "@/components/catalog/CategoryTile";
 import { CatalogFilterPanel, type TechSpecGroup } from "@/components/catalog/CatalogFilterPanel";
+import { SPEC_LABELS } from "@/lib/specLabels";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
