@@ -119,7 +119,7 @@ function CheckList({
               }`}>
                 {active && <span className="text-[8px] text-primary-foreground font-bold">✓</span>}
               </span>
-              <span className="flex-1 truncate">{opt.name}</span>
+              <span className="flex-1 min-w-0 break-words leading-snug">{opt.name}</span>
               <span className="text-[10px] text-muted-foreground">{opt.count}</span>
             </button>
           );
