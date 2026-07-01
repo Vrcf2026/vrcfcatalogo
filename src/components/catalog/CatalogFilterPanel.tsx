@@ -48,15 +48,15 @@ function FilterSection({ title, count, children, defaultOpen = true }: {
     <div className="space-y-2">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+        className="flex items-center justify-between gap-2 w-full text-left text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
       >
-        <span className="flex items-center gap-1.5">
-          {title}
+        <span className="flex-1 min-w-0 flex items-center gap-1.5 text-left">
+          <span className="break-words">{title}</span>
           {count != null && count > 0 && (
             <span className="text-[10px] font-semibold text-primary normal-case tracking-normal">({count})</span>
           )}
         </span>
-        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {open ? <ChevronUp className="h-3 w-3 flex-shrink-0" /> : <ChevronDown className="h-3 w-3 flex-shrink-0" />}
       </button>
       {open && children}
     </div>
