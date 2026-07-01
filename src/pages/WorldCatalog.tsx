@@ -25,6 +25,7 @@ import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
 import { CategoryTile } from "@/components/catalog/CategoryTile";
 import { CatalogFilterPanel, type TechSpecGroup } from "@/components/catalog/CatalogFilterPanel";
+import { SPEC_LABELS } from "@/lib/specLabels";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
@@ -345,11 +346,17 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
     enabled: categoryFilter !== "all" || brandFilter.length > 0,
   });
 
-  const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => ({
-    key: g.key,
-    label: g.label.charAt(0).toUpperCase() + g.label.slice(1),
-    values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
-  }));
+  const techSpecOptions: TechSpecGroup[] = (specsRpcQuery.data ?? []).map((g: any) => {
+    const rawKey = String(g.key ?? "").trim();
+    const mapped = SPEC_LABELS[rawKey];
+    const fallback = String(g.label ?? rawKey).trim();
+    const label = mapped ?? (fallback.charAt(0).toUpperCase() + fallback.slice(1));
+    return {
+      key: rawKey,
+      label,
+      values: (g.values ?? []).map((v: any) => ({ value: v.value, count: v.count })),
+    };
+  });
 
   // Facets: contagens de família/tipo/marca dentro da categoria actual + search.
   const facetsQuery = useQuery({
