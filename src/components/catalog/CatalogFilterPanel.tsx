@@ -108,19 +108,25 @@ function CheckList({
           return (
             <button key={opt.id}
               onClick={() => onToggle(opt.id)}
-              className={`w-full text-left px-2.5 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+              className={`w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-start gap-2.5 ${
                 active
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-foreground/80 hover:bg-secondary"
+                  ? "bg-primary/10"
+                  : "hover:bg-secondary"
               }`}
             >
-              <span className={`h-3.5 w-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
+              <span className={`mt-0.5 h-3.5 w-3.5 rounded border flex-shrink-0 flex items-center justify-center ${
                 active ? "bg-primary border-primary" : "border-muted-foreground/40"
               }`}>
                 {active && <span className="text-[8px] text-primary-foreground font-bold">✓</span>}
               </span>
-              <span className="flex-1 min-w-0 break-words leading-snug">{opt.name}</span>
-              <span className="text-[10px] text-muted-foreground">{opt.count}</span>
+              <span className="flex flex-col min-w-0 flex-1">
+                <span className={`text-sm leading-snug break-words ${active ? "text-primary font-semibold" : "text-foreground/90 font-medium"}`}>
+                  {opt.name}
+                </span>
+                <span className="text-[11px] text-muted-foreground mt-0.5">
+                  {opt.count} {opt.count === 1 ? "produto" : "produtos"}
+                </span>
+              </span>
             </button>
           );
         })}
