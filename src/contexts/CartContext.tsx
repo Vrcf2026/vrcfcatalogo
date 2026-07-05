@@ -44,9 +44,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      if (!hasFunctionalConsent()) return [];
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const source = hasFunctionalConsent()
+        ? localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY)
+        : sessionStorage.getItem(STORAGE_KEY);
+      return source ? JSON.parse(source) : [];
     } catch {
       return [];
     }
