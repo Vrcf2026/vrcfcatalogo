@@ -44,9 +44,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      if (!hasFunctionalConsent()) return [];
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
+      const source = hasFunctionalConsent()
+        ? localStorage.getItem(STORAGE_KEY) ?? sessionStorage.getItem(STORAGE_KEY)
+        : sessionStorage.getItem(STORAGE_KEY);
+      return source ? JSON.parse(source) : [];
     } catch {
       return [];
     }
@@ -56,10 +57,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       if (!hasFunctionalConsent()) {
+        // Sem consentimento funcional persistimos em sessionStorage para que o
+        // carrinho não desapareça entre navegações nem quando o utilizador
+        // aceita cookies (reload no banner). Ao aceitar, o próximo efeito
+        // migra estes items para localStorage.
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items));
         localStorage.removeItem(STORAGE_KEY);
         return;
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      sessionStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }

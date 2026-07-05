@@ -31,6 +31,7 @@ export function CookieConsentBanner() {
   const handleReject = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "rejected");
     localStorage.removeItem("vrcf_cart");
+    sessionStorage.removeItem("vrcf_cart");
     setVisible(false);
   };
 

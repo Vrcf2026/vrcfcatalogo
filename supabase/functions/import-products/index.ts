@@ -289,8 +289,27 @@ async function handleUpsertProducts(supabase: SupabaseClient, produtos: any[], f
 
   const rows = await resolveProductReferences(supabase, produtos, fornecedor);
 
-  const batchSize = 100;
+  const batchSize = 50;
   let count = 0;
+  const failures: { sku?: string; error: string }[] = [];
+
+  const upsertOne = async (row: any): Promise<boolean> => {
+    let attempt = await supabase.from("products").upsert(row, { onConflict: "sku" }).select("id");
+    if (attempt.error && attempt.error.code === "23505" && String(attempt.error.message ?? "").includes("slug") && row.slug) {
+      // Slug em conflito com outro SKU: gera um sufixo determinístico e tenta uma vez.
+      const suffix = String(row.sku ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(-8) || Math.random().toString(36).slice(2, 8);
+      row.slug = `${row.slug}-${suffix}`;
+      attempt = await supabase.from("products").upsert(row, { onConflict: "sku" }).select("id");
+    }
+    if (attempt.error) {
+      console.error("Row upsert error:", { sku: row.sku, error: attempt.error });
+      failures.push({ sku: row.sku, error: attempt.error.message });
+      return false;
+    }
+    count += attempt.data?.length ?? 1;
+    return true;
+  };
+
   for (let i = 0; i < rows.length; i += batchSize) {
     const batch = rows.slice(i, i + batchSize);
 
@@ -322,14 +341,24 @@ async function handleUpsertProducts(supabase: SupabaseClient, produtos: any[], f
       .from("products")
       .upsert(batch, { onConflict: "sku" })
       .select("id");
-    if (error) {
-      console.error("Upsert error:", error);
-      return jsonResponse({ error: error.message, processed: count }, 500);
+
+    if (!error) {
+      count += data?.length ?? batch.length;
+      continue;
     }
-    count += data?.length ?? batch.length;
+
+    // Falha no batch (ex.: 23505 duplicate slug ou 57014 timeout). Tenta linha a
+    // linha para que uma única linha problemática não aborte a importação toda.
+    console.warn("Batch upsert failed, retrying row-by-row:", { code: error.code, message: error.message, batchStart: i });
+    for (const row of batch) {
+      await upsertOne(row);
+    }
   }
-  return jsonResponse({ success: true, count });
+
+  return jsonResponse({ success: true, count, failures: failures.length ? failures : undefined });
 }
+
+
 
 async function handlePriceHistory(supabase: SupabaseClient, alteracoes: any[], fornecedor?: string) {
   if (!Array.isArray(alteracoes) || alteracoes.length === 0) {
