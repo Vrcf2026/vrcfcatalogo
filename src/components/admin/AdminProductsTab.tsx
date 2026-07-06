@@ -331,7 +331,7 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
 
   const handleToggle = async (id: string, field: string, val: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
-    await supabase.from("products").update({ [field]: val }).eq("id", id);
+    await supabase.from("products").update({ [field]: val } as any).eq("id", id);
     queryClient.invalidateQueries({ queryKey: ["products"] });
   };
 
