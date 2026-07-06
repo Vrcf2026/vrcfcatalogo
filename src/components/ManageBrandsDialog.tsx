@@ -110,7 +110,7 @@ export function ManageBrandsDialog({ brands }: ManageBrandsDialogProps) {
 
   const handleToggleFlag = async (id: string, field: "show_in_world_strip" | "show_on_homepage", value: boolean) => {
     try {
-      const { error } = await supabase.from("brands").update({ [field]: value }).eq("id", id);
+      const { error } = await supabase.from("brands").update({ [field]: value } as any).eq("id", id);
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       queryClient.invalidateQueries({ queryKey: ["brands-strip"] });
