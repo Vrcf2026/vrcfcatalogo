@@ -140,8 +140,19 @@ export default function PaginaOrcamento() {
       const quoteItems = items.map(i => ({
         id: i.id, name: i.name, price: i.price,
         category: i.category, quantity: i.quantity,
+        sku: (i as any).sku ?? produtoMap[i.id]?.sku ?? null,
       }));
       const portesEstimados = totalPortes;
+
+      const shippingAddrStr = (() => {
+        if (shippingOption === "pickup") return "Levantamento em loja — Montijo";
+        if (shippingOption === "saved" && selectedAddressId) {
+          const a = savedAddresses.find((x: any) => x.id === selectedAddressId);
+          if (a) return `${a.address_line1}${a.address_line2 ? ", " + a.address_line2 : ""}, ${a.postal_code} ${a.city}`;
+        }
+        if (newAddress.line1.trim()) return `${newAddress.line1.trim()}, ${newAddress.postal_code} ${newAddress.city}`;
+        return null;
+      })();
 
       const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
         body: {
@@ -152,6 +163,7 @@ export default function PaginaOrcamento() {
           items: quoteItems,
           sendCopyToCustomer: sendCopy,
           shippingEstimate: portesEstimados,
+          shippingAddress: shippingAddrStr,
         },
       });
       if (fnError) throw fnError;
@@ -185,16 +197,21 @@ export default function PaginaOrcamento() {
           .select("id")
           .single();
         if (!qErr && quote) {
-          const rows = items.map(i => ({
-            quote_id: quote.id,
-            product_id: i.id,
-            product_name_snapshot: i.name,
-            product_image_snapshot: i.imageUrl,
-            product_sku_snapshot: (i as any).sku ?? produtoMap[i.id]?.sku ?? null,
-            unit_price: i.price ?? 0,
-            quantity: i.quantity,
-            line_total: (i.price ?? 0) * i.quantity,
-          }));
+          // unit_price e line_total sempre c/IVA (23%) — é o preço que o cliente vê
+          const rows = items.map(i => {
+            const taxa = 1.23; // sempre 23% para o pedido do cliente
+            const unitPriceVat = (i.price ?? 0) * taxa;
+            return {
+              quote_id: quote.id,
+              product_id: i.id,
+              product_name_snapshot: i.name,
+              product_image_snapshot: i.imageUrl,
+              product_sku_snapshot: (i as any).sku ?? produtoMap[i.id]?.sku ?? null,
+              unit_price: parseFloat(unitPriceVat.toFixed(2)),
+              quantity: i.quantity,
+              line_total: parseFloat((unitPriceVat * i.quantity).toFixed(2)),
+            };
+          });
           if (rows.length) await supabase.from("quote_items").insert(rows);
         }
       } catch (e) {
