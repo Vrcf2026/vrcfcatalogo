@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /gestao
+Disallow: /conta
 Disallow: /login
+Disallow: /registo
+Disallow: /reset-password
 
-Sitemap: https://mgdhclajlcmepdfrkktw.supabase.co/functions/v1/sitemap
+Sitemap: https://catalogo.vrcf.pt/sitemap.xml
