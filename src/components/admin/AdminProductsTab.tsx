@@ -235,6 +235,9 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
       if (data.length < PAGE) break;
       from += PAGE;
     }
+    const enrichedAll = await enrichWithInternalPricing(all);
+    all.length = 0;
+    all.push(...enrichedAll);
 
     const cols = [
       "sku", "name", "category", "family", "type", "brand", "mundo",
