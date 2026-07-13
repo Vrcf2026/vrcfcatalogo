@@ -1152,6 +1152,17 @@ export type Database = {
           product_id: string
         }[]
       }
+      get_products_internal_pricing: {
+        Args: { p_ids: string[] }
+        Returns: {
+          fornecedor: string
+          id: string
+          price_tier2: number
+          price_tier3: number
+          purchase_price: number
+          purchase_price_vat: number
+        }[]
+      }
       get_quotes_over_time: {
         Args: { p_weeks?: number }
         Returns: {

@@ -241,10 +241,21 @@ function OrcamentoDetalhe() {
     queryFn: async () => {
       const [q, i] = await Promise.all([
         supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
-        supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight,purchase_price,price)").eq("quote_id", id!),
+        supabase.from("quote_items").select("*,products(stock_status,weight,price)").eq("quote_id", id!),
       ]);
       if (q.error) throw q.error;
-      return { quote: q.data, items: i.data ?? [] };
+      const items = i.data ?? [];
+      const productIds = Array.from(new Set(items.map((it: any) => it.product_id).filter(Boolean)));
+      if (productIds.length) {
+        const { data: pricing } = await (supabase as any).rpc("get_products_internal_pricing", { p_ids: productIds });
+        const priceMap = new Map<string, any>();
+        for (const row of (pricing ?? []) as any[]) priceMap.set(row.id, row);
+        for (const it of items as any[]) {
+          const extra = it.product_id ? priceMap.get(it.product_id) : null;
+          if (extra && it.products) it.products = { ...it.products, ...extra };
+        }
+      }
+      return { quote: q.data, items };
     },
   });
 
@@ -784,14 +795,21 @@ function GestorProductList() {
     queryKey: ["gestor-products", q, fornecedor],
     queryFn: async () => {
       let query = supabase.from("products")
-        .select("id,name,sku,price,purchase_price,taxa_iva,image_url,fornecedor,stock_status,weight,category")
+        .select("id,name,sku,price,taxa_iva,image_url,stock_status,weight,category")
         .eq("include_in_catalog", true)
         .order("name")
         .limit(50);
       if (q.length > 1) query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`) as any;
-      if (fornecedor !== "todos") query = query.eq("fornecedor", fornecedor) as any;
       const { data } = await query;
-      return data ?? [];
+      let rows = (data ?? []) as any[];
+      if (rows.length) {
+        const { data: pricing } = await (supabase as any).rpc("get_products_internal_pricing", { p_ids: rows.map(r => r.id) });
+        const map = new Map<string, any>();
+        for (const row of (pricing ?? []) as any[]) map.set(row.id, row);
+        rows = rows.map(r => ({ ...r, ...(map.get(r.id) ?? {}) }));
+        if (fornecedor !== "todos") rows = rows.filter(r => r.fornecedor === fornecedor);
+      }
+      return rows;
     },
     staleTime: 60_000,
   });
@@ -932,11 +950,18 @@ function ProductSearchModal({ open, onClose, onSelect }: {
     enabled: q.length > 2,
     queryFn: async () => {
       const { data } = await supabase.from("products")
-        .select("id,name,sku,price,purchase_price,image_url,fornecedor,stock_status,taxa_iva")
+        .select("id,name,sku,price,image_url,stock_status,taxa_iva")
         .eq("include_in_catalog", true)
         .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
         .limit(20);
-      return data ?? [];
+      let rows = (data ?? []) as any[];
+      if (rows.length) {
+        const { data: pricing } = await (supabase as any).rpc("get_products_internal_pricing", { p_ids: rows.map(r => r.id) });
+        const map = new Map<string, any>();
+        for (const row of (pricing ?? []) as any[]) map.set(row.id, row);
+        rows = rows.map(r => ({ ...r, ...(map.get(r.id) ?? {}) }));
+      }
+      return rows;
     },
     staleTime: 30_000,
   });

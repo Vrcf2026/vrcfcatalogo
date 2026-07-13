@@ -4,14 +4,32 @@ const PAGE_SIZE = 1000;
 const CONCURRENCY = 3;
 
 export const PRODUCT_COLUMNS =
-  "id,sku,name,slug,description,short_description,category,categoria_pai,family,family_id,type,type_id,brand,brand_id,price,purchase_price,purchase_price_vat,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,sob_encomenda,weight,especificacoes,specs_locked,destaques,conteudo_embalagem,produtos_relacionados,upgrades,min_sale_qty,created_at,updated_at";
+  "id,sku,name,slug,description,short_description,category,categoria_pai,family,family_id,type,type_id,brand,brand_id,price,image_url,featured,include_in_catalog,show_on_homepage,mundo,stock_status,sob_encomenda,weight,especificacoes,specs_locked,destaques,conteudo_embalagem,produtos_relacionados,upgrades,min_sale_qty,created_at,updated_at";
 
 // Colunas "leves" para a tabela do Admin — sem campos grandes (descrição,
 // especificações, upgrades, relacionados) que só são precisos ao abrir o
 // EditProductSheet para um produto específico. Isto reduz drasticamente o
 // volume de dados transferido para a listagem paginada.
 export const LIST_COLUMNS =
-  "id,sku,name,category,family,family_id,type,type_id,brand,brand_id,price,purchase_price,image_url,featured,include_in_catalog,show_on_homepage,mundo,fornecedor,stock_status,min_sale_qty,especificacoes,created_at";
+  "id,sku,name,category,family,family_id,type,type_id,brand,brand_id,price,image_url,featured,include_in_catalog,show_on_homepage,mundo,stock_status,min_sale_qty,especificacoes,created_at";
+
+// Campos internos (preço de compra, escalões, fornecedor) só acessíveis a
+// gestores/admins via RPC — utilize enrichWithInternalPricing quando precisar
+// destes valores para a listagem de administração.
+export const enrichWithInternalPricing = async <T extends { id: string }>(rows: T[]): Promise<T[]> => {
+  if (!rows.length) return rows;
+  const ids = rows.map((r) => r.id);
+  const client = supabase as any;
+  const { data, error } = await client.rpc("get_products_internal_pricing", { p_ids: ids });
+  if (error || !data) return rows;
+  const map = new Map<string, any>();
+  for (const row of data as any[]) map.set(row.id, row);
+  return rows.map((r) => {
+    const extra = map.get(r.id);
+    return extra ? { ...r, ...extra } : r;
+  });
+};
+
 
 type FetchAllOptions = {
   table: string;

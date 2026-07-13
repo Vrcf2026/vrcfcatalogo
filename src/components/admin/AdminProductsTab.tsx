@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useState, useMemo, useEffect } from "react";
 import { Search, Trash2, ChevronUp, ChevronDown, Loader2, Package, Download, Shuffle } from "lucide-react";
 import { toast } from "sonner";
-import { LIST_COLUMNS, PRODUCT_COLUMNS } from "@/lib/fetchAllRows";
+import { LIST_COLUMNS, PRODUCT_COLUMNS, enrichWithInternalPricing } from "@/lib/fetchAllRows";
 
 const FORNECEDORES = ["diginova", "visiotech", "bydemes", "allto", "manual"];
 const PAGE_SIZE = 50;
@@ -104,7 +104,8 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
       const from = (page - 1) * PAGE_SIZE;
       const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
-      return { rows: data ?? [], total: count ?? 0 };
+      const enriched = await enrichWithInternalPricing((data ?? []) as any[]);
+      return { rows: enriched, total: count ?? 0 };
     },
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
@@ -211,7 +212,8 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
     if (nextPage !== page) setPage(nextPage);
     const { data, error } = await supabase.from("products").select(PRODUCT_COLUMNS).eq("id", nextId).maybeSingle();
     if (error || !data) { toast.error("Erro ao carregar produto"); return; }
-    setEditingProduct(data);
+    const [enriched] = await enrichWithInternalPricing([data as any]);
+    setEditingProduct(enriched);
   };
 
   const editingIdx = editingProduct ? filteredIds.indexOf(editingProduct.id) : -1;
@@ -233,6 +235,9 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
       if (data.length < PAGE) break;
       from += PAGE;
     }
+    const enrichedAll = await enrichWithInternalPricing(all);
+    all.length = 0;
+    all.push(...enrichedAll);
 
     const cols = [
       "sku", "name", "category", "family", "type", "brand", "mundo",
@@ -517,8 +522,10 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
                         // upgrades, etc. que não vêm na listagem paginada LIST_COLUMNS)
                         const { data } = await supabase.from("products")
                           .select(PRODUCT_COLUMNS).eq("id", p.id).maybeSingle();
-                        if (data) setEditingProduct(data);
-                        else setEditingProduct(p); // fallback
+                        if (data) {
+                          const [enriched] = await enrichWithInternalPricing([data as any]);
+                          setEditingProduct(enriched);
+                        } else setEditingProduct(p); // fallback
                       }}>
                       <td className="px-3 py-2.5 max-w-[220px]">
                         <div className="flex items-center gap-2">
