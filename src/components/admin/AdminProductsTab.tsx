@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { useState, useMemo, useEffect } from "react";
 import { Search, Trash2, ChevronUp, ChevronDown, Loader2, Package, Download, Shuffle } from "lucide-react";
 import { toast } from "sonner";
-import { LIST_COLUMNS, PRODUCT_COLUMNS } from "@/lib/fetchAllRows";
+import { LIST_COLUMNS, PRODUCT_COLUMNS, enrichWithInternalPricing } from "@/lib/fetchAllRows";
 
 const FORNECEDORES = ["diginova", "visiotech", "bydemes", "allto", "manual"];
 const PAGE_SIZE = 50;
