@@ -123,6 +123,18 @@ export function EditProductSheet({ open, onOpenChange, product, families, types 
     setStorePrice((product as any).store_price?.toString() || "");
     setStorePriceVat((product as any).store_price_vat?.toString() || "");
     setPriceLocked(!!(product as any).price_locked);
+
+    // Se os campos de custo/fornecedor não vieram do parent (foram removidos
+    // do SELECT público), buscar via RPC de gestão.
+    if (product.id && product.purchase_price == null && product.purchase_price_vat == null) {
+      (supabase as any).rpc("get_products_internal_pricing", { p_ids: [product.id] })
+        .then(({ data }: any) => {
+          const row = Array.isArray(data) ? data[0] : null;
+          if (!row) return;
+          if (row.purchase_price != null) setPurchasePrice(String(row.purchase_price));
+          if (row.purchase_price_vat != null) setPurchasePriceVat(String(row.purchase_price_vat));
+        });
+    }
     setWeight(product.weight?.toString() || "");
     setImageUrl(product.image_url || "");
     setMundo(product.mundo || "escritorio");
