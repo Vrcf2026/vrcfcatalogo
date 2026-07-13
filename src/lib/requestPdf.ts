@@ -125,12 +125,27 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
   doc.text("Total c/IVA", W - MR - 2, y + 5.5, { align: "right" });
   y += 10;
 
+  // Detetar se os preços em BD estão s/IVA (registos antigos ou fluxos de gestor)
+  // ou já c/IVA (novos pedidos). Comparamos a soma das linhas com quote.total.
+  const shipping = Number(request.shipping_total) || 0;
+  const rawSum = items.reduce(
+    (s, it) => s + (Number(it.line_total) ?? (Number(it.unit_price) || 0) * it.quantity),
+    0,
+  );
+  const quoteTotal = Number(request.total) || 0;
+  let vatFactor = 1;
+  if (quoteTotal > 0 && rawSum > 0) {
+    const diffAsCIva = Math.abs(rawSum + shipping - quoteTotal);
+    const diffAsSIva = Math.abs(rawSum * (1 + IVA) + shipping - quoteTotal);
+    if (diffAsSIva + 0.02 < diffAsCIva) vatFactor = 1 + IVA;
+  }
+
   let subtotalCIva = 0;
   let rowEven = false;
   for (const it of items) {
     if (y > H - 60) { doc.addPage(); y = 20; drawFooter(); }
-    const unitVat = it.unit_price ?? 0; // já c/IVA
-    const lineVat = it.line_total ?? (unitVat * it.quantity);
+    const unitVat = (it.unit_price ?? 0) * vatFactor;
+    const lineVat = (it.line_total ?? ((it.unit_price ?? 0) * it.quantity)) * vatFactor;
     subtotalCIva += lineVat;
 
     const nameLines = doc.splitTextToSize(it.product_name_snapshot, W - ML - MR - 68);
@@ -162,7 +177,6 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
 
   // ── TOTAIS ──
   y += 5;
-  const shipping = Number(request.shipping_total) || 0;
   const subtotalSIva = subtotalCIva / (1 + IVA);
   const ivaValor = subtotalCIva - subtotalSIva;
   const totalFinal = subtotalCIva + shipping;
