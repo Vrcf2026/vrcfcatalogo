@@ -104,7 +104,8 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
       const from = (page - 1) * PAGE_SIZE;
       const { data, error, count } = await query.range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
-      return { rows: data ?? [], total: count ?? 0 };
+      const enriched = await enrichWithInternalPricing((data ?? []) as any[]);
+      return { rows: enriched, total: count ?? 0 };
     },
     staleTime: 60 * 1000,
     placeholderData: (prev) => prev,
