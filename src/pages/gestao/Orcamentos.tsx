@@ -241,10 +241,21 @@ function OrcamentoDetalhe() {
     queryFn: async () => {
       const [q, i] = await Promise.all([
         supabase.from("quotes").select("*").eq("id", id!).maybeSingle(),
-        supabase.from("quote_items").select("*,products(stock_status,fornecedor,weight,purchase_price,price)").eq("quote_id", id!),
+        supabase.from("quote_items").select("*,products(stock_status,weight,price)").eq("quote_id", id!),
       ]);
       if (q.error) throw q.error;
-      return { quote: q.data, items: i.data ?? [] };
+      const items = i.data ?? [];
+      const productIds = Array.from(new Set(items.map((it: any) => it.product_id).filter(Boolean)));
+      if (productIds.length) {
+        const { data: pricing } = await (supabase as any).rpc("get_products_internal_pricing", { p_ids: productIds });
+        const priceMap = new Map<string, any>();
+        for (const row of (pricing ?? []) as any[]) priceMap.set(row.id, row);
+        for (const it of items as any[]) {
+          const extra = it.product_id ? priceMap.get(it.product_id) : null;
+          if (extra && it.products) it.products = { ...it.products, ...extra };
+        }
+      }
+      return { quote: q.data, items };
     },
   });
 
