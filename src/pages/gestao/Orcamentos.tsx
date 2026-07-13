@@ -950,11 +950,18 @@ function ProductSearchModal({ open, onClose, onSelect }: {
     enabled: q.length > 2,
     queryFn: async () => {
       const { data } = await supabase.from("products")
-        .select("id,name,sku,price,purchase_price,image_url,fornecedor,stock_status,taxa_iva")
+        .select("id,name,sku,price,image_url,stock_status,taxa_iva")
         .eq("include_in_catalog", true)
         .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
         .limit(20);
-      return data ?? [];
+      let rows = (data ?? []) as any[];
+      if (rows.length) {
+        const { data: pricing } = await (supabase as any).rpc("get_products_internal_pricing", { p_ids: rows.map(r => r.id) });
+        const map = new Map<string, any>();
+        for (const row of (pricing ?? []) as any[]) map.set(row.id, row);
+        rows = rows.map(r => ({ ...r, ...(map.get(r.id) ?? {}) }));
+      }
+      return rows;
     },
     staleTime: 30_000,
   });
