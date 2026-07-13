@@ -795,14 +795,21 @@ function GestorProductList() {
     queryKey: ["gestor-products", q, fornecedor],
     queryFn: async () => {
       let query = supabase.from("products")
-        .select("id,name,sku,price,purchase_price,taxa_iva,image_url,fornecedor,stock_status,weight,category")
+        .select("id,name,sku,price,taxa_iva,image_url,stock_status,weight,category")
         .eq("include_in_catalog", true)
         .order("name")
         .limit(50);
       if (q.length > 1) query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`) as any;
-      if (fornecedor !== "todos") query = query.eq("fornecedor", fornecedor) as any;
       const { data } = await query;
-      return data ?? [];
+      let rows = (data ?? []) as any[];
+      if (rows.length) {
+        const { data: pricing } = await (supabase as any).rpc("get_products_internal_pricing", { p_ids: rows.map(r => r.id) });
+        const map = new Map<string, any>();
+        for (const row of (pricing ?? []) as any[]) map.set(row.id, row);
+        rows = rows.map(r => ({ ...r, ...(map.get(r.id) ?? {}) }));
+        if (fornecedor !== "todos") rows = rows.filter(r => r.fornecedor === fornecedor);
+      }
+      return rows;
     },
     staleTime: 60_000,
   });
