@@ -212,7 +212,8 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
     if (nextPage !== page) setPage(nextPage);
     const { data, error } = await supabase.from("products").select(PRODUCT_COLUMNS).eq("id", nextId).maybeSingle();
     if (error || !data) { toast.error("Erro ao carregar produto"); return; }
-    setEditingProduct(data);
+    const [enriched] = await enrichWithInternalPricing([data as any]);
+    setEditingProduct(enriched);
   };
 
   const editingIdx = editingProduct ? filteredIds.indexOf(editingProduct.id) : -1;
