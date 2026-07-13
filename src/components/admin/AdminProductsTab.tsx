@@ -522,8 +522,10 @@ export const AdminProductsTab = ({ families, dbCategories, brands, types, catego
                         // upgrades, etc. que não vêm na listagem paginada LIST_COLUMNS)
                         const { data } = await supabase.from("products")
                           .select(PRODUCT_COLUMNS).eq("id", p.id).maybeSingle();
-                        if (data) setEditingProduct(data);
-                        else setEditingProduct(p); // fallback
+                        if (data) {
+                          const [enriched] = await enrichWithInternalPricing([data as any]);
+                          setEditingProduct(enriched);
+                        } else setEditingProduct(p); // fallback
                       }}>
                       <td className="px-3 py-2.5 max-w-[220px]">
                         <div className="flex items-center gap-2">
