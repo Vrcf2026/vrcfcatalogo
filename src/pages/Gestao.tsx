@@ -1,30 +1,55 @@
 import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
+import { useGestaoCounts } from "@/hooks/useGestaoCounts";
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Wrench, Users, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { cn } from "@/lib/utils";
 
-// Tabs desktop/tablet — sidebar completa
-const tabsDesktop = [
-  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true  },
-  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"            },
-  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                  },
-  { to: "/gestao/clientes",   icon: Users,            label: "Clientes"              },
+type Tab = {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  end?: boolean;
+  countKey?: "pendingQuotes" | "pendingRmas";
+};
+
+const tabsDesktop: Tab[] = [
+  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true },
+  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos", countKey: "pendingQuotes" },
+  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs",       countKey: "pendingRmas" },
+  { to: "/gestao/clientes",   icon: Users,            label: "Clientes" },
 ];
 
-// Tabs mobile — só o essencial para resposta rápida
-const tabsMobile = [
-  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true  },
-  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"            },
-  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                  },
+const tabsMobile: Tab[] = [
+  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true },
+  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos", countKey: "pendingQuotes" },
+  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs",       countKey: "pendingRmas" },
 ];
+
+function CountBadge({ count, className }: { count: number; className?: string }) {
+  if (!count) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full",
+        "text-[10px] font-bold leading-none tabular-nums",
+        "bg-destructive text-destructive-foreground",
+        className,
+      )}
+      aria-label={`${count} novos`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 export default function Gestao() {
   const { user, loading, isGestor, signOut } = useAuth();
   const location = useLocation();
+  const { data: counts } = useGestaoCounts(!!user && isGestor);
 
   if (loading) {
     return (
@@ -37,6 +62,8 @@ export default function Gestao() {
   if (!user || !isGestor) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
+
+  const getCount = (key?: Tab["countKey"]) => (key && counts ? counts[key] : 0);
 
   return (
     <>
@@ -73,24 +100,28 @@ export default function Gestao() {
           {/* Sidebar — só em md+ */}
           <aside className="hidden md:block">
             <nav className="flex flex-col gap-1 sticky top-20">
-              {tabsDesktop.map((t) => (
-                <NavLink
-                  key={t.to}
-                  to={t.to}
-                  end={t.end}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap transition-colors",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    )
-                  }
-                >
-                  <t.icon className="h-4 w-4" />
-                  {t.label}
-                </NavLink>
-              ))}
+              {tabsDesktop.map((t) => {
+                const c = getCount(t.countKey);
+                return (
+                  <NavLink
+                    key={t.to}
+                    to={t.to}
+                    end={t.end}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      )
+                    }
+                  >
+                    <t.icon className="h-4 w-4" />
+                    <span className="flex-1">{t.label}</span>
+                    <CountBadge count={c} />
+                  </NavLink>
+                );
+              })}
             </nav>
           </aside>
 
@@ -108,22 +139,28 @@ export default function Gestao() {
         {/* Bottom nav mobile — só tabs essenciais */}
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
           <div className="grid grid-cols-3 h-14">
-            {tabsMobile.map((t) => (
-              <NavLink
-                key={t.to}
-                to={t.to}
-                end={t.end}
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center gap-0.5 transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )
-                }
-              >
-                <t.icon className="h-5 w-5" />
-                <span className="text-[9px] font-medium">{t.label}</span>
-              </NavLink>
-            ))}
+            {tabsMobile.map((t) => {
+              const c = getCount(t.countKey);
+              return (
+                <NavLink
+                  key={t.to}
+                  to={t.to}
+                  end={t.end}
+                  className={({ isActive }) =>
+                    cn(
+                      "relative flex flex-col items-center justify-center gap-0.5 transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    )
+                  }
+                >
+                  <div className="relative">
+                    <t.icon className="h-5 w-5" />
+                    <CountBadge count={c} className="absolute -top-1.5 -right-2.5" />
+                  </div>
+                  <span className="text-[9px] font-medium">{t.label}</span>
+                </NavLink>
+              );
+            })}
           </div>
         </nav>
       </div>
