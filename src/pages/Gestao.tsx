@@ -1,26 +1,50 @@
 import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useAuth } from "@/hooks/useAuth";
+import { useGestaoCounts } from "@/hooks/useGestaoCounts";
 import { Button } from "@/components/ui/button";
 import { Loader2, FileText, Wrench, Users, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react";
 import { SiteFooter } from "@/components/SiteFooter";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { cn } from "@/lib/utils";
 
-// Tabs desktop/tablet — sidebar completa
-const tabsDesktop = [
-  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true  },
-  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"            },
-  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                  },
-  { to: "/gestao/clientes",   icon: Users,            label: "Clientes"              },
+type Tab = {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  end?: boolean;
+  countKey?: "pendingQuotes" | "pendingRmas";
+};
+
+const tabsDesktop: Tab[] = [
+  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true },
+  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos", countKey: "pendingQuotes" },
+  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs",       countKey: "pendingRmas" },
+  { to: "/gestao/clientes",   icon: Users,            label: "Clientes" },
 ];
 
-// Tabs mobile — só o essencial para resposta rápida
-const tabsMobile = [
-  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true  },
-  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos"            },
-  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs"                  },
+const tabsMobile: Tab[] = [
+  { to: "/gestao",            icon: LayoutDashboard, label: "Resumo",     end: true },
+  { to: "/gestao/orcamentos", icon: FileText,         label: "Orçamentos", countKey: "pendingQuotes" },
+  { to: "/gestao/rma",        icon: Wrench,           label: "RMAs",       countKey: "pendingRmas" },
 ];
+
+function CountBadge({ count, className }: { count: number; className?: string }) {
+  if (!count) return null;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full",
+        "text-[10px] font-bold leading-none tabular-nums",
+        "bg-destructive text-destructive-foreground",
+        className,
+      )}
+      aria-label={`${count} novos`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
 
 export default function Gestao() {
   const { user, loading, isGestor, signOut } = useAuth();
