@@ -139,22 +139,28 @@ export default function Gestao() {
         {/* Bottom nav mobile — só tabs essenciais */}
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
           <div className="grid grid-cols-3 h-14">
-            {tabsMobile.map((t) => (
-              <NavLink
-                key={t.to}
-                to={t.to}
-                end={t.end}
-                className={({ isActive }) =>
-                  cn(
-                    "flex flex-col items-center justify-center gap-0.5 transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                  )
-                }
-              >
-                <t.icon className="h-5 w-5" />
-                <span className="text-[9px] font-medium">{t.label}</span>
-              </NavLink>
-            ))}
+            {tabsMobile.map((t) => {
+              const c = getCount(t.countKey);
+              return (
+                <NavLink
+                  key={t.to}
+                  to={t.to}
+                  end={t.end}
+                  className={({ isActive }) =>
+                    cn(
+                      "relative flex flex-col items-center justify-center gap-0.5 transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                    )
+                  }
+                >
+                  <div className="relative">
+                    <t.icon className="h-5 w-5" />
+                    <CountBadge count={c} className="absolute -top-1.5 -right-2.5" />
+                  </div>
+                  <span className="text-[9px] font-medium">{t.label}</span>
+                </NavLink>
+              );
+            })}
           </div>
         </nav>
       </div>
