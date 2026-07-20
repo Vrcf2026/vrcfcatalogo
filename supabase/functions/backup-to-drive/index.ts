@@ -104,29 +104,25 @@ serve(async (req) => {
     const stats: Record<string, number> = {};
 
     for (const table of TABLES) {
-      // Stream por páginas, escrevendo o JSON como array sem manter tudo em memória.
-      const parts: string[] = ["["];
+      // Cada página → 1 ficheiro no Drive. Evita acumular grandes tabelas em memória.
       let from = 0;
       const size = 500;
+      let page = 0;
       let total = 0;
-      let first = true;
       while (true) {
         const { data, error } = await supabase.from(table).select("*").range(from, from + size - 1);
         if (error) throw new Error(`${table}: ${error.message}`);
         if (!data || data.length === 0) break;
-        for (const row of data) {
-          parts.push((first ? "" : ",") + JSON.stringify(row));
-          first = false;
-        }
+        const name = page === 0 && data.length < size ? `${table}.json` : `${table}_${String(page).padStart(4, "0")}.json`;
+        await uploadJson(dayId, name, JSON.stringify(data));
         total += data.length;
+        page++;
         if (data.length < size) break;
         from += size;
       }
-      parts.push("]");
-      const content = parts.join("");
-      await uploadJson(dayId, `${table}.json`, content);
       stats[table] = total;
     }
+
 
     // Manifest
     await uploadJson(dayId, "_manifest.json", JSON.stringify({
