@@ -19,6 +19,7 @@ import {
 import { EditProductSheet } from "@/components/EditProductSheet";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
+import { quoteStatusClass } from "@/lib/statusColors";
 
 const URGENCIA: Record<string, number> = {
   pending: 0, sent: 1, in_review: 2, accepted: 3,
@@ -39,18 +40,8 @@ const STATUS_OPTIONS = [
   { value: "cancelled",     label: "Cancelado" },
 ];
 
-const STATUS_COLOR: Record<string, string> = {
-  pending:        "bg-amber-100 text-amber-800",
-  in_review:      "bg-purple-100 text-purple-800",
-  sent:           "bg-blue-100 text-blue-800",
-  accepted:       "bg-emerald-100 text-emerald-800",
-  paid:           "bg-emerald-100 text-emerald-800",
-  in_preparation: "bg-cyan-100 text-cyan-800",
-  shipped:        "bg-indigo-100 text-indigo-800",
-  completed:      "bg-gray-100 text-gray-700",
-  rejected:       "bg-red-100 text-red-800",
-  cancelled:      "bg-gray-100 text-gray-500",
-};
+// Status colors — moved to semantic tokens in src/index.css.
+// Use quoteStatusClass(status) which returns "status-badge status-badge-<key>".
 
 const PRAZO_OPCOES = ["24-48h", "3-5 dias úteis", "5-10 dias úteis", "Sob consulta"];
 
