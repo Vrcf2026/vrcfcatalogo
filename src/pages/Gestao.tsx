@@ -100,24 +100,28 @@ export default function Gestao() {
           {/* Sidebar — só em md+ */}
           <aside className="hidden md:block">
             <nav className="flex flex-col gap-1 sticky top-20">
-              {tabsDesktop.map((t) => (
-                <NavLink
-                  key={t.to}
-                  to={t.to}
-                  end={t.end}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap transition-colors",
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                    )
-                  }
-                >
-                  <t.icon className="h-4 w-4" />
-                  {t.label}
-                </NavLink>
-              ))}
+              {tabsDesktop.map((t) => {
+                const c = getCount(t.countKey);
+                return (
+                  <NavLink
+                    key={t.to}
+                    to={t.to}
+                    end={t.end}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap transition-colors",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      )
+                    }
+                  >
+                    <t.icon className="h-4 w-4" />
+                    <span className="flex-1">{t.label}</span>
+                    <CountBadge count={c} />
+                  </NavLink>
+                );
+              })}
             </nav>
           </aside>
 
