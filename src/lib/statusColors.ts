@@ -12,8 +12,7 @@ export type RmaStatus =
 
 /** Returns the semantic badge class for a quote status. */
 export function quoteStatusClass(status: string): string {
-  return `status-badge status-badge-${status}` +
-    (status === "pending" ? " status-badge-pending" : "");
+  return `status-badge status-badge-${status}`;
 }
 
 /** Returns the semantic badge class for an RMA status. */
