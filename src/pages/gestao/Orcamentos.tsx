@@ -19,6 +19,7 @@ import {
 import { EditProductSheet } from "@/components/EditProductSheet";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
+import { quoteStatusClass } from "@/lib/statusColors";
 
 const URGENCIA: Record<string, number> = {
   pending: 0, sent: 1, in_review: 2, accepted: 3,
@@ -39,18 +40,8 @@ const STATUS_OPTIONS = [
   { value: "cancelled",     label: "Cancelado" },
 ];
 
-const STATUS_COLOR: Record<string, string> = {
-  pending:        "bg-amber-100 text-amber-800",
-  in_review:      "bg-purple-100 text-purple-800",
-  sent:           "bg-blue-100 text-blue-800",
-  accepted:       "bg-emerald-100 text-emerald-800",
-  paid:           "bg-emerald-100 text-emerald-800",
-  in_preparation: "bg-cyan-100 text-cyan-800",
-  shipped:        "bg-indigo-100 text-indigo-800",
-  completed:      "bg-gray-100 text-gray-700",
-  rejected:       "bg-red-100 text-red-800",
-  cancelled:      "bg-gray-100 text-gray-500",
-};
+// Status colors — moved to semantic tokens in src/index.css.
+// Use quoteStatusClass(status) which returns "status-badge status-badge-<key>".
 
 const PRAZO_OPCOES = ["24-48h", "3-5 dias úteis", "5-10 dias úteis", "Sob consulta"];
 
@@ -150,7 +141,7 @@ function OrcamentosList() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-semibold">{q.quote_number}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status] ?? ""}`}>
+                    <span className={quoteStatusClass(q.status)}>
                       {STATUS_OPTIONS.find((s) => s.value === q.status)?.label ?? q.status}
                     </span>
                   </div>
@@ -253,12 +244,12 @@ function StatusTimeline({ currentStatus, onChangeStatus }: { currentStatus: stri
                     : ""
                 } ${!isTerminal ? "cursor-pointer" : "cursor-default"}`}
               >
-                <div className={`h-7 w-7 rounded-full flex items-center justify-center ${
-                  isDone ? "bg-emerald-100" : isCurrent ? "bg-white shadow-sm" : "bg-gray-100"
+                <div className={`status-step ${
+                  isDone ? "status-step-done" : isCurrent ? "status-step-current" : "status-step-future"
                 }`}>
                   {isDone
-                    ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    : <Icon className={`h-4 w-4 ${isCurrent ? step.color : "text-gray-400"}`} />
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    : <Icon className={`h-4 w-4 ${isCurrent ? step.color : "text-muted-foreground"}`} />
                   }
                 </div>
                 <span className={`text-[9px] font-medium whitespace-nowrap ${isCurrent ? "text-foreground" : "text-muted-foreground"}`}>
@@ -501,7 +492,7 @@ function OrcamentoDetalhe() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
         <span className="font-mono font-bold text-lg">{quote.quote_number}</span>
-        <Badge className={STATUS_COLOR[status] ?? ""}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
+        <Badge className={quoteStatusClass(status)}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm" onClick={() => generateQuotePdf(
             { ...quote, notes, prazo_entrega: prazoEntrega, total: totalCalc, shipping_total: shippingNum, validade } as any,
@@ -724,7 +715,7 @@ function OrcamentoDetalhe() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Progresso</span>
-                <Badge className={STATUS_COLOR[status] ?? ""}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
+                <Badge className={quoteStatusClass(status)}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
