@@ -52,7 +52,7 @@ const ContactFloatingBubble = () => {
   const dismiss = () => {
     setVisible(false);
     try {
-      localStorage.setItem(STORAGE_KEY, String(Date.now()));
+      localStorage.setItem(STORAGE_KEY, "1");
     } catch {
       /* ignore */
     }
