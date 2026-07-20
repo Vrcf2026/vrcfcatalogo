@@ -15,8 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { HONEYPOT_FIELD_NAME, honeypotStyle, isLikelyBot } from "@/lib/antiBot";
 
-const STORAGE_KEY = "vrcf-contact-bubble-dismissed-at";
-const DISMISS_DURATION_MS = 24 * 60 * 60 * 1000; // 24h
+const STORAGE_KEY = "vrcf-contact-bubble-dismissed";
+const SHOW_AFTER_MS = 2000;
+const AUTO_HIDE_MS = 12000; // desaparece 12s após aparecer
 const WHATSAPP_URL =
   "https://wa.me/351911564243?text=Ol%C3%A1%20VRCF%2C%20gostaria%20de%20obter%20informa%C3%A7%C3%A3o%20sobre%3A";
 
@@ -30,10 +31,18 @@ const ContactFloatingBubble = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const dismissedAt = Number(localStorage.getItem(STORAGE_KEY) || 0);
-    if (dismissedAt && Date.now() - dismissedAt < DISMISS_DURATION_MS) return;
-    const t = setTimeout(() => setVisible(true), 2000);
-    return () => clearTimeout(t);
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    const showTimer = setTimeout(() => {
+      setVisible(true);
+      // Auto-esconder (sem persistir — reaparece na próxima visita)
+      const hideTimer = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
+      (showTimer as unknown as { hideTimer?: ReturnType<typeof setTimeout> }).hideTimer = hideTimer;
+    }, SHOW_AFTER_MS);
+    return () => {
+      clearTimeout(showTimer);
+      const h = (showTimer as unknown as { hideTimer?: ReturnType<typeof setTimeout> }).hideTimer;
+      if (h) clearTimeout(h);
+    };
   }, []);
 
   useEffect(() => {
@@ -43,7 +52,7 @@ const ContactFloatingBubble = () => {
   const dismiss = () => {
     setVisible(false);
     try {
-      localStorage.setItem(STORAGE_KEY, String(Date.now()));
+      localStorage.setItem(STORAGE_KEY, "1");
     } catch {
       /* ignore */
     }
