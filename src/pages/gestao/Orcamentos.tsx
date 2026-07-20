@@ -244,12 +244,12 @@ function StatusTimeline({ currentStatus, onChangeStatus }: { currentStatus: stri
                     : ""
                 } ${!isTerminal ? "cursor-pointer" : "cursor-default"}`}
               >
-                <div className={`h-7 w-7 rounded-full flex items-center justify-center ${
-                  isDone ? "bg-emerald-100" : isCurrent ? "bg-white shadow-sm" : "bg-gray-100"
+                <div className={`status-step ${
+                  isDone ? "status-step-done" : isCurrent ? "status-step-current" : "status-step-future"
                 }`}>
                   {isDone
-                    ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    : <Icon className={`h-4 w-4 ${isCurrent ? step.color : "text-gray-400"}`} />
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    : <Icon className={`h-4 w-4 ${isCurrent ? step.color : "text-muted-foreground"}`} />
                   }
                 </div>
                 <span className={`text-[9px] font-medium whitespace-nowrap ${isCurrent ? "text-foreground" : "text-muted-foreground"}`}>
