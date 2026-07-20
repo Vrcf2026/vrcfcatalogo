@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
 import { lazy, Suspense, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { ManageFamiliesDialog } from "@/components/ManageFamiliesDialog";
 import { ManageCategoriesDialog } from "@/components/ManageCategoriesDialog";
 import { ManageBrandsDialog } from "@/components/ManageBrandsDialog";
@@ -13,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldCheck, LogOut, Loader2, Package, Image, Truck, Users, HeartPulse, ArrowLeft } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useAdminLookups } from "@/hooks/useAdminLookups";
 import { useNavigate } from "react-router-dom";
 import { EditProductSheet } from "@/components/EditProductSheet";
 
@@ -35,59 +34,15 @@ const Admin = () => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Todas as listas partilhadas num único hook — React Query dedupa com
+  // qualquer sub-componente que use as mesmas queryKeys.
+  const { families, dbCategories, brands, types, categoryNames, totalAll } = useAdminLookups();
+
   const handleLogout = async () => {
     await signOut();
     navigate("/");
   };
 
-  // Listas base partilhadas pelos diálogos do header e pelo separador de produtos.
-  const { data: families = [] } = useQuery({
-    queryKey: ["families"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("product_families").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: dbCategories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: brands = [] } = useQuery({
-    queryKey: ["brands"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("brands").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: types = [] } = useQuery({
-    queryKey: ["types"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("product_types").select("*").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: totalAll = 0 } = useQuery({
-    queryKey: ["products", "count-all"],
-    queryFn: async () => {
-      const { count, error } = await supabase.from("products").select("id", { count: "exact", head: true });
-      if (error) throw error;
-      return count ?? 0;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const categoryNames = dbCategories.map((c: any) => c.name);
 
   return (
     <>
