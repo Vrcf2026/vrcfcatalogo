@@ -141,7 +141,7 @@ function OrcamentosList() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-semibold">{q.quote_number}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[q.status] ?? ""}`}>
+                    <span className={quoteStatusClass(q.status)}>
                       {STATUS_OPTIONS.find((s) => s.value === q.status)?.label ?? q.status}
                     </span>
                   </div>
@@ -492,7 +492,7 @@ function OrcamentoDetalhe() {
           <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
         </Button>
         <span className="font-mono font-bold text-lg">{quote.quote_number}</span>
-        <Badge className={STATUS_COLOR[status] ?? ""}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
+        <Badge className={quoteStatusClass(status)}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm" onClick={() => generateQuotePdf(
             { ...quote, notes, prazo_entrega: prazoEntrega, total: totalCalc, shipping_total: shippingNum, validade } as any,
@@ -715,7 +715,7 @@ function OrcamentoDetalhe() {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Progresso</span>
-                <Badge className={STATUS_COLOR[status] ?? ""}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
+                <Badge className={quoteStatusClass(status)}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
               </CardTitle>
             </CardHeader>
             <CardContent>
