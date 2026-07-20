@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Loader2, Send, CheckCircle2, Truck, FileText,
   Eye, Search, PackageX, Download, Edit2, Save, X, Plus, Package,
-  Upload, Receipt, ExternalLink,
+  Upload, Receipt, ExternalLink, Clock, CreditCard, Wrench, MapPin,
 } from "lucide-react";
 import { EditProductSheet } from "@/components/EditProductSheet";
 import { toast } from "sonner";
@@ -206,6 +206,94 @@ function OrcamentosList() {
           <TabelaPortes />
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// ─── Timeline de estados ─────────────────────────────────────────────────────
+
+const TIMELINE_STEPS = [
+  { key: "pending",        label: "Pedido",      icon: FileText,     color: "text-amber-500",  bg: "bg-amber-50 border-amber-200" },
+  { key: "in_review",      label: "Em análise",  icon: Clock,        color: "text-purple-500", bg: "bg-purple-50 border-purple-200" },
+  { key: "sent",           label: "Enviado",     icon: Send,         color: "text-blue-500",   bg: "bg-blue-50 border-blue-200" },
+  { key: "accepted",       label: "Aceite",      icon: CheckCircle2, color: "text-emerald-500",bg: "bg-emerald-50 border-emerald-200" },
+  { key: "paid",           label: "Pago",        icon: CreditCard,   color: "text-emerald-600",bg: "bg-emerald-50 border-emerald-200" },
+  { key: "in_preparation", label: "Preparação",  icon: Wrench,       color: "text-cyan-500",   bg: "bg-cyan-50 border-cyan-200" },
+  { key: "shipped",        label: "Expedido",    icon: Truck,        color: "text-indigo-500", bg: "bg-indigo-50 border-indigo-200" },
+  { key: "completed",      label: "Concluído",   icon: CheckCircle2, color: "text-gray-500",   bg: "bg-gray-50 border-gray-200" },
+];
+
+const TERMINAL_STEPS = ["rejected", "cancelled"];
+
+function StatusTimeline({ currentStatus, onChangeStatus }: { currentStatus: string; onChangeStatus: (s: string) => void }) {
+  const isTerminal = TERMINAL_STEPS.includes(currentStatus);
+  const currentIdx = TIMELINE_STEPS.findIndex(s => s.key === currentStatus);
+
+  return (
+    <div className="space-y-2">
+      {/* Timeline visual */}
+      <div className="flex items-center gap-0 overflow-x-auto pb-1">
+        {TIMELINE_STEPS.map((step, idx) => {
+          const Icon = step.icon;
+          const isDone    = idx < currentIdx;
+          const isCurrent = step.key === currentStatus;
+          const isFuture  = idx > currentIdx;
+          return (
+            <div key={step.key} className="flex items-center shrink-0">
+              <button
+                onClick={() => !isTerminal && onChangeStatus(step.key)}
+                title={step.label}
+                className={`flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all ${
+                  isCurrent
+                    ? `${step.bg} border ring-1 ring-offset-1`
+                    : isDone
+                    ? "opacity-70 hover:opacity-100"
+                    : isFuture
+                    ? "opacity-30 hover:opacity-60"
+                    : ""
+                } ${!isTerminal ? "cursor-pointer" : "cursor-default"}`}
+              >
+                <div className={`h-7 w-7 rounded-full flex items-center justify-center ${
+                  isDone ? "bg-emerald-100" : isCurrent ? "bg-white shadow-sm" : "bg-gray-100"
+                }`}>
+                  {isDone
+                    ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    : <Icon className={`h-4 w-4 ${isCurrent ? step.color : "text-gray-400"}`} />
+                  }
+                </div>
+                <span className={`text-[9px] font-medium whitespace-nowrap ${isCurrent ? "text-foreground" : "text-muted-foreground"}`}>
+                  {step.label}
+                </span>
+              </button>
+              {idx < TIMELINE_STEPS.length - 1 && (
+                <div className={`h-px w-3 shrink-0 mx-0.5 ${idx < currentIdx ? "bg-emerald-400" : "bg-border"}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Estado terminal */}
+      {isTerminal && (
+        <div className={`text-xs px-3 py-2 rounded-lg font-medium ${
+          currentStatus === "rejected" ? "bg-red-50 text-red-700 border border-red-200" : "bg-gray-50 text-gray-600 border border-gray-200"
+        }`}>
+          {currentStatus === "rejected" ? "✗ Rejeitado pelo cliente" : "✗ Cancelado"}
+          <button className="ml-2 underline text-[11px]" onClick={() => onChangeStatus("in_review")}>
+            Reabrir
+          </button>
+        </div>
+      )}
+
+      {/* Próximo passo */}
+      {!isTerminal && currentIdx >= 0 && currentIdx < TIMELINE_STEPS.length - 1 && (
+        <button
+          onClick={() => onChangeStatus(TIMELINE_STEPS[currentIdx + 1].key)}
+          className="w-full text-xs text-center py-1.5 px-3 rounded-lg border border-dashed border-primary/40 text-primary hover:bg-primary/5 transition-colors"
+        >
+          Avançar → {TIMELINE_STEPS[currentIdx + 1].label}
+        </button>
+      )}
     </div>
   );
 }
@@ -629,64 +717,62 @@ function OrcamentoDetalhe() {
         </div>
 
         {/* ── Painel lateral ── */}
-        <div className="space-y-4">
+        <div className="space-y-3">
 
-          {/* Estado */}
+          {/* Timeline de estados */}
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Estado</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <Select value={status} onValueChange={handleUpdateStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              {/* Campo de tracking quando expedido */}
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm flex items-center justify-between">
+                <span>Progresso</span>
+                <Badge className={STATUS_COLOR[status] ?? ""}>{STATUS_OPTIONS.find(s => s.value === status)?.label ?? status}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusTimeline currentStatus={status} onChangeStatus={handleUpdateStatus} />
               {status === "shipped" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Nº de tracking / transportadora</Label>
+                <div className="space-y-1.5 mt-3 pt-3 border-t">
+                  <Label className="text-xs">Nº de tracking</Label>
                   <Input value={trackingCode} onChange={e => setTrackingCode(e.target.value)} placeholder="ex: CTT123456789PT" className="h-9" />
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Orçamento */}
+          {/* Proposta + Ações num só card */}
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Proposta</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs flex items-center gap-1"><Truck className="h-3 w-3" /> Portes c/ IVA (€)</Label>
-                <Input value={shippingTotal} onChange={(e) => setShippingTotal(e.target.value)} placeholder="0.00" className="h-9" />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Portes c/ IVA (€)</Label>
+                  <Input value={shippingTotal} onChange={(e) => setShippingTotal(e.target.value)} placeholder="0.00" className="h-8 text-sm" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Validade</Label>
+                  <Input value={validade} onChange={(e) => setValidade(e.target.value)} placeholder="30 dias" className="h-8 text-sm" />
+                </div>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <Label className="text-xs">Prazo de entrega</Label>
-                <Input value={prazoEntrega} onChange={(e) => setPrazoEntrega(e.target.value)} placeholder="ex: 3-5 dias úteis" className="h-9" />
-                <div className="flex flex-wrap gap-1">
+                <Input value={prazoEntrega} onChange={(e) => setPrazoEntrega(e.target.value)} placeholder="ex: 3-5 dias úteis" className="h-8 text-sm" />
+                <div className="flex flex-wrap gap-1 mt-1">
                   {PRAZO_OPCOES.map(opt => (
                     <Button key={opt} type="button" variant="secondary" size="sm" className="h-6 text-[10px] px-2"
                       onClick={() => setPrazoEntrega(opt)}>{opt}</Button>
                   ))}
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Validade do orçamento</Label>
-                <Input value={validade} onChange={(e) => setValidade(e.target.value)} placeholder="30 dias" className="h-9" />
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Ações */}
-          <Card>
-            <CardContent className="pt-4 space-y-2">
-              <Button className="w-full" onClick={handleSave} disabled={saving}>
+              <Separator />
+
+              {/* Botões principais */}
+              <Button className="w-full" variant="outline" onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Guardar alterações
+                <Save className="h-4 w-4 mr-1.5" /> Guardar
               </Button>
 
               {canSendFinal && quote.customer_email && (
-                <Button className="w-full" variant="default" onClick={handleSendFinal} disabled={sendingFinal}>
+                <Button className="w-full bg-primary hover:bg-primary/90" onClick={handleSendFinal} disabled={sendingFinal}>
                   {sendingFinal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
                   Enviar Orçamento ao Cliente
                 </Button>

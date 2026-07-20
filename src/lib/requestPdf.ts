@@ -1,12 +1,13 @@
-import jsPDF from "jspdf";
+/**
+ * PDF do Pedido de Orçamento — via HTML impresso.
+ */
 
 interface RequestItem {
   product_name_snapshot: string;
   product_sku_snapshot?: string | null;
-  product_image_snapshot?: string | null;
   quantity: number;
-  unit_price?: number | null;  // c/IVA
-  line_total?: number | null;  // c/IVA
+  unit_price?: number | null;
+  line_total?: number | null;
 }
 
 interface RequestData {
@@ -23,198 +24,198 @@ interface RequestData {
   shipping_total?: number | null;
 }
 
-const PRIMARY = [234, 88, 12] as const;
-const DARK    = [15, 23, 42]  as const;
-const GRAY    = [100, 100, 100] as const;
-const LIGHT   = [241, 245, 249] as const;
-const WARN    = [255, 249, 235] as const;
-
 const IVA = 0.23;
-const rgb = (doc: jsPDF, c: readonly [number, number, number]) =>
-  doc.setTextColor(c[0], c[1], c[2]);
 const fmt = (n: number) => n.toFixed(2).replace(".", ",") + " €";
 
 export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const W = doc.internal.pageSize.getWidth();
-  const H = doc.internal.pageSize.getHeight();
-  const ML = 15, MR = 15, CT = W / 2;
-  let y = 15;
+  const hoje = new Date(request.created_at).toLocaleDateString("pt-PT", {
+    day: "2-digit", month: "long", year: "numeric",
+  });
 
-  const drawFooter = () => {
-    const fy = H - 18;
-    doc.setDrawColor(220, 220, 220);
-    doc.line(ML, fy, W - MR, fy);
-    doc.setFontSize(7); rgb(doc, GRAY);
-    doc.text("VRCF — Informática & Segurança · Rua Luís Calado Nunes 15 LJ B · 2870-350 Montijo · NIF PT515237205", CT, fy + 4, { align: "center" });
-    doc.text("geral@vrcf.pt · +351 911 564 243 · catalogo.vrcf.pt", CT, fy + 8, { align: "center" });
-    doc.text("Valores estimados c/IVA. O orçamento definitivo será confirmado em separado.", CT, fy + 12, { align: "center" });
-  };
-
-  // ── CABEÇALHO ──
-  doc.setFillColor(...PRIMARY);
-  doc.rect(0, 0, W, 28, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(16);
-  doc.setTextColor(255, 255, 255);
-  doc.text("VRCF", ML, 12);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8);
-  doc.setTextColor(255, 220, 190);
-  doc.text("Informática & Segurança", ML, 17);
-  doc.text("catalogo.vrcf.pt", ML, 21);
-
-  doc.setFont("helvetica", "bold"); doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text("PEDIDO DE ORÇAMENTO", W - MR, 13, { align: "right" });
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
-  doc.setTextColor(255, 220, 190);
-  doc.text(request.quote_number, W - MR, 19, { align: "right" });
-  doc.text(new Date(request.created_at).toLocaleDateString("pt-PT"), W - MR, 24, { align: "right" });
-
-  y = 36;
-
-  // ── AVISO ──
-  doc.setFillColor(...WARN);
-  doc.roundedRect(ML, y, W - ML - MR, 12, 2, 2, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(146, 64, 14);
-  doc.text("⚠  Pedido de orçamento — valores estimados c/ IVA", ML + 4, y + 5);
-  doc.setFont("helvetica", "normal");
-  doc.text("O orçamento definitivo (com preços, portes e prazo confirmados) será enviado em separado.", ML + 4, y + 10);
-  y += 17;
-
-  // ── DOIS BLOCOS: CLIENTE + DETALHES ──
-  const colW = (W - ML - MR - 8) / 2;
-  doc.setFillColor(...LIGHT);
-  doc.roundedRect(ML, y, colW, 36, 2, 2, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); rgb(doc, [90, 90, 90]);
-  doc.text("CLIENTE", ML + 4, y + 6);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); rgb(doc, DARK);
-  let cy = y + 12;
-  if (request.customer_name) { doc.setFont("helvetica", "bold"); doc.text(request.customer_name, ML + 4, cy); cy += 5; doc.setFont("helvetica", "normal"); }
-  if (request.customer_company) { doc.text(request.customer_company, ML + 4, cy); cy += 4; }
-  if (request.customer_tax_id) { rgb(doc, GRAY); doc.setFontSize(8); doc.text(`NIF: ${request.customer_tax_id}`, ML + 4, cy); cy += 4; rgb(doc, DARK); doc.setFontSize(9); }
-  if (request.customer_email) { doc.text(request.customer_email, ML + 4, cy); cy += 4; }
-  if (request.customer_phone) { doc.text(request.customer_phone, ML + 4, cy); }
-
-  const col2X = ML + colW + 8;
-  doc.setFillColor(...LIGHT);
-  doc.roundedRect(col2X, y, colW, 36, 2, 2, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8); rgb(doc, [90, 90, 90]);
-  doc.text("REFERÊNCIA", col2X + 4, y + 6);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(9); rgb(doc, DARK);
-  let dy = y + 12;
-  const detRow = (label: string, val: string) => {
-    rgb(doc, GRAY); doc.setFontSize(8); doc.text(label, col2X + 4, dy);
-    rgb(doc, DARK); doc.setFontSize(9); doc.text(val, col2X + colW - 4, dy, { align: "right" }); dy += 5;
-  };
-  detRow("Data:", new Date(request.created_at).toLocaleDateString("pt-PT"));
-  detRow("Nº pedido:", request.quote_number);
-  if (request.shipping_address) {
-    const addr = request.shipping_address.substring(0, 32);
-    detRow("Entrega:", addr);
-  }
-  y += 41;
-
-  // ── TABELA DE PRODUTOS ──
-  doc.setFillColor(...PRIMARY);
-  doc.rect(ML, y, W - ML - MR, 8, "F");
-  doc.setFont("helvetica", "bold"); doc.setFontSize(8.5);
-  doc.setTextColor(255, 255, 255);
-  doc.text("Produto / Referência", ML + 3, y + 5.5);
-  doc.text("Qtd", W - MR - 55, y + 5.5, { align: "right" });
-  doc.text("Unit. c/IVA", W - MR - 28, y + 5.5, { align: "right" });
-  doc.text("Total c/IVA", W - MR - 2, y + 5.5, { align: "right" });
-  y += 10;
-
-  // Detetar se os preços em BD estão s/IVA (registos antigos ou fluxos de gestor)
-  // ou já c/IVA (novos pedidos). Comparamos a soma das linhas com quote.total.
-  const shipping = Number(request.shipping_total) || 0;
-  const rawSum = items.reduce(
-    (s, it) => s + (Number(it.line_total) ?? (Number(it.unit_price) || 0) * it.quantity),
-    0,
-  );
-  const quoteTotal = Number(request.total) || 0;
-  let vatFactor = 1;
-  if (quoteTotal > 0 && rawSum > 0) {
-    const diffAsCIva = Math.abs(rawSum + shipping - quoteTotal);
-    const diffAsSIva = Math.abs(rawSum * (1 + IVA) + shipping - quoteTotal);
-    if (diffAsSIva + 0.02 < diffAsCIva) vatFactor = 1 + IVA;
-  }
-
-  let subtotalCIva = 0;
-  let rowEven = false;
-  for (const it of items) {
-    if (y > H - 60) { doc.addPage(); y = 20; drawFooter(); }
-    const unitVat = (it.unit_price ?? 0) * vatFactor;
-    const lineVat = (it.line_total ?? ((it.unit_price ?? 0) * it.quantity)) * vatFactor;
-    subtotalCIva += lineVat;
-
-    const nameLines = doc.splitTextToSize(it.product_name_snapshot, W - ML - MR - 68);
-    const hasRef = !!it.product_sku_snapshot;
-    const rowH = Math.max(9, nameLines.length * 4.8 + (hasRef ? 4 : 0));
-
-    if (rowEven) { doc.setFillColor(248, 250, 252); doc.rect(ML, y, W - ML - MR, rowH, "F"); }
-    rowEven = !rowEven;
-
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); rgb(doc, DARK);
-    doc.text(nameLines, ML + 3, y + 5);
-    if (hasRef) {
-      rgb(doc, GRAY); doc.setFontSize(7.5);
-      doc.text(`REF: ${it.product_sku_snapshot}`, ML + 3, y + 5 + nameLines.length * 4.5);
-      doc.setFontSize(8.5);
-    }
-
-    rgb(doc, GRAY);
-    doc.text(String(it.quantity), W - MR - 55, y + 5, { align: "right" });
-    doc.text(unitVat > 0 ? fmt(unitVat) : "—", W - MR - 28, y + 5, { align: "right" });
-    rgb(doc, DARK); doc.setFont("helvetica", "bold");
-    doc.text(lineVat > 0 ? fmt(lineVat) : "—", W - MR - 2, y + 5, { align: "right" });
-    doc.setFont("helvetica", "normal");
-
-    doc.setDrawColor(220, 220, 220);
-    doc.line(ML, y + rowH, W - MR, y + rowH);
-    y += rowH + 1;
-  }
-
-  // ── TOTAIS ──
-  y += 5;
+  const subtotalCIva = items.reduce((s, it) => s + (it.line_total ?? (it.unit_price ?? 0) * it.quantity), 0);
   const subtotalSIva = subtotalCIva / (1 + IVA);
-  const ivaValor = subtotalCIva - subtotalSIva;
-  const totalFinal = subtotalCIva + shipping;
+  const ivaValor     = subtotalCIva - subtotalSIva;
+  const shipping     = Number(request.shipping_total) || 0;
+  const totalFinal   = subtotalCIva + shipping;
 
-  const totRow = (label: string, val: string, bold = false) => {
-    doc.setFont("helvetica", bold ? "bold" : "normal");
-    doc.setFontSize(bold ? 10 : 9);
-    rgb(doc, bold ? DARK : GRAY);
-    doc.text(label, W - MR - 68, y);
-    rgb(doc, DARK);
-    doc.text(val, W - MR - 2, y, { align: "right" });
-    y += bold ? 7 : 5;
-  };
-  totRow("Subtotal s/ IVA (estimado)", fmt(subtotalSIva));
-  totRow("IVA 23% (estimado)", fmt(ivaValor));
-  if (shipping > 0) totRow("Portes estimados c/ IVA", fmt(shipping));
-  doc.setDrawColor(...PRIMARY); doc.line(W - MR - 70, y - 1, W - MR, y - 1);
-  totRow("TOTAL ESTIMADO c/ IVA", fmt(totalFinal), true);
+  const itemsHTML = items.map((it, idx) => {
+    const unitVat = it.unit_price ?? 0;
+    const lineVat = it.line_total ?? (unitVat * it.quantity);
+    const bg = idx % 2 === 0 ? "#ffffff" : "#f8fafc";
+    return `
+      <tr style="background:${bg}">
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0">
+          <div style="font-weight:600;color:#0f172a;font-size:13px">${it.product_name_snapshot}</div>
+          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${it.product_sku_snapshot}</div>` : ""}
+        </td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:13px">${it.quantity}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b;font-size:13px">${unitVat > 0 ? fmt(unitVat) : "—"}</td>
+        <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a;font-size:13px">${lineVat > 0 ? fmt(lineVat) : "—"}</td>
+      </tr>`;
+  }).join("");
 
-  // ── MORADA ──
-  if (request.shipping_address) {
-    y += 6;
-    doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); rgb(doc, [90, 90, 90]);
-    doc.text("MORADA DE ENTREGA", ML, y); y += 5;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); rgb(doc, DARK);
-    doc.text(request.shipping_address, ML, y); y += 6;
-  }
+  const html = `<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8"/>
+<title>Pedido ${request.quote_number}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Helvetica Neue',Arial,sans-serif; color:#0f172a; background:#fff; font-size:13px; }
+  @page { margin:15mm 12mm; size:A4; }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+  .page { max-width:780px; margin:0 auto; }
+  .header { background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%); color:#fff; padding:28px 32px; border-radius:0 0 12px 12px; display:flex; justify-content:space-between; align-items:flex-start; }
+  .header .name { font-size:24px; font-weight:800; color:#ea580c; }
+  .header .sub  { font-size:11px; color:#94a3b8; margin-top:2px; }
+  .header .web  { font-size:11px; color:#64748b; margin-top:1px; }
+  .header-doc { text-align:right; }
+  .header-doc .doc-type { font-size:20px; font-weight:800; color:#fff; }
+  .header-doc .doc-num  { font-size:14px; color:#ea580c; font-weight:700; margin-top:4px; font-family:monospace; }
+  .header-doc .doc-date { font-size:11px; color:#94a3b8; margin-top:2px; }
 
-  // ── OBSERVAÇÕES ──
-  if (request.notes) {
-    if (y > H - 50) { doc.addPage(); y = 20; drawFooter(); }
-    doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); rgb(doc, [90, 90, 90]);
-    doc.text("OBSERVAÇÕES", ML, y); y += 5;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); rgb(doc, DARK);
-    const noteLines = doc.splitTextToSize(request.notes, W - ML - MR);
-    doc.text(noteLines, ML, y);
-  }
+  .warn { background:#fefce8; border:1px solid #fde047; border-radius:8px; padding:12px 16px; margin:20px 0; display:flex; gap:10px; align-items:flex-start; }
+  .warn-icon { font-size:18px; flex-shrink:0; margin-top:-1px; }
+  .warn-title { font-size:12px; font-weight:700; color:#854d0e; margin-bottom:2px; }
+  .warn-text  { font-size:11px; color:#92400e; }
 
-  drawFooter();
-  doc.save(`Pedido_${request.quote_number}.pdf`);
+  .info-row { display:flex; gap:16px; margin:0 0 20px; }
+  .info-box { flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; }
+  .box-title { font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px; }
+  .box-name  { font-size:14px; font-weight:700; color:#0f172a; margin-bottom:3px; }
+  .box-line  { font-size:12px; color:#64748b; margin-bottom:2px; }
+  .det-row   { display:flex; justify-content:space-between; margin-bottom:5px; }
+  .det-label { font-size:11px; color:#94a3b8; }
+  .det-value { font-size:12px; font-weight:600; color:#0f172a; }
+
+  .addr-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:16px; }
+  .addr-title { font-size:10px; font-weight:700; color:#1d4ed8; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:4px; }
+  .addr-text  { font-size:12px; color:#1e40af; }
+
+  .table-wrap { border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; margin-bottom:20px; }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:linear-gradient(135deg,#475569,#334155); }
+  thead th { padding:10px 12px; color:#fff; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; }
+  thead th:not(:first-child) { text-align:right; }
+  thead th:nth-child(2) { text-align:center; }
+
+  .totals-wrap { display:flex; justify-content:flex-end; margin-bottom:20px; }
+  .totals-box { width:280px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:16px; }
+  .tot-row { display:flex; justify-content:space-between; margin-bottom:6px; }
+  .tot-label { font-size:12px; color:#64748b; }
+  .tot-value { font-size:12px; color:#0f172a; }
+  .tot-div { border:none; border-top:2px dashed #e2e8f0; margin:10px 0; }
+  .tot-total .tot-label { font-size:14px; font-weight:800; color:#64748b; }
+  .tot-total .tot-value { font-size:14px; font-weight:800; color:#475569; }
+  .tot-note { font-size:10px; color:#94a3b8; margin-top:6px; text-align:right; font-style:italic; }
+
+  .notes-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:14px; margin-bottom:16px; }
+  .notes-title { font-size:10px; font-weight:700; color:#166534; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:5px; }
+  .notes-text  { font-size:12px; color:#15803d; }
+
+  .footer { border-top:1px solid #e2e8f0; padding-top:12px; margin-top:8px; display:flex; justify-content:space-between; }
+  .footer-left .co-name { font-size:12px; font-weight:700; color:#0f172a; }
+  .footer-left .co-line { font-size:10px; color:#94a3b8; margin-top:1px; }
+  .footer-right .disc { font-size:10px; color:#94a3b8; text-align:right; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <div class="name">VRCF</div>
+      <div class="sub">Informática &amp; Segurança</div>
+      <div class="web">catalogo.vrcf.pt</div>
+    </div>
+    <div class="header-doc">
+      <div class="doc-type">PEDIDO DE ORÇAMENTO</div>
+      <div class="doc-num">${request.quote_number}</div>
+      <div class="doc-date">${hoje}</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <div class="warn-icon">⚠️</div>
+    <div>
+      <div class="warn-title">Valores estimados com IVA incluído</div>
+      <div class="warn-text">Este documento é uma cópia do pedido de orçamento. Os valores definitivos (preços, portes e prazo) serão confirmados no orçamento oficial enviado pela VRCF.</div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-box" style="flex:2">
+      <div class="box-title">Cliente</div>
+      <div class="box-name">${request.customer_name || "—"}</div>
+      ${request.customer_company ? `<div class="box-line">${request.customer_company}</div>` : ""}
+      ${request.customer_tax_id ? `<div class="box-line" style="font-size:11px;color:#94a3b8">NIF: ${request.customer_tax_id}</div>` : ""}
+      ${request.customer_phone ? `<div class="box-line">📞 ${request.customer_phone}</div>` : ""}
+      ${request.customer_email ? `<div class="box-line">✉️ ${request.customer_email}</div>` : ""}
+    </div>
+    <div class="info-box" style="flex:1.2">
+      <div class="box-title">Referência</div>
+      <div class="det-row"><span class="det-label">Data</span><span class="det-value">${hoje}</span></div>
+      <div class="det-row"><span class="det-label">Nº pedido</span><span class="det-value" style="font-family:monospace;color:#ea580c">${request.quote_number}</span></div>
+    </div>
+  </div>
+
+  ${request.shipping_address ? `
+  <div class="addr-box">
+    <div class="addr-title">📦 Morada de Entrega</div>
+    <div class="addr-text">${request.shipping_address}</div>
+  </div>` : ""}
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th style="width:55%">Produto / Referência</th>
+        <th style="width:10%">Qtd</th>
+        <th style="width:17%">Unit. c/ IVA</th>
+        <th style="width:18%">Total c/ IVA</th>
+      </tr></thead>
+      <tbody>${itemsHTML}</tbody>
+    </table>
+  </div>
+
+  <div class="totals-wrap">
+    <div class="totals-box">
+      <div class="tot-row"><span class="tot-label">Subtotal s/ IVA</span><span class="tot-value">${fmt(subtotalSIva)}</span></div>
+      <div class="tot-row"><span class="tot-label">IVA (23%)</span><span class="tot-value">${fmt(ivaValor)}</span></div>
+      ${shipping > 0 ? `<div class="tot-row"><span class="tot-label">Portes estimados</span><span class="tot-value">${fmt(shipping)}</span></div>` : ""}
+      <hr class="tot-div"/>
+      <div class="tot-row tot-total">
+        <span class="tot-label">Total estimado c/ IVA</span>
+        <span class="tot-value">${fmt(totalFinal)}</span>
+      </div>
+      <div class="tot-note">* Valor sujeito a confirmação no orçamento oficial</div>
+    </div>
+  </div>
+
+  ${request.notes ? `
+  <div class="notes-box">
+    <div class="notes-title">✏️ Observações</div>
+    <div class="notes-text">${request.notes}</div>
+  </div>` : ""}
+
+  <div class="footer">
+    <div class="footer-left">
+      <div class="co-name">VRCF — Informática &amp; Segurança, Unipessoal Lda</div>
+      <div class="co-line">NIF PT515237205 · Rua Luís Calado Nunes 15 LJ B, 2870-350 Montijo</div>
+      <div class="co-line">📞 +351 911 564 243 · ✉️ geral@vrcf.pt · 🌐 catalogo.vrcf.pt</div>
+    </div>
+    <div class="footer-right">
+      <div class="disc">Documento não substitui fatura fiscal</div>
+      <div class="disc">Pedido submetido em ${hoje}</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const win = window.open("", "_blank", "width=900,height=1100");
+  if (!win) { alert("Ativa os popups para gerar o PDF."); return; }
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { setTimeout(() => { win.print(); }, 300); };
 }
