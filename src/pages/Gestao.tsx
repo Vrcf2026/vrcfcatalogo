@@ -49,6 +49,7 @@ function CountBadge({ count, className }: { count: number; className?: string })
 export default function Gestao() {
   const { user, loading, isGestor, signOut } = useAuth();
   const location = useLocation();
+  const { data: counts } = useGestaoCounts(!!user && isGestor);
 
   if (loading) {
     return (
@@ -61,6 +62,8 @@ export default function Gestao() {
   if (!user || !isGestor) {
     return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
+
+  const getCount = (key?: Tab["countKey"]) => (key && counts ? counts[key] : 0);
 
   return (
     <>
