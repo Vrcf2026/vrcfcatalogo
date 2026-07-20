@@ -29,3 +29,7 @@ verify_jwt = false
 
 [functions.handle-email-suppression]
 verify_jwt = false
+
+[functions.backup-to-drive]
+verify_jwt = false
+
