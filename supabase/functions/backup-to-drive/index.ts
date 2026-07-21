@@ -105,12 +105,18 @@ serve(async (req) => {
 
     for (const table of TABLES) {
       // Cada página → 1 ficheiro no Drive. Evita acumular grandes tabelas em memória.
+      // Para `products`, apenas fazemos backup dos produtos criados manualmente —
+      // os importados (allto/visiotech/diginova) são regenerados via imports.
       let from = 0;
       const size = 500;
       let page = 0;
       let total = 0;
       while (true) {
-        const { data, error } = await supabase.from(table).select("*").range(from, from + size - 1);
+        let query = supabase.from(table).select("*").range(from, from + size - 1);
+        if (table === "products") {
+          query = query.or("fornecedor.is.null,fornecedor.eq.manual");
+        }
+        const { data, error } = await query;
         if (error) throw new Error(`${table}: ${error.message}`);
         if (!data || data.length === 0) break;
         const name = page === 0 && data.length < size ? `${table}.json` : `${table}_${String(page).padStart(4, "0")}.json`;
