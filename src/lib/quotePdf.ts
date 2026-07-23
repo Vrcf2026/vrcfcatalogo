@@ -167,8 +167,8 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
     </div>
     <div class="header-doc">
       <div class="doc-type">ORÇAMENTO</div>
-      <div class="doc-num">${quote.quote_number}</div>
-      <div class="doc-date">${hoje}</div>
+      <div class="doc-num">${esc(quote.quote_number)}</div>
+      <div class="doc-date">${esc(hoje)}</div>
     </div>
   </div>
 
@@ -176,25 +176,25 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
   <div class="info-row">
     <div class="info-box" style="flex:2">
       <div class="box-title">Cliente</div>
-      <div class="box-name">${quote.customer_name || "—"}</div>
-      ${quote.customer_company ? `<div class="box-line">${quote.customer_company}</div>` : ""}
-      ${quote.customer_tax_id ? `<div class="box-nif">NIF: ${quote.customer_tax_id}</div>` : ""}
-      ${quote.customer_phone ? `<div class="box-line">📞 ${quote.customer_phone}</div>` : ""}
-      ${quote.customer_email ? `<div class="box-line">✉️ ${quote.customer_email}</div>` : ""}
+      <div class="box-name">${quote.customer_name ? esc(quote.customer_name) : "—"}</div>
+      ${quote.customer_company ? `<div class="box-line">${esc(quote.customer_company)}</div>` : ""}
+      ${quote.customer_tax_id ? `<div class="box-nif">NIF: ${esc(quote.customer_tax_id)}</div>` : ""}
+      ${quote.customer_phone ? `<div class="box-line">📞 ${esc(quote.customer_phone)}</div>` : ""}
+      ${quote.customer_email ? `<div class="box-line">✉️ ${esc(quote.customer_email)}</div>` : ""}
     </div>
     <div class="info-box" style="flex:1.2">
       <div class="box-title">Detalhes</div>
-      <div class="detail-row"><span class="detail-label">Data</span><span class="detail-value">${hoje}</span></div>
-      <div class="detail-row"><span class="detail-label">Validade</span><span class="detail-value">${quote.validade ?? "30 dias"}</span></div>
-      ${quote.prazo_entrega ? `<div class="detail-row"><span class="detail-label">Prazo</span><span class="detail-value">${quote.prazo_entrega}</span></div>` : ""}
-      <div class="detail-row"><span class="detail-label">Referência</span><span class="detail-value" style="font-family:monospace;color:#ea580c">${quote.quote_number}</span></div>
+      <div class="detail-row"><span class="detail-label">Data</span><span class="detail-value">${esc(hoje)}</span></div>
+      <div class="detail-row"><span class="detail-label">Validade</span><span class="detail-value">${esc(quote.validade ?? "30 dias")}</span></div>
+      ${quote.prazo_entrega ? `<div class="detail-row"><span class="detail-label">Prazo</span><span class="detail-value">${esc(quote.prazo_entrega)}</span></div>` : ""}
+      <div class="detail-row"><span class="detail-label">Referência</span><span class="detail-value" style="font-family:monospace;color:#ea580c">${esc(quote.quote_number)}</span></div>
     </div>
   </div>
 
   ${quote.shipping_address ? `
   <div class="addr-box">
     <div class="addr-title">📦 Morada de Entrega</div>
-    <div class="addr-text">${quote.shipping_address}</div>
+    <div class="addr-text">${esc(quote.shipping_address).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <!-- Tabela de produtos -->
