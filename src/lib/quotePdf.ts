@@ -32,6 +32,16 @@ interface QuoteData {
 const fmt = (n: number | null | undefined) =>
   n != null ? Number(n).toFixed(2).replace(".", ",") + " €" : "—";
 
+const esc = (v: unknown): string => {
+  if (v == null) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
 const IVA = 0.23;
 
 export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
