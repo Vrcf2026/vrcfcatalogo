@@ -26,6 +26,15 @@ interface RequestData {
 
 const IVA = 0.23;
 const fmt = (n: number) => n.toFixed(2).replace(".", ",") + " €";
+const esc = (v: unknown): string => {
+  if (v == null) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
 
 export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
   const hoje = new Date(request.created_at).toLocaleDateString("pt-PT", {
@@ -45,8 +54,8 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
     return `
       <tr style="background:${bg}">
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0">
-          <div style="font-weight:600;color:#0f172a;font-size:13px">${it.product_name_snapshot}</div>
-          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${it.product_sku_snapshot}</div>` : ""}
+          <div style="font-weight:600;color:#0f172a;font-size:13px">${esc(it.product_name_snapshot)}</div>
+          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${esc(it.product_sku_snapshot)}</div>` : ""}
         </td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:13px">${it.quantity}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b;font-size:13px">${unitVat > 0 ? fmt(unitVat) : "—"}</td>
@@ -58,7 +67,7 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
-<title>Pedido ${request.quote_number}</title>
+<title>Pedido ${esc(request.quote_number)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Helvetica Neue',Arial,sans-serif; color:#0f172a; background:#fff; font-size:13px; }
@@ -130,8 +139,8 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
     </div>
     <div class="header-doc">
       <div class="doc-type">PEDIDO DE ORÇAMENTO</div>
-      <div class="doc-num">${request.quote_number}</div>
-      <div class="doc-date">${hoje}</div>
+      <div class="doc-num">${esc(request.quote_number)}</div>
+      <div class="doc-date">${esc(hoje)}</div>
     </div>
   </div>
 
@@ -146,23 +155,23 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
   <div class="info-row">
     <div class="info-box" style="flex:2">
       <div class="box-title">Cliente</div>
-      <div class="box-name">${request.customer_name || "—"}</div>
-      ${request.customer_company ? `<div class="box-line">${request.customer_company}</div>` : ""}
-      ${request.customer_tax_id ? `<div class="box-line" style="font-size:11px;color:#94a3b8">NIF: ${request.customer_tax_id}</div>` : ""}
-      ${request.customer_phone ? `<div class="box-line">📞 ${request.customer_phone}</div>` : ""}
-      ${request.customer_email ? `<div class="box-line">✉️ ${request.customer_email}</div>` : ""}
+      <div class="box-name">${request.customer_name ? esc(request.customer_name) : "—"}</div>
+      ${request.customer_company ? `<div class="box-line">${esc(request.customer_company)}</div>` : ""}
+      ${request.customer_tax_id ? `<div class="box-line" style="font-size:11px;color:#94a3b8">NIF: ${esc(request.customer_tax_id)}</div>` : ""}
+      ${request.customer_phone ? `<div class="box-line">📞 ${esc(request.customer_phone)}</div>` : ""}
+      ${request.customer_email ? `<div class="box-line">✉️ ${esc(request.customer_email)}</div>` : ""}
     </div>
     <div class="info-box" style="flex:1.2">
       <div class="box-title">Referência</div>
-      <div class="det-row"><span class="det-label">Data</span><span class="det-value">${hoje}</span></div>
-      <div class="det-row"><span class="det-label">Nº pedido</span><span class="det-value" style="font-family:monospace;color:#ea580c">${request.quote_number}</span></div>
+      <div class="det-row"><span class="det-label">Data</span><span class="det-value">${esc(hoje)}</span></div>
+      <div class="det-row"><span class="det-label">Nº pedido</span><span class="det-value" style="font-family:monospace;color:#ea580c">${esc(request.quote_number)}</span></div>
     </div>
   </div>
 
   ${request.shipping_address ? `
   <div class="addr-box">
     <div class="addr-title">📦 Morada de Entrega</div>
-    <div class="addr-text">${request.shipping_address}</div>
+    <div class="addr-text">${esc(request.shipping_address).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <div class="table-wrap">
@@ -194,7 +203,7 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
   ${request.notes ? `
   <div class="notes-box">
     <div class="notes-title">✏️ Observações</div>
-    <div class="notes-text">${request.notes}</div>
+    <div class="notes-text">${esc(request.notes).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <div class="footer">
@@ -205,7 +214,7 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
     </div>
     <div class="footer-right">
       <div class="disc">Documento não substitui fatura fiscal</div>
-      <div class="disc">Pedido submetido em ${hoje}</div>
+      <div class="disc">Pedido submetido em ${esc(hoje)}</div>
     </div>
   </div>
 

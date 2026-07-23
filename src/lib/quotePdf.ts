@@ -32,6 +32,16 @@ interface QuoteData {
 const fmt = (n: number | null | undefined) =>
   n != null ? Number(n).toFixed(2).replace(".", ",") + " €" : "—";
 
+const esc = (v: unknown): string => {
+  if (v == null) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
+
 const IVA = 0.23;
 
 export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
@@ -52,8 +62,8 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
     return `
       <tr style="background:${bg}">
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0">
-          <div style="font-weight:600;color:#0f172a;font-size:13px">${it.product_name_snapshot}</div>
-          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${it.product_sku_snapshot}</div>` : ""}
+          <div style="font-weight:600;color:#0f172a;font-size:13px">${esc(it.product_name_snapshot)}</div>
+          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${esc(it.product_sku_snapshot)}</div>` : ""}
         </td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:13px">${it.quantity}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b;font-size:13px">${unitVat > 0 ? fmt(unitVat) : "—"}</td>
@@ -65,7 +75,7 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
-<title>Orçamento ${quote.quote_number}</title>
+<title>Orçamento ${esc(quote.quote_number)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#0f172a; background:#fff; font-size:13px; }
@@ -157,8 +167,8 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
     </div>
     <div class="header-doc">
       <div class="doc-type">ORÇAMENTO</div>
-      <div class="doc-num">${quote.quote_number}</div>
-      <div class="doc-date">${hoje}</div>
+      <div class="doc-num">${esc(quote.quote_number)}</div>
+      <div class="doc-date">${esc(hoje)}</div>
     </div>
   </div>
 
@@ -166,25 +176,25 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
   <div class="info-row">
     <div class="info-box" style="flex:2">
       <div class="box-title">Cliente</div>
-      <div class="box-name">${quote.customer_name || "—"}</div>
-      ${quote.customer_company ? `<div class="box-line">${quote.customer_company}</div>` : ""}
-      ${quote.customer_tax_id ? `<div class="box-nif">NIF: ${quote.customer_tax_id}</div>` : ""}
-      ${quote.customer_phone ? `<div class="box-line">📞 ${quote.customer_phone}</div>` : ""}
-      ${quote.customer_email ? `<div class="box-line">✉️ ${quote.customer_email}</div>` : ""}
+      <div class="box-name">${quote.customer_name ? esc(quote.customer_name) : "—"}</div>
+      ${quote.customer_company ? `<div class="box-line">${esc(quote.customer_company)}</div>` : ""}
+      ${quote.customer_tax_id ? `<div class="box-nif">NIF: ${esc(quote.customer_tax_id)}</div>` : ""}
+      ${quote.customer_phone ? `<div class="box-line">📞 ${esc(quote.customer_phone)}</div>` : ""}
+      ${quote.customer_email ? `<div class="box-line">✉️ ${esc(quote.customer_email)}</div>` : ""}
     </div>
     <div class="info-box" style="flex:1.2">
       <div class="box-title">Detalhes</div>
-      <div class="detail-row"><span class="detail-label">Data</span><span class="detail-value">${hoje}</span></div>
-      <div class="detail-row"><span class="detail-label">Validade</span><span class="detail-value">${quote.validade ?? "30 dias"}</span></div>
-      ${quote.prazo_entrega ? `<div class="detail-row"><span class="detail-label">Prazo</span><span class="detail-value">${quote.prazo_entrega}</span></div>` : ""}
-      <div class="detail-row"><span class="detail-label">Referência</span><span class="detail-value" style="font-family:monospace;color:#ea580c">${quote.quote_number}</span></div>
+      <div class="detail-row"><span class="detail-label">Data</span><span class="detail-value">${esc(hoje)}</span></div>
+      <div class="detail-row"><span class="detail-label">Validade</span><span class="detail-value">${esc(quote.validade ?? "30 dias")}</span></div>
+      ${quote.prazo_entrega ? `<div class="detail-row"><span class="detail-label">Prazo</span><span class="detail-value">${esc(quote.prazo_entrega)}</span></div>` : ""}
+      <div class="detail-row"><span class="detail-label">Referência</span><span class="detail-value" style="font-family:monospace;color:#ea580c">${esc(quote.quote_number)}</span></div>
     </div>
   </div>
 
   ${quote.shipping_address ? `
   <div class="addr-box">
     <div class="addr-title">📦 Morada de Entrega</div>
-    <div class="addr-text">${quote.shipping_address}</div>
+    <div class="addr-text">${esc(quote.shipping_address).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <!-- Tabela de produtos -->
@@ -240,13 +250,13 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
   ${quote.notes ? `
   <div class="notes-box">
     <div class="notes-title">✏️ Observações</div>
-    <div class="notes-text">${quote.notes}</div>
+    <div class="notes-text">${esc(quote.notes).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <!-- Condições gerais -->
   <div class="conditions">
     <div class="cond-title">Condições Gerais</div>
-    <div class="cond-item"><span>•</span><span>Este orçamento tem validade de <strong>${quote.validade ?? "30 dias"}</strong> a partir da data de emissão.</span></div>
+    <div class="cond-item"><span>•</span><span>Este orçamento tem validade de <strong>${esc(quote.validade ?? "30 dias")}</strong> a partir da data de emissão.</span></div>
     <div class="cond-item"><span>•</span><span>Os preços apresentados incluem IVA à taxa de 23% e são válidos até à data de validade indicada.</span></div>
     <div class="cond-item"><span>•</span><span>A encomenda só é processada após confirmação de pagamento ou acordo de condições de crédito.</span></div>
     <div class="cond-item"><span>•</span><span>Imagens meramente ilustrativas. Especificações técnicas sujeitas a alteração pelo fabricante.</span></div>
