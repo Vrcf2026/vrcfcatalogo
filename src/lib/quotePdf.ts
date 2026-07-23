@@ -62,8 +62,8 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
     return `
       <tr style="background:${bg}">
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0">
-          <div style="font-weight:600;color:#0f172a;font-size:13px">${it.product_name_snapshot}</div>
-          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${it.product_sku_snapshot}</div>` : ""}
+          <div style="font-weight:600;color:#0f172a;font-size:13px">${esc(it.product_name_snapshot)}</div>
+          ${it.product_sku_snapshot ? `<div style="font-size:11px;color:#94a3b8;font-family:monospace;margin-top:2px">REF: ${esc(it.product_sku_snapshot)}</div>` : ""}
         </td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:center;color:#64748b;font-size:13px">${it.quantity}</td>
         <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:right;color:#64748b;font-size:13px">${unitVat > 0 ? fmt(unitVat) : "—"}</td>
@@ -75,7 +75,7 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
 <html lang="pt">
 <head>
 <meta charset="utf-8"/>
-<title>Orçamento ${quote.quote_number}</title>
+<title>Orçamento ${esc(quote.quote_number)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#0f172a; background:#fff; font-size:13px; }
