@@ -250,13 +250,13 @@ export function generateQuotePdf(quote: QuoteData, items: QuoteItem[]) {
   ${quote.notes ? `
   <div class="notes-box">
     <div class="notes-title">✏️ Observações</div>
-    <div class="notes-text">${quote.notes}</div>
+    <div class="notes-text">${esc(quote.notes).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <!-- Condições gerais -->
   <div class="conditions">
     <div class="cond-title">Condições Gerais</div>
-    <div class="cond-item"><span>•</span><span>Este orçamento tem validade de <strong>${quote.validade ?? "30 dias"}</strong> a partir da data de emissão.</span></div>
+    <div class="cond-item"><span>•</span><span>Este orçamento tem validade de <strong>${esc(quote.validade ?? "30 dias")}</strong> a partir da data de emissão.</span></div>
     <div class="cond-item"><span>•</span><span>Os preços apresentados incluem IVA à taxa de 23% e são válidos até à data de validade indicada.</span></div>
     <div class="cond-item"><span>•</span><span>A encomenda só é processada após confirmação de pagamento ou acordo de condições de crédito.</span></div>
     <div class="cond-item"><span>•</span><span>Imagens meramente ilustrativas. Especificações técnicas sujeitas a alteração pelo fabricante.</span></div>
