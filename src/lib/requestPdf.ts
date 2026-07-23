@@ -203,7 +203,7 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
   ${request.notes ? `
   <div class="notes-box">
     <div class="notes-title">✏️ Observações</div>
-    <div class="notes-text">${request.notes}</div>
+    <div class="notes-text">${esc(request.notes).replace(/\n/g, "<br/>")}</div>
   </div>` : ""}
 
   <div class="footer">
@@ -214,7 +214,7 @@ export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
     </div>
     <div class="footer-right">
       <div class="disc">Documento não substitui fatura fiscal</div>
-      <div class="disc">Pedido submetido em ${hoje}</div>
+      <div class="disc">Pedido submetido em ${esc(hoje)}</div>
     </div>
   </div>
 
