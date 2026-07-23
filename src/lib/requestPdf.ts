@@ -26,6 +26,15 @@ interface RequestData {
 
 const IVA = 0.23;
 const fmt = (n: number) => n.toFixed(2).replace(".", ",") + " €";
+const esc = (v: unknown): string => {
+  if (v == null) return "";
+  return String(v)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+};
 
 export function generateRequestPdf(request: RequestData, items: RequestItem[]) {
   const hoje = new Date(request.created_at).toLocaleDateString("pt-PT", {
