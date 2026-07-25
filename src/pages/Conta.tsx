@@ -130,7 +130,7 @@ export default function Conta() {
         <SiteFooter />
       </div>
 
-      <SuggestionDialog open={contactOpen} onOpenChange={setContactOpen} />
+      <SuggestionDialog open={contactOpen} onOpenChange={setContactOpen} mode="contacto" />
     </>
   );
 }

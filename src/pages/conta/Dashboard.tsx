@@ -225,7 +225,7 @@ export default function ContaDashboard() {
         <span className="text-xs font-medium text-blue-600">Contactar VRCF</span>
       </Button>
 
-      <SuggestionDialog open={contactOpen} onOpenChange={setContactOpen} />
+      <SuggestionDialog open={contactOpen} onOpenChange={setContactOpen} mode="contacto" />
     </div>
   );
 }
