@@ -62,7 +62,8 @@ serve(async (req) => {
     const { count } = await supabase
       .from("products")
       .select("id", { count: "exact", head: true })
-      .not("slug", "is", null);
+      .not("slug", "is", null)
+      .eq("include_in_catalog", true);
 
     const totalPages = Math.ceil((count || 0) / PAGE_SIZE);
 
@@ -90,18 +91,25 @@ ${staticEntry}${productSitemaps}
 
   const { data: products } = await supabase
     .from("products")
-    .select("slug, updated_at")
+    .select("slug, updated_at, fornecedor")
     .not("slug", "is", null)
+    .eq("include_in_catalog", true)
     .order("created_at", { ascending: true })
     .range(from, to);
 
-  const urls = (products || []).map((p: { slug: string; updated_at: string | null }) => `
+  // Produtos estáveis (Visiotech/manual): priority alta, changefreq semanal
+  // Produtos voláteis (Diginova/allto): priority baixa, changefreq diário
+  const VOLATILE = ["diginova", "allto"];
+  const urls = (products || []).map((p: { slug: string; updated_at: string | null; fornecedor: string | null }) => {
+    const isVolatile = p.fornecedor && VOLATILE.includes(p.fornecedor.toLowerCase());
+    return `
   <url>
     <loc>${BASE_URL}/produto/${p.slug}</loc>
     <lastmod>${p.updated_at ? p.updated_at.split("T")[0] : today}</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>`).join("");
+    <changefreq>${isVolatile ? "daily" : "weekly"}</changefreq>
+    <priority>${isVolatile ? "0.4" : "0.7"}</priority>
+  </url>`;
+  }).join("");
 
   return xmlResponse(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -7,4 +7,8 @@ Disallow: /login
 Disallow: /registo
 Disallow: /reset-password
 
+# Sitemap estático (páginas principais)
 Sitemap: https://catalogo.vrcf.pt/sitemap.xml
+
+# Sitemap dinâmico (todos os produtos)
+Sitemap: https://mgdhclajlcmepdfrkktw.supabase.co/functions/v1/sitemap
