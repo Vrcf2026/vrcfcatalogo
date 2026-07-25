@@ -85,7 +85,12 @@ export default function ContaOrcamentos() {
             <Card key={q.id} className="hover:bg-secondary/30 transition-colors">
               <CardContent className="py-3 flex flex-wrap items-center gap-3 justify-between">
                 <div>
-                  <div className="font-mono text-sm font-semibold">{q.quote_number}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {["pending","in_review"].includes(q.status) ? "Pedido" : "Orçamento"}
+                    </span>
+                    <span className="font-mono text-sm font-semibold">{q.quote_number}</span>
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(q.created_at).toLocaleDateString("pt-PT", { dateStyle: "medium" })}
                   </div>

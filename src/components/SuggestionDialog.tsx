@@ -1,60 +1,74 @@
 import { useState, useEffect } from "react";
-import { Send } from "lucide-react";
+import { Send, MessageSquare, Lightbulb, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface SuggestionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mode?: "contacto" | "sugestao";
 }
 
-export function SuggestionDialog({ open, onOpenChange }: SuggestionDialogProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", message: "" });
+const ASSUNTOS = [
+  "Informação sobre um produto",
+  "Estado de uma encomenda",
+  "Orçamento específico",
+  "Reclamação",
+  "Parceria ou fornecimento",
+  "Outro assunto",
+];
+
+export function SuggestionDialog({ open, onOpenChange, mode = "sugestao" }: SuggestionDialogProps) {
+  const { user } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", assunto: "", message: "" });
+  const isContacto = mode === "contacto";
 
   useEffect(() => {
-    if (!open) {
-      setForm({ name: "", email: "", message: "" });
+    if (open) {
+      setForm(f => ({ ...f, email: user?.email ?? "" }));
+    } else {
+      setForm({ name: "", email: user?.email ?? "", assunto: "", message: "" });
     }
-  }, [open]);
+  }, [open, user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
-      toast.error("Por favor preencha todos os campos.");
+      toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
-
-    setIsSubmitting(true);
+    if (isContacto && !form.assunto) {
+      toast.error("Selecione o assunto.");
+      return;
+    }
+    setSubmitting(true);
     try {
       const { error } = await supabase.functions.invoke("send-suggestion", {
         body: {
           name: form.name.trim(),
           email: form.email.trim(),
-          message: form.message.trim(),
+          message: isContacto
+            ? `[${form.assunto}]\n\n${form.message.trim()}`
+            : form.message.trim(),
         },
       });
-
       if (error) throw error;
-
-      toast.success("Sugestão enviada com sucesso! Obrigado pelo seu contributo.");
-      setForm({ name: "", email: "", message: "" });
+      toast.success(isContacto
+        ? "Mensagem enviada. Responderemos brevemente."
+        : "Sugestão enviada. Obrigado!");
       onOpenChange(false);
     } catch {
-      toast.error("Erro ao enviar a sugestão. Tente novamente.");
+      toast.error("Erro ao enviar. Tente novamente.");
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -63,51 +77,61 @@ export function SuggestionDialog({ open, onOpenChange }: SuggestionDialogProps) 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            Sugestão
+            {isContacto
+              ? <><MessageSquare className="h-5 w-5 text-blue-500" /> Contactar VRCF</>
+              : <><Lightbulb className="h-5 w-5 text-primary" /> Enviar Sugestão</>}
           </DialogTitle>
           <DialogDescription>
-            A sua opinião é importante para nós. Partilhe as suas ideias ou sugestões.
+            {isContacto
+              ? "Envie-nos uma mensagem e responderemos o mais brevemente possível."
+              : "A sua opinião é importante. Partilhe ideias ou sugestões de melhoria."}
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3 mt-4">
-          <div>
-            <Label htmlFor="suggestion-name" className="text-xs">Nome</Label>
-            <Input
-              id="suggestion-name"
-              placeholder="O seu nome"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              maxLength={100}
-              required
-            />
+
+        <form onSubmit={handleSubmit} className="space-y-3 mt-1">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Nome *</Label>
+              <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="O seu nome" maxLength={100} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Email *</Label>
+              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="email@exemplo.com" maxLength={255} required />
+            </div>
           </div>
-          <div>
-            <Label htmlFor="suggestion-email" className="text-xs">Email</Label>
-            <Input
-              id="suggestion-email"
-              type="email"
-              placeholder="O seu email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              maxLength={255}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="suggestion-message" className="text-xs">Mensagem</Label>
+
+          {isContacto && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Assunto *</Label>
+              <Select value={form.assunto} onValueChange={v => setForm(f => ({ ...f, assunto: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o assunto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSUNTOS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">{isContacto ? "Mensagem *" : "Sugestão *"}</Label>
             <Textarea
-              id="suggestion-message"
-              placeholder="Escreva aqui a sua sugestão..."
               value={form.message}
-              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-              maxLength={1000}
-              rows={4}
-              required
-            />
+              onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+              placeholder={isContacto
+                ? "Descreva o seu pedido ou questão..."
+                : "Escreva a sua sugestão..."}
+              rows={4} maxLength={1000} required />
           </div>
-          <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
-            <Send className="h-4 w-4" />
-            {isSubmitting ? "A enviar..." : "Enviar Sugestão"}
+
+          <Button type="submit" className="w-full gap-2" disabled={submitting}>
+            {submitting
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <Send className="h-4 w-4" />}
+            {submitting ? "A enviar..." : isContacto ? "Enviar mensagem" : "Enviar sugestão"}
           </Button>
         </form>
       </DialogContent>
