@@ -1,0 +1,19 @@
+# VRCF Catálogo
+
+> Catálogo B2B da VRCF — Informática & Segurança (Montijo, Portugal): videovigilância, alarmes, redes, informática e economato. Mais de 27.000 produtos com pedido de orçamento online.
+
+Os preços apresentados são indicativos, em Euro (€), com IVA incluído à taxa legal em vigor. A VRCF opera desde 2019.
+
+## Páginas
+
+- [Início](/): Destaques, novidades e produtos mais vistos do catálogo VRCF.
+- [Segurança](/seguranca): Videovigilância, alarmes, controlo de acessos e redes.
+- [Escritório & IT](/escritorio): Equipamento informático, periféricos e consumíveis.
+- [Economato](/economato): Material de escritório e economato.
+
+## Opcional
+
+- [Termos e Condições](/termos-e-condicoes): Condições de utilização do catálogo.
+- [Condições de Venda](/condicoes-venda): Condições comerciais e de fornecimento.
+- [Política de Privacidade](/politica-de-privacidade): Tratamento de dados pessoais (RGPD).
+- [Política de Cookies](/politica-de-cookies): Utilização de cookies no site.
