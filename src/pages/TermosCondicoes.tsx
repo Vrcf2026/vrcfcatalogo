@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import vrcfLogo from "@/assets/vrcf-logo.png";
@@ -6,6 +7,17 @@ import vrcfLogo from "@/assets/vrcf-logo.png";
 const TermosCondicoes = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Termos e Condições — VRCF Catálogo</title>
+        <meta name="description" content="Termos e condições de utilização do catálogo online VRCF: preços indicativos, pedidos de orçamento e responsabilidades." />
+        <link rel="canonical" href="https://catalogo.vrcf.pt/termos-e-condicoes" />
+        <meta property="og:title" content="Termos e Condições — VRCF Catálogo" />
+        <meta property="og:description" content="Termos e condições de utilização do catálogo online VRCF: preços indicativos, pedidos de orçamento e responsabilidades." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://catalogo.vrcf.pt/termos-e-condicoes" />
+        <meta name="twitter:title" content="Termos e Condições — VRCF Catálogo" />
+        <meta name="twitter:description" content="Termos e condições de utilização do catálogo online VRCF: preços indicativos, pedidos de orçamento e responsabilidades." />
+      </Helmet>
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">

@@ -15,8 +15,8 @@ const STATIC_PATHS = [
   { path: "/seguranca",               priority: "0.9", changefreq: "daily"   },
   { path: "/escritorio",              priority: "0.9", changefreq: "daily"   },
   { path: "/economato",               priority: "0.9", changefreq: "daily"   },
-  { path: "/pesquisa",                priority: "0.5", changefreq: "weekly"  },
   { path: "/termos-e-condicoes",      priority: "0.3", changefreq: "monthly" },
+  { path: "/condicoes-venda",         priority: "0.3", changefreq: "monthly" },
   { path: "/politica-de-cookies",     priority: "0.3", changefreq: "monthly" },
   { path: "/politica-de-privacidade", priority: "0.3", changefreq: "monthly" },
 ];
