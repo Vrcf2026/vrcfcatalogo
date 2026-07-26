@@ -255,7 +255,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         return { data: rows, count };
       }
 
-      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS, { count: "exact" })
+      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*", { count: "exact" })
         .eq("mundo", mundo)
         .eq("include_in_catalog", true);
 

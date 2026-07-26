@@ -63,7 +63,7 @@ const Pesquisa = () => {
         return { rows, count };
       }
 
-      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS, { count: "exact" }).eq("include_in_catalog", true);
+      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*", { count: "exact" }).eq("include_in_catalog", true);
       if (mundoFilter !== "all") q = q.eq("mundo", mundoFilter);
       q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
       const { data, error, count } = await q.range(from, from + PAGE_SIZE - 1);

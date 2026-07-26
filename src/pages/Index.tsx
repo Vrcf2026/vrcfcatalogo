@@ -29,7 +29,7 @@ const useFeaturedProducts = (mundo?: string) =>
   useQuery({
     queryKey: ["hp-featured", mundo],
     queryFn: async () => {
-      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS)
+      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*")
         .eq("include_in_catalog", true)
         .eq("show_on_homepage", true)
         .order("created_at", { ascending: false })
@@ -38,7 +38,7 @@ const useFeaturedProducts = (mundo?: string) =>
       const { data, error } = await q;
       if (error) throw error;
       if (data && data.length > 0) return data;
-      let q2 = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS)
+      let q2 = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*")
         .eq("include_in_catalog", true)
         .eq("featured", true)
         .order("created_at", { ascending: false })
