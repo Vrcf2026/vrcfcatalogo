@@ -21,6 +21,7 @@ import { getCategoryMeta } from "@/lib/categoryIcons.tsx";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
 import { QueryError } from "@/components/QueryError";
+import { PRODUCT_PUBLIC_COLUMNS } from "@/lib/productColumns";
 
 // ── HOOKS ────────────────────────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ const useFeaturedProducts = (mundo?: string) =>
   useQuery({
     queryKey: ["hp-featured", mundo],
     queryFn: async () => {
-      let q = supabase.from("products").select("*")
+      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS)
         .eq("include_in_catalog", true)
         .eq("show_on_homepage", true)
         .order("created_at", { ascending: false })
@@ -37,7 +38,7 @@ const useFeaturedProducts = (mundo?: string) =>
       const { data, error } = await q;
       if (error) throw error;
       if (data && data.length > 0) return data;
-      let q2 = supabase.from("products").select("*")
+      let q2 = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS)
         .eq("include_in_catalog", true)
         .eq("featured", true)
         .order("created_at", { ascending: false })
@@ -69,7 +70,7 @@ const useWorldCount = (mundo: string) =>
   useQuery({
     queryKey: ["hp-count", mundo],
     queryFn: async () => {
-      const { count, error } = await supabase.from("products").select("*", { count: "exact", head: true })
+      const { count, error } = await supabase.from("products").select("id", { count: "exact", head: true })
         .eq("mundo", mundo).eq("include_in_catalog", true);
       if (error) throw error;
       return count ?? 0;

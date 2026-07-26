@@ -14,6 +14,7 @@ import { UserMenuButton } from "@/components/UserMenuButton";
 import { useCart } from "@/contexts/CartContext";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SiteFooter } from "@/components/SiteFooter";
+import { PRODUCT_PUBLIC_COLUMNS } from "@/lib/productColumns";
 
 const PAGE_SIZE = 24;
 
@@ -62,7 +63,7 @@ const Pesquisa = () => {
         return { rows, count };
       }
 
-      let q = supabase.from("products").select("*", { count: "exact" }).eq("include_in_catalog", true);
+      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS, { count: "exact" }).eq("include_in_catalog", true);
       if (mundoFilter !== "all") q = q.eq("mundo", mundoFilter);
       q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
       const { data, error, count } = await q.range(from, from + PAGE_SIZE - 1);
