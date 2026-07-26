@@ -24,6 +24,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { toast } from "sonner";
 import vrcfLogo from "@/assets/vrcf-logo.png";
 import { SPEC_LABELS } from "@/lib/specLabels";
+import { PRODUCT_PUBLIC_COLUMNS } from "@/lib/productColumns";
 
 const STOCK_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
   high:       { label: "Em stock",           color: "bg-emerald-500/12 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
@@ -42,10 +43,10 @@ const Produto = () => {
   const { data: product, isLoading, isError, refetch } = useQuery({
     queryKey: ["product-slug", slug],
     queryFn: async () => {
-      const { data: bySlug, error: e1 } = await supabase.from("products").select("*").eq("slug", slug!).maybeSingle();
+      const { data: bySlug, error: e1 } = await supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*").eq("slug", slug!).maybeSingle();
       if (e1) throw e1;
       if (bySlug) return bySlug;
-      const { data: byId, error: e2 } = await supabase.from("products").select("*").eq("id", slug!).maybeSingle();
+      const { data: byId, error: e2 } = await supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*").eq("id", slug!).maybeSingle();
       if (e2) throw e2;
       return byId;
     },

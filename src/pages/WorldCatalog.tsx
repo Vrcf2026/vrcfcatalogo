@@ -26,6 +26,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { CategoryTile } from "@/components/catalog/CategoryTile";
 import { CatalogFilterPanel, type TechSpecGroup } from "@/components/catalog/CatalogFilterPanel";
 import { SPEC_LABELS } from "@/lib/specLabels";
+import { PRODUCT_PUBLIC_COLUMNS } from "@/lib/productColumns";
 
 type Mundo = "seguranca" | "escritorio" | "economato";
 interface Props { mundo: Mundo; title: string; subtitle: string; }
@@ -254,7 +255,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         return { data: rows, count };
       }
 
-      let q = supabase.from("products").select("*", { count: "exact" })
+      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*", { count: "exact" })
         .eq("mundo", mundo)
         .eq("include_in_catalog", true);
 
