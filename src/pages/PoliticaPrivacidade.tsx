@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import vrcfLogo from "@/assets/vrcf-logo.png";
@@ -6,6 +7,17 @@ import vrcfLogo from "@/assets/vrcf-logo.png";
 const PoliticaPrivacidade = () => {
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Política de Privacidade — VRCF Catálogo</title>
+        <meta name="description" content="Como a VRCF recolhe, trata e protege os seus dados pessoais, em conformidade com o RGPD." />
+        <link rel="canonical" href="https://catalogo.vrcf.pt/politica-de-privacidade" />
+        <meta property="og:title" content="Política de Privacidade — VRCF Catálogo" />
+        <meta property="og:description" content="Como a VRCF recolhe, trata e protege os seus dados pessoais, em conformidade com o RGPD." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://catalogo.vrcf.pt/politica-de-privacidade" />
+        <meta name="twitter:title" content="Política de Privacidade — VRCF Catálogo" />
+        <meta name="twitter:description" content="Como a VRCF recolhe, trata e protege os seus dados pessoais, em conformidade com o RGPD." />
+      </Helmet>
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-lg">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
