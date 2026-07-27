@@ -3,6 +3,8 @@
 // Retenção: últimos 30 dias diários + 1 pasta por mês nos últimos 12 meses.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isServiceRoleCall, unauthorized } from "../_shared/auth-guard.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

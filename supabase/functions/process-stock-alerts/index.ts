@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { isServiceRoleCall, unauthorized } from '../_shared/auth-guard.ts'
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
