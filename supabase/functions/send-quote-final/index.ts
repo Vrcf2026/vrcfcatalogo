@@ -35,6 +35,14 @@ serve(async (req) => {
   }
 
   try {
+    // Só a equipa de gestão (ou chamadas internas) pode enviar o orçamento final.
+    if (!isServiceRoleCall(req)) {
+      const caller = await authenticateCaller(req);
+      if (!caller) return unauthorized(corsHeaders);
+      if (!caller.isStaff) return forbidden(corsHeaders);
+    }
+
+
     const { quoteId } = await req.json();
     if (!quoteId) {
       return new Response(JSON.stringify({ error: "quoteId obrigatório" }), {

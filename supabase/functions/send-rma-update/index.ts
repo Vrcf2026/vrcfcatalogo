@@ -44,6 +44,14 @@ serve(async (req) => {
   }
 
   try {
+    // Notificações de RMA só podem ser despoletadas pela equipa de gestão.
+    if (!isServiceRoleCall(req)) {
+      const caller = await authenticateCaller(req);
+      if (!caller) return unauthorized(corsHeaders);
+      if (!caller.isStaff) return forbidden(corsHeaders);
+    }
+
+
     const { rmaId, newStatus } = await req.json();
     if (!rmaId || !newStatus) {
       return new Response(JSON.stringify({ error: "rmaId e newStatus obrigatórios" }), {
