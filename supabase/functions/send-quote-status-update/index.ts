@@ -59,6 +59,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    const internalCall = isServiceRoleCall(req);
+    let caller: Awaited<ReturnType<typeof authenticateCaller>> = null;
+    if (!internalCall) {
+      caller = await authenticateCaller(req);
+      if (!caller) return unauthorized(corsHeaders);
+    }
+
     const { quoteId, newStatus, triggeredBy } = await req.json();
     if (!quoteId || !newStatus) {
       return new Response(JSON.stringify({ error: "quoteId e newStatus obrigatórios" }), {
@@ -73,13 +80,25 @@ serve(async (req) => {
 
     const { data: quote, error } = await supabase
       .from("quotes")
-      .select("quote_number, customer_name, customer_email, notes")
+      .select("user_id, quote_number, customer_name, customer_email, notes")
       .eq("id", quoteId)
       .maybeSingle();
 
     if (error || !quote) throw new Error("Orçamento não encontrado");
 
+    // O papel do chamador determina o fluxo — nunca o valor enviado pelo cliente.
+    let effectiveTrigger = triggeredBy;
+    if (caller) {
+      if (caller.isStaff) {
+        effectiveTrigger = triggeredBy === "customer" ? "customer" : "staff";
+      } else {
+        if (quote.user_id !== caller.userId) return forbidden(corsHeaders);
+        effectiveTrigger = "customer";
+      }
+    }
+
     // === Decisão tomada pelo cliente → notificar gestor ===
+
     if (triggeredBy === "customer") {
       const decisionLabel = CUSTOMER_DECISION_LABELS[newStatus];
       if (!decisionLabel) {
