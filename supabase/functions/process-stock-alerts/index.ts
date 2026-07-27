@@ -1,4 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { isServiceRoleCall, unauthorized } from '../_shared/auth-guard.ts'
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +14,10 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
+
+  // Job em lote: apenas chamadas internas (trigger/cron) com a service role key.
+  if (!isServiceRoleCall(req)) return unauthorized(corsHeaders)
+
 
   try {
     const supabase = createClient(

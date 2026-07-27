@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { authenticateCaller, forbidden, isServiceRoleCall, unauthorized } from "../_shared/auth-guard.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +44,14 @@ serve(async (req) => {
   }
 
   try {
+    // Notificações de RMA só podem ser despoletadas pela equipa de gestão.
+    if (!isServiceRoleCall(req)) {
+      const caller = await authenticateCaller(req);
+      if (!caller) return unauthorized(corsHeaders);
+      if (!caller.isStaff) return forbidden(corsHeaders);
+    }
+
+
     const { rmaId, newStatus } = await req.json();
     if (!rmaId || !newStatus) {
       return new Response(JSON.stringify({ error: "rmaId e newStatus obrigatórios" }), {
