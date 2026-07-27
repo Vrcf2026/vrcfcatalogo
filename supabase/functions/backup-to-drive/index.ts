@@ -93,6 +93,11 @@ async function trashFile(id: string) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // Job agendado: apenas chamadas internas (cron) com a service role key.
+  if (!isServiceRoleCall(req)) return unauthorized(corsHeaders);
+
+
+
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
