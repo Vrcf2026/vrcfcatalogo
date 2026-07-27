@@ -99,7 +99,7 @@ serve(async (req) => {
 
     // === Decisão tomada pelo cliente → notificar gestor ===
 
-    if (triggeredBy === "customer") {
+    if (effectiveTrigger === "customer") {
       const decisionLabel = CUSTOMER_DECISION_LABELS[newStatus];
       if (!decisionLabel) {
         return new Response(JSON.stringify({ skipped: true, reason: `Decisão "${newStatus}" não notifica gestor` }), {
