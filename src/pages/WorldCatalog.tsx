@@ -549,7 +549,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <Link to="/" className="shrink-0 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Início</span>
           </Link>
-          <Link to="/" className="shrink-0"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
+          <Link to="/" className="shrink-0"><img src={vrcfLogo} alt="VRCF Informática &amp; Segurança" className="h-9 sm:h-11 w-auto" /></Link>
           <form onSubmit={submitGlobalSearch} className="relative flex-1 max-w-xl mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar em todo o catálogo..." value={globalQuery}

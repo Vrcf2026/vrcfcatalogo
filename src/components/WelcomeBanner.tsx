@@ -55,7 +55,7 @@ export function WelcomeBanner() {
         </button>
 
         <div className="p-8 text-center">
-          <img src={vrcfLogo} alt="VRCF" className="h-16 mx-auto mb-5 brightness-110" />
+          <img src={vrcfLogo} alt="VRCF Informática &amp; Segurança" className="h-16 mx-auto mb-5 brightness-110" />
           <h2 className="font-heading text-3xl font-bold text-orange-500">VRCF Showroom</h2>
           <p className="mt-2 text-sm text-zinc-300">Segurança · Redes · Escritório &amp; IT</p>
 
