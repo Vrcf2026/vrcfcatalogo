@@ -32,18 +32,18 @@ const ContactFloatingBubble = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (localStorage.getItem(STORAGE_KEY)) return;
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
     const showTimer = setTimeout(() => {
       setVisible(true);
       // Auto-esconder (sem persistir — reaparece na próxima visita)
-      const hideTimer = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
-      (showTimer as unknown as { hideTimer?: ReturnType<typeof setTimeout> }).hideTimer = hideTimer;
+      hideTimer = setTimeout(() => setVisible(false), AUTO_HIDE_MS);
     }, SHOW_AFTER_MS);
     return () => {
       clearTimeout(showTimer);
-      const h = (showTimer as unknown as { hideTimer?: ReturnType<typeof setTimeout> }).hideTimer;
-      if (h) clearTimeout(h);
+      if (hideTimer) clearTimeout(hideTimer);
     };
   }, []);
+
 
   useEffect(() => {
     if (dialogOpen) setFormOpenedAt(Date.now());
