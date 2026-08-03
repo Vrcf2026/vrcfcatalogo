@@ -595,10 +595,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 <p className="text-[11px] text-muted-foreground hidden sm:block">{subtitle}</p>
               </div>
               <div className="hidden sm:flex gap-1">
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
+                <Button variant="outline" size="icon" aria-label="Deslocar para a esquerda" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
+                <Button variant="outline" size="icon" aria-label="Deslocar para a direita" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>

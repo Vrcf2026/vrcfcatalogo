@@ -61,7 +61,7 @@ const Login = () => {
         <CardHeader className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2">
             <ShieldCheck className="h-7 w-7 text-primary" />
-            <CardTitle className="font-heading text-xl">VRCF</CardTitle>
+            <CardTitle asChild className="font-heading text-xl"><h1>Acesso à conta VRCF</h1></CardTitle>
           </div>
           <p className="text-sm text-muted-foreground">Iniciar sessão</p>
         </CardHeader>

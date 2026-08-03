@@ -69,16 +69,16 @@ export function CartDrawer() {
                       <p className="text-[10px] text-muted-foreground">Embalagem de {(item as any).minSaleQty} un.</p>
                     )}
                     <div className="flex items-center gap-2 mt-2">
-                      <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                      <Button variant="outline" size="icon" aria-label="Diminuir quantidade" className="h-7 w-7 rounded-lg"
                         onClick={() => updateQuantity(item.id, item.quantity - ((item as any).minSaleQty > 1 ? (item as any).minSaleQty : 1))}>
                         <Minus className="h-3 w-3" />
                       </Button>
                       <span className="text-sm font-bold w-6 text-center">{item.quantity}</span>
-                      <Button variant="outline" size="icon" className="h-7 w-7 rounded-lg"
+                      <Button variant="outline" size="icon" aria-label="Aumentar quantidade" className="h-7 w-7 rounded-lg"
                         onClick={() => updateQuantity(item.id, item.quantity + ((item as any).minSaleQty > 1 ? (item as any).minSaleQty : 1))}>
                         <Plus className="h-3 w-3" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-destructive hover:text-destructive"
+                      <Button variant="ghost" size="icon" aria-label="Remover produto do orçamento" className="h-7 w-7 ml-auto text-destructive hover:text-destructive"
                         onClick={() => removeItem(item.id)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
