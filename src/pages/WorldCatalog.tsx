@@ -549,7 +549,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
           <Link to="/" className="shrink-0 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Início</span>
           </Link>
-          <Link to="/" className="shrink-0"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
+          <Link to="/" className="shrink-0"><img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-9 sm:h-11 w-auto" /></Link>
           <form onSubmit={submitGlobalSearch} className="relative flex-1 max-w-xl mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Pesquisar em todo o catálogo..." value={globalQuery}
@@ -595,10 +595,10 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                 <p className="text-[11px] text-muted-foreground hidden sm:block">{subtitle}</p>
               </div>
               <div className="hidden sm:flex gap-1">
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
+                <Button variant="outline" size="icon" aria-label="Deslocar para a esquerda" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: -280, behavior: "smooth" })}>
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
+                <Button variant="outline" size="icon" aria-label="Deslocar para a direita" className="h-7 w-7" onClick={() => scrollRef.current?.scrollBy({ left: 280, behavior: "smooth" })}>
                   <ChevronRight className="h-3.5 w-3.5" />
                 </Button>
               </div>

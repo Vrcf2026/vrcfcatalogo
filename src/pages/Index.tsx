@@ -239,7 +239,7 @@ const Index = () => {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center gap-2 px-3 py-2 max-w-[1600px] mx-auto">
           <Link to="/" className="shrink-0">
-            <img src={vrcfLogo} alt="VRCF" className="h-8 sm:h-10 w-auto" />
+            <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-8 sm:h-10 w-auto" />
           </Link>
           <form onSubmit={handleSearch} className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />

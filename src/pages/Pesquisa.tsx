@@ -113,7 +113,7 @@ const Pesquisa = () => {
             <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Início</span>
           </Link>
           <Link to="/" className="shrink-0">
-            <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-12 w-auto" />
+            <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-9 sm:h-12 w-auto" />
           </Link>
           <div className="relative flex-1 max-w-xl mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -186,6 +186,10 @@ const Pesquisa = () => {
       </header>
 
       <section className="container mx-auto px-4 py-8">
+        <h1 className="sr-only">
+          {search.trim() ? `Resultados de pesquisa para "${search.trim()}"` : "Pesquisa de produtos no catálogo VRCF"}
+        </h1>
+
         {!search.trim() ? (
           <div className="text-center py-20">
             <Search className="h-16 w-16 mx-auto text-muted-foreground/40" />

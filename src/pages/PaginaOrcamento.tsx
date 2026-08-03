@@ -281,7 +281,7 @@ export default function PaginaOrcamento() {
             <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Início</span>
           </Link>
           <Link to="/" className="shrink-0">
-            <img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" />
+            <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-9 sm:h-11 w-auto" />
           </Link>
           <h1 className="flex-1 text-sm font-bold text-foreground flex items-center gap-2 truncate">
             <ShoppingCart className="h-4 w-4 text-primary shrink-0" />

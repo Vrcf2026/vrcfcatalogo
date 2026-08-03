@@ -19,7 +19,7 @@ export function SiteFooter() {
             {/* Col 1 — Identidade */}
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-2">
-                <img src={vrcfShield} alt="VRCF" className="h-8 w-auto" />
+                <img src={vrcfShield} alt="VRCF Informática e Segurança" className="h-8 w-auto" />
                 <div>
                   <p className="font-bold text-sm leading-tight">VRCF</p>
                   <p className="text-[11px] text-muted-foreground">Informática & Segurança</p>

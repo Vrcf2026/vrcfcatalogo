@@ -248,7 +248,7 @@ const Produto = () => {
         <div className="container mx-auto flex items-center gap-3 px-3 py-2 sm:px-4">
           <div className="flex items-center gap-2 shrink-0">
             <Link to={worldPath} className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-4 w-4" /></Link>
-            <Link to="/"><img src={vrcfLogo} alt="VRCF" className="h-9 sm:h-11 w-auto" /></Link>
+            <Link to="/"><img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-9 sm:h-11 w-auto" /></Link>
           </div>
           <GlobalSearchBar />
           <div className="flex items-center gap-2 shrink-0">

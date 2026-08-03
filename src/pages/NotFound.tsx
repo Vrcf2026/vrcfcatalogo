@@ -17,7 +17,7 @@ const NotFound = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 text-center">
       <Link to="/" className="mb-8">
-        <img src={vrcfLogo} alt="VRCF" className="h-12 w-auto mx-auto" />
+        <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-12 w-auto mx-auto" />
       </Link>
 
       <p className="text-8xl font-bold text-primary/20 leading-none select-none">404</p>
