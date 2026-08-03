@@ -186,6 +186,10 @@ const Pesquisa = () => {
       </header>
 
       <section className="container mx-auto px-4 py-8">
+        <h1 className="sr-only">
+          {search.trim() ? `Resultados de pesquisa para "${search.trim()}"` : "Pesquisa de produtos no catálogo VRCF"}
+        </h1>
+
         {!search.trim() ? (
           <div className="text-center py-20">
             <Search className="h-16 w-16 mx-auto text-muted-foreground/40" />
