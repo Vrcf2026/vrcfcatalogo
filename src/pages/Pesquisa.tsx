@@ -113,7 +113,7 @@ const Pesquisa = () => {
             <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Início</span>
           </Link>
           <Link to="/" className="shrink-0">
-            <img src={vrcfLogo} alt="VRCF Informática &amp; Segurança" className="h-9 sm:h-12 w-auto" />
+            <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-9 sm:h-12 w-auto" />
           </Link>
           <div className="relative flex-1 max-w-xl mx-auto">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

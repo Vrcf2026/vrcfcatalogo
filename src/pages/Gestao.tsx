@@ -77,7 +77,7 @@ export default function Gestao() {
         <header className="border-b border-border bg-background/95 backdrop-blur sticky top-0 z-30">
           <div className="max-w-[1600px] mx-auto px-4 h-14 flex items-center justify-between">
             <Link to="/" className="flex items-center gap-2">
-              <img src={vrcfLogo} alt="VRCF Informática &amp; Segurança" className="h-7 w-auto" />
+              <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-7 w-auto" />
               <span className="font-heading font-bold hidden sm:inline text-sm text-muted-foreground">
                 Gestão Comercial
               </span>
