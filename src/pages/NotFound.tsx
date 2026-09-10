@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, Home, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,11 @@ const NotFound = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 text-center">
+      <Helmet>
+        <title>Página não encontrada — VRCF Montijo</title>
+        <meta name="description" content="A página que procura não existe ou foi removida. Pesquise no catálogo VRCF: segurança, redes, informática e economato." />
+        <meta name="robots" content="noindex, follow" />
+      </Helmet>
       <Link to="/" className="mb-8">
         <img src={vrcfLogo} alt="VRCF Informática e Segurança" className="h-12 w-auto mx-auto" />
       </Link>
