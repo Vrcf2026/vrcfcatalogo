@@ -200,12 +200,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Helmet>
-        <title>VRCF Showroom — Segurança, Redes, Informática & Economato | Montijo</title>
+        <title>VRCF — Segurança e Informática no Montijo</title>
         <meta name="description" content="Catálogo B2B VRCF: câmaras IP, alarmes, redes, informática recondicionada e material de escritório. +27.000 produtos. Peça orçamento online — Montijo." />
         <link rel="canonical" href="https://catalogo.vrcf.pt/" />
         <meta property="og:type"        content="website" />
         <meta property="og:site_name"   content="VRCF Showroom" />
-        <meta property="og:title"       content="VRCF Showroom — Segurança, Redes, Informática & Economato | Montijo" />
+        <meta property="og:title"       content="VRCF — Segurança e Informática no Montijo" />
         <meta property="og:description" content="Catálogo B2B VRCF: câmaras IP, alarmes, redes, informática recondicionada e material de escritório. +27.000 produtos. Peça orçamento online." />
         <meta property="og:url"         content="https://catalogo.vrcf.pt/" />
         <script type="application/ld+json">{JSON.stringify({

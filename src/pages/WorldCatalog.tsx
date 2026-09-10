@@ -523,6 +523,7 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
         <title>{categoryFilter !== "all" ? `${categoryFilter} — ${title} | VRCF Montijo` : `${title} | VRCF Montijo`}</title>
         <meta name="description" content={categoryFilter !== "all" ? `${categoryFilter} em ${title} — VRCF Montijo. Peça orçamento online.` : `${subtitle} Catálogo online com mais de 27.000 produtos. Peça orçamento online — VRCF Montijo.`} />
         <link rel="canonical" href={`https://catalogo.vrcf.pt/${mundo}${categoryFilter !== "all" ? `?categoria=${encodeURIComponent(categoryFilter)}` : ""}`} />
+        {brandFilter.length > 0 && <meta name="robots" content="noindex, follow" />}
         <meta property="og:title"       content={`${title} — VRCF Showroom`} />
         <meta property="og:description" content={subtitle} />
         <meta property="og:type"        content="website" />
@@ -592,6 +593,9 @@ const WorldCatalog = ({ mundo, title, subtitle }: Props) => {
                   <Icon className="h-3 w-3" />
                   {title}
                 </div>
+                <h1 className="sr-only">
+                  {categoryFilter !== "all" ? `${categoryFilter} — ${title} | VRCF Montijo` : `${title} — Catálogo VRCF Montijo`}
+                </h1>
                 <p className="text-[11px] text-muted-foreground hidden sm:block">{subtitle}</p>
               </div>
               <div className="hidden sm:flex gap-1">
