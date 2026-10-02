@@ -142,7 +142,7 @@ const Pesquisa = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Pesquisar em todo o catálogo..."
+              placeholder="Ex: portátil para a escola até 500€"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10 bg-card"
