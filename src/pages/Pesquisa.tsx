@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ShieldCheck, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle } from "lucide-react";
+import { Loader2, Package, ShieldCheck, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,35 +44,58 @@ const Pesquisa = () => {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Pesquisa inteligente (IA) para frases em linguagem natural
+  const [exactMode, setExactMode] = useState(false);
+  useEffect(() => { setExactMode(false); }, [search]);
+  const isNatural = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (s.length < 3) return false;
+    return s.split(/\s+/).length >= 3 || /€|euro|até|barat|para\s/.test(s);
+  }, [search]);
+
+  const aiQuery = useQuery({
+    queryKey: ["smart-search", search.trim().toLowerCase()],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smart-search", { body: { query: search.trim() } });
+      if (error || data?.error) return null;
+      return data as { terms: string; mundo: string | null; min_price: number | null; max_price: number | null; summary: string };
+    },
+    enabled: isNatural && !exactMode,
+    staleTime: 30 * 60 * 1000,
+    retry: false,
+  });
+
+  const ai = isNatural && !exactMode ? aiQuery.data ?? null : null;
+  const aiPending = isNatural && !exactMode && aiQuery.isLoading;
+  const effTerms = ai?.terms?.trim() || search.trim();
+  const effMundo = mundoFilter !== "all" ? mundoFilter : ai?.mundo ?? null;
+  const minP = ai?.min_price ?? null;
+  const maxP = ai?.max_price ?? null;
+  const hasPrice = minP != null || maxP != null;
+
   const productsQuery = useQuery({
-    queryKey: ["global-search", search, mundoFilter, page],
+    queryKey: ["global-search", effTerms, effMundo, minP, maxP, page],
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
-
-      if (search.trim()) {
-        const { data, error } = await supabase.rpc("search_products", {
-          p_query: search.trim(),
-          p_mundo: mundoFilter !== "all" ? mundoFilter : null,
-          p_limit: PAGE_SIZE,
-          p_offset: from,
-          p_order_by: "featured",
-        });
-        if (error) throw error;
-        const rows = (data ?? []).map((r: any) => r.row_data);
-        const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
-        return { rows, count };
-      }
-
-      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*", { count: "exact" }).eq("include_in_catalog", true);
-      if (mundoFilter !== "all") q = q.eq("mundo", mundoFilter);
-      q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
-      const { data, error, count } = await q.range(from, from + PAGE_SIZE - 1);
+      const { data, error } = await supabase.rpc("search_products", {
+        p_query: effTerms,
+        p_mundo: effMundo,
+        p_limit: hasPrice ? 300 : PAGE_SIZE,
+        p_offset: hasPrice ? 0 : from,
+        p_order_by: "featured",
+      });
       if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
+      let rows = (data ?? []).map((r: any) => r.row_data);
+      if (hasPrice) {
+        rows = rows.filter((p: any) => p.price != null && (minP == null || p.price >= minP) && (maxP == null || p.price <= maxP));
+        return { rows: rows.slice(from, from + PAGE_SIZE), count: rows.length };
+      }
+      const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
+      return { rows, count };
     },
     placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
-    enabled: search.trim().length > 0,
+    enabled: search.trim().length > 0 && !aiPending,
   });
 
   const products = productsQuery.data?.rows ?? [];
@@ -119,7 +142,7 @@ const Pesquisa = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               autoFocus
-              placeholder="Pesquisar em todo o catálogo..."
+              placeholder="Ex: portátil para a escola até 500€"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="pl-10 bg-card"
@@ -196,12 +219,24 @@ const Pesquisa = () => {
             <h3 className="mt-4 font-heading text-lg font-semibold">Pesquise em todo o catálogo VRCF</h3>
             <p className="mt-1 text-sm text-muted-foreground">Segurança, Redes, Escritório e IT — tudo num só lugar.</p>
           </div>
-        ) : productsQuery.isLoading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+        ) : aiPending || productsQuery.isLoading ? (
+          <div className="flex flex-col items-center gap-3 py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            {aiPending && <p className="text-sm text-muted-foreground">A interpretar a sua pesquisa…</p>}
+          </div>
         ) : products.length > 0 ? (
           <>
+            {ai && (
+              <div className="mb-4 mx-auto max-w-2xl flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
+                <Wand2 className="h-4 w-4 text-primary shrink-0" />
+                <span>{ai.summary}</span>
+                <button onClick={() => setExactMode(true)} className="text-xs text-muted-foreground underline hover:text-foreground">
+                  Pesquisar texto exato
+                </button>
+              </div>
+            )}
             <p className="mb-4 text-sm text-muted-foreground text-center">
-              {total} resultado{total !== 1 ? "s" : ""} para "{search}" — Página {page} de {totalPages}
+              {total} resultado{total !== 1 ? "s" : ""} para "{ai ? effTerms : search}" — Página {page} de {totalPages}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {products.map((product: any) => (
