@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
-import { Loader2, Package, ShieldCheck, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle } from "lucide-react";
+import { Loader2, Package, ShieldCheck, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -219,12 +219,24 @@ const Pesquisa = () => {
             <h3 className="mt-4 font-heading text-lg font-semibold">Pesquise em todo o catálogo VRCF</h3>
             <p className="mt-1 text-sm text-muted-foreground">Segurança, Redes, Escritório e IT — tudo num só lugar.</p>
           </div>
-        ) : productsQuery.isLoading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+        ) : aiPending || productsQuery.isLoading ? (
+          <div className="flex flex-col items-center gap-3 py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            {aiPending && <p className="text-sm text-muted-foreground">A interpretar a sua pesquisa…</p>}
+          </div>
         ) : products.length > 0 ? (
           <>
+            {ai && (
+              <div className="mb-4 mx-auto max-w-2xl flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
+                <Wand2 className="h-4 w-4 text-primary shrink-0" />
+                <span>{ai.summary}</span>
+                <button onClick={() => setExactMode(true)} className="text-xs text-muted-foreground underline hover:text-foreground">
+                  Pesquisar texto exato
+                </button>
+              </div>
+            )}
             <p className="mb-4 text-sm text-muted-foreground text-center">
-              {total} resultado{total !== 1 ? "s" : ""} para "{search}" — Página {page} de {totalPages}
+              {total} resultado{total !== 1 ? "s" : ""} para "{ai ? effTerms : search}" — Página {page} de {totalPages}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
               {products.map((product: any) => (
