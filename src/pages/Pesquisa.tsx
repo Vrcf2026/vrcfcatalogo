@@ -44,35 +44,58 @@ const Pesquisa = () => {
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Pesquisa inteligente (IA) para frases em linguagem natural
+  const [exactMode, setExactMode] = useState(false);
+  useEffect(() => { setExactMode(false); }, [search]);
+  const isNatural = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (s.length < 3) return false;
+    return s.split(/\s+/).length >= 3 || /€|euro|até|barat|para\s/.test(s);
+  }, [search]);
+
+  const aiQuery = useQuery({
+    queryKey: ["smart-search", search.trim().toLowerCase()],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("smart-search", { body: { query: search.trim() } });
+      if (error || data?.error) return null;
+      return data as { terms: string; mundo: string | null; min_price: number | null; max_price: number | null; summary: string };
+    },
+    enabled: isNatural && !exactMode,
+    staleTime: 30 * 60 * 1000,
+    retry: false,
+  });
+
+  const ai = isNatural && !exactMode ? aiQuery.data ?? null : null;
+  const aiPending = isNatural && !exactMode && aiQuery.isLoading;
+  const effTerms = ai?.terms?.trim() || search.trim();
+  const effMundo = mundoFilter !== "all" ? mundoFilter : ai?.mundo ?? null;
+  const minP = ai?.min_price ?? null;
+  const maxP = ai?.max_price ?? null;
+  const hasPrice = minP != null || maxP != null;
+
   const productsQuery = useQuery({
-    queryKey: ["global-search", search, mundoFilter, page],
+    queryKey: ["global-search", effTerms, effMundo, minP, maxP, page],
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE;
-
-      if (search.trim()) {
-        const { data, error } = await supabase.rpc("search_products", {
-          p_query: search.trim(),
-          p_mundo: mundoFilter !== "all" ? mundoFilter : null,
-          p_limit: PAGE_SIZE,
-          p_offset: from,
-          p_order_by: "featured",
-        });
-        if (error) throw error;
-        const rows = (data ?? []).map((r: any) => r.row_data);
-        const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
-        return { rows, count };
-      }
-
-      let q = supabase.from("products").select(PRODUCT_PUBLIC_COLUMNS as "*", { count: "exact" }).eq("include_in_catalog", true);
-      if (mundoFilter !== "all") q = q.eq("mundo", mundoFilter);
-      q = q.order("featured", { ascending: false }).order("created_at", { ascending: false });
-      const { data, error, count } = await q.range(from, from + PAGE_SIZE - 1);
+      const { data, error } = await supabase.rpc("search_products", {
+        p_query: effTerms,
+        p_mundo: effMundo,
+        p_limit: hasPrice ? 300 : PAGE_SIZE,
+        p_offset: hasPrice ? 0 : from,
+        p_order_by: "featured",
+      });
       if (error) throw error;
-      return { rows: data ?? [], count: count ?? 0 };
+      let rows = (data ?? []).map((r: any) => r.row_data);
+      if (hasPrice) {
+        rows = rows.filter((p: any) => p.price != null && (minP == null || p.price >= minP) && (maxP == null || p.price <= maxP));
+        return { rows: rows.slice(from, from + PAGE_SIZE), count: rows.length };
+      }
+      const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
+      return { rows, count };
     },
     placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
-    enabled: search.trim().length > 0,
+    enabled: search.trim().length > 0 && !aiPending,
   });
 
   const products = productsQuery.data?.rows ?? [];
