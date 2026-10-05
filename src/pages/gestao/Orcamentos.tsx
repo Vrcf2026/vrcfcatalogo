@@ -14,8 +14,9 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft, Loader2, Send, CheckCircle2, Truck, FileText,
   Eye, Search, PackageX, Download, Edit2, Save, X, Plus, Package,
-  Upload, Receipt, ExternalLink, Clock, CreditCard, Wrench, MapPin,
+  Upload, Receipt, ExternalLink, Clock, CreditCard, Wrench, MapPin, Sparkles,
 } from "lucide-react";
+import { QuoteAssistantDialog, type AssistantPick } from "@/components/gestao/QuoteAssistantDialog";
 import { EditProductSheet } from "@/components/EditProductSheet";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
@@ -1094,6 +1095,7 @@ function NovoOrcamento() {
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [productSearch, setProductSearch] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [lines, setLines] = useState<any[]>([]);
   const [customer, setCustomer] = useState({ name: "", email: "", phone: "", company: "", tax_id: "", address: "" });
   const [notes, setNotes] = useState("");
@@ -1101,20 +1103,36 @@ function NovoOrcamento() {
   const [shippingTotal, setShippingTotal] = useState("");
   const [validade, setValidade] = useState("30 dias");
 
-  const addProduct = (p: any) => {
+  const productLine = (p: any, quantity = 1) => {
     const iva = (Number(p.taxa_iva) || 23) / 100;
     const unitPrice = p.price ? Number(p.price) * (1 + iva) : 0;
-    setLines(prev => [...prev, {
-      id: `line-${Date.now()}`,
+    return {
+      id: `line-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       product_id: p.id,
       product_name_snapshot: p.name,
       product_sku_snapshot: p.sku ?? "",
       product_image_snapshot: p.image_url ?? null,
-      quantity: 1,
+      quantity,
       unit_price: unitPrice.toFixed(2),
       purchase_price: p.purchase_price,
-    }]);
+    };
   };
+
+  const addProduct = (p: any) => setLines(prev => [...prev, productLine(p)]);
+
+  const addAssistantLines = (picks: AssistantPick[]) =>
+    setLines(prev => [...prev, ...picks.map(pk => pk.product
+      ? productLine(pk.product, pk.quantity)
+      : {
+          id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          product_id: null,
+          product_name_snapshot: pk.description,
+          product_sku_snapshot: "",
+          product_image_snapshot: null,
+          quantity: pk.quantity,
+          unit_price: "",
+          purchase_price: null,
+        })]);
 
   const updateLine = (id: string, field: string, value: any) =>
     setLines(p => p.map(l => l.id === id ? { ...l, [field]: value } : l));
@@ -1218,6 +1236,10 @@ function NovoOrcamento() {
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Produtos / Linhas</span>
                 <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                    onClick={() => setAssistantOpen(true)}>
+                    <Sparkles className="h-3.5 w-3.5" /> Assistente IA
+                  </Button>
                   <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
                     onClick={() => setProductSearch(true)}>
                     <Search className="h-3.5 w-3.5" /> Pesquisar
@@ -1324,6 +1346,7 @@ function NovoOrcamento() {
       </div>
 
       <ProductSearchModal open={productSearch} onClose={() => setProductSearch(false)} onSelect={addProduct} />
+      <QuoteAssistantDialog open={assistantOpen} onClose={() => setAssistantOpen(false)} onAdd={addAssistantLines} />
     </div>
   );
 }
