@@ -18,6 +18,8 @@ import { template as suggestionCustomer } from './suggestion-customer.tsx'
 import { template as rmaStatusUpdate } from './rma-status-update.tsx'
 import { template as quoteCustomerDecisionGestor } from './quote-customer-decision-gestor.tsx'
 import { template as stockAlert } from './stock-alert.tsx'
+import { template as quoteReminderCustomer } from './quote-reminder-customer.tsx'
+import { template as quoteFollowupDigest } from './quote-followup-digest.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'quote-request-admin': quoteRequestAdmin,
@@ -29,5 +31,7 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'rma-status-update': rmaStatusUpdate,
   'quote-customer-decision-gestor': quoteCustomerDecisionGestor,
   'stock-alert': stockAlert,
+  'quote-reminder-customer': quoteReminderCustomer,
+  'quote-followup-digest': quoteFollowupDigest,
 }
 

@@ -1,6 +1,6 @@
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Helmet } from "react-helmet-async";
 import { Loader2, Package, ShieldCheck, ChevronLeft, ChevronRight, ShoppingCart, ArrowLeft, Search, Globe, Tag, MessageCircle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -187,6 +187,23 @@ const Pesquisa = () => {
     staleTime: 2 * 60 * 1000,
     enabled: search.trim().length > 0 && !aiPending,
   });
+
+  // Registar a pesquisa (uma vez por pesquisa) para a gestão ver o que não se encontra
+  const loggedRef = useRef<string>("");
+  useEffect(() => {
+    const d = productsQuery.data;
+    if (!d || productsQuery.isPlaceholderData || page !== 1 || !search.trim()) return;
+    const key = `${search.trim().toLowerCase()}|${effMundo ?? ""}|${!!ai}`;
+    if (loggedRef.current === key) return;
+    loggedRef.current = key;
+    (supabase.rpc as any)("log_search", {
+      p_query: search.trim(),
+      p_terms: ai ? effTerms : null,
+      p_mundo: effMundo,
+      p_results: d.relaxed ? 0 : d.count,
+      p_ai: !!ai,
+    }).then(() => {}, () => {});
+  }, [productsQuery.data, productsQuery.isPlaceholderData]);
 
   const products = productsQuery.data?.rows ?? [];
   const total = productsQuery.data?.count ?? 0;

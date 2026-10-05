@@ -54,7 +54,7 @@ const STATUS_COLOR: Record<string, string> = {
 export default function OrcamentoDetalhe() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const { addItem, clearCart, setIsOpen } = useCart();
+  const { addItem, setIsOpen } = useCart();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [resending, setResending] = useState(false);
@@ -119,21 +119,63 @@ export default function OrcamentoDetalhe() {
     }
   };
 
-  const handleRepeat = () => {
+  // Repetir: volta a pôr no carrinho os produtos deste orçamento, com o preço ATUAL.
+  // (Antes usava o unit_price do orçamento, que já tem IVA — o carrinho somava-lhe IVA outra
+  // vez — e não trazia peso/fornecedor, por isso os portes saíam mal.)
+  const [repeating, setRepeating] = useState(false);
+  const handleRepeat = async () => {
     if (!data?.items.length) return;
-    clearCart();
-    data.items.forEach((it) => {
-      addItem({
-        id: it.product_id ?? it.id,
-        name: it.product_name_snapshot,
-        price: it.unit_price ? Number(it.unit_price) : null,
-        imageUrl: it.product_image_snapshot,
-        category: null,
-      }, it.quantity);
-    });
-    toast.success("Itens adicionados ao carrinho.");
-    setIsOpen(true);
-    navigate("/");
+    setRepeating(true);
+    try {
+      const ids = [...new Set(data.items.map((it) => it.product_id).filter(Boolean))] as string[];
+      const { data: prods } = ids.length
+        ? await supabase.from("products")
+            .select("id,name,price,image_url,category,sku,weight,fornecedor,envio_especial,min_sale_qty,include_in_catalog")
+            .in("id", ids)
+        : { data: [] as any[] };
+      const byId = new Map((prods ?? []).filter((p: any) => p.include_in_catalog).map((p: any) => [p.id, p]));
+
+      // Preço de empresa, se o cliente tiver escalão
+      const tierPrices = new Map<string, number>();
+      if (byId.size) {
+        const { data: tp } = await (supabase as any).rpc("get_my_tier_prices", { p_ids: [...byId.keys()] });
+        for (const r of (tp ?? []) as any[]) tierPrices.set(r.id, Number(r.price));
+      }
+
+      let added = 0;
+      const missing: string[] = [];
+      for (const it of data.items) {
+        const p: any = it.product_id ? byId.get(it.product_id) : null;
+        if (!p) { missing.push(it.product_name_snapshot); continue; }
+        const minQty = p.min_sale_qty && p.min_sale_qty > 1 ? p.min_sale_qty : 1;
+        addItem({
+          id: p.id,
+          name: p.name,
+          price: tierPrices.get(p.id) ?? p.price,
+          imageUrl: p.image_url ?? it.product_image_snapshot,
+          category: p.category,
+          sku: p.sku ?? null,
+          weight: p.weight ?? null,
+          fornecedor: p.fornecedor ?? null,
+          envio_especial: p.envio_especial ?? false,
+          minSaleQty: minQty,
+        }, Math.max(it.quantity, minQty));
+        added++;
+      }
+
+      if (added) {
+        toast.success(`${added} produto${added !== 1 ? "s" : ""} adicionado${added !== 1 ? "s" : ""} ao carrinho, com os preços atuais.`);
+        setIsOpen(true);
+      }
+      if (missing.length) {
+        toast.warning(`Já não disponível no catálogo: ${missing.slice(0, 3).join(", ")}${missing.length > 3 ? "…" : ""}`);
+      }
+      if (!added && !missing.length) toast.error("Este orçamento não tem produtos do catálogo.");
+    } catch {
+      toast.error("Não foi possível repetir o pedido.");
+    } finally {
+      setRepeating(false);
+    }
   };
 
   if (isLoading) return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>;
@@ -261,8 +303,8 @@ export default function OrcamentoDetalhe() {
                   </a>
                 </Button>
               )}
-              <Button size="sm" onClick={handleRepeat} className="gap-1">
-                <Repeat2 className="h-4 w-4" />Repetir
+              <Button size="sm" onClick={handleRepeat} disabled={repeating} className="gap-1">
+                {repeating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat2 className="h-4 w-4" />}Repetir
               </Button>
             </div>
           </div>

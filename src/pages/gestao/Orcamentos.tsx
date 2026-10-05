@@ -17,6 +17,7 @@ import {
   Upload, Receipt, ExternalLink, Clock, CreditCard, Wrench, MapPin, Sparkles,
 } from "lucide-react";
 import { QuoteAssistantDialog, type AssistantPick } from "@/components/gestao/QuoteAssistantDialog";
+import { MarginSummary } from "@/components/gestao/MarginSummary";
 import { EditProductSheet } from "@/components/EditProductSheet";
 import { toast } from "sonner";
 import { generateQuotePdf } from "@/lib/quotePdf";
@@ -342,17 +343,20 @@ function OrcamentoDetalhe() {
   useEffect(() => {
     if (!data?.quote) return;
     const q = data.quote as any;
-    if (q.status === "sent") {
+    // Só um pedido novo passa a "em análise" ao abrir. (Antes era "sent", o que tirava ao
+    // cliente o botão de aceitar sempre que a gestão abria um orçamento já enviado.)
+    if (q.status === "pending") {
       supabase.from("quotes").update({ status: "in_review" as any }).eq("id", id!).then(() => {
         qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
       });
     }
-    setStatus(q.status);
+    setStatus(q.status === "pending" ? "in_review" : q.status);
     setNotes(q.notes ?? "");
     setAdminNotes(q.admin_notes ?? "");
     setTotal(q.total != null ? String(q.total) : "");
     setShippingTotal(q.shipping_total != null ? String(q.shipping_total) : "");
     setPrazoEntrega(q.prazo_entrega ?? "");
+    setValidade(q.validade ?? "30 dias");
     setTrackingCode((q as any).tracking_code ?? "");
   }, [data?.quote]);
 
@@ -395,6 +399,7 @@ function OrcamentoDetalhe() {
         total: totalCalc > 0 ? totalCalc : null,
         shipping_total: shippingNum > 0 ? shippingNum : null,
         prazo_entrega: prazoEntrega.trim() || null,
+        validade: validade.trim() || null,
       } as any).eq("id", id!);
 
       qc.invalidateQueries({ queryKey: ["gestao-quote", id] });
@@ -421,6 +426,7 @@ function OrcamentoDetalhe() {
         total: totalCalc > 0 ? totalCalc : null,
         shipping_total: shippingNum > 0 ? shippingNum : null,
         prazo_entrega: prazoEntrega.trim() || null,
+        validade: validade.trim() || null,
       } as any).eq("id", id);
 
       const { data: result, error } = await supabase.functions.invoke("send-quote-final", { body: { quoteId: id } });
@@ -685,6 +691,16 @@ function OrcamentoDetalhe() {
                   <span>Total c/ IVA</span>
                   <span className="text-primary">{totalCalc > 0 ? totalCalc.toFixed(2).replace(".", ",") + " €" : "—"}</span>
                 </div>
+              </div>
+              <div className="mt-3">
+                <MarginSummary lines={items.map((it: any) => {
+                  const edit = itemEdits[it.id];
+                  return {
+                    quantity: Number(edit?.qty ?? it.quantity) || 0,
+                    unitPriceVat: edit ? parseFloat(edit.unit_price) || 0 : Number(it.unit_price) || 0,
+                    cost: it.products?.purchase_price ?? it.purchase_price ?? null,
+                  };
+                })} />
               </div>
             </CardContent>
           </Card>
@@ -1162,9 +1178,11 @@ function NovoOrcamento() {
         customer_tax_id: customer.tax_id.trim() || null,
         shipping_address: customer.address.trim() || null,
         notes: notes.trim() || null,
+        subtotal: subtotal,
         total: total > 0 ? total : null,
         shipping_total: shipping > 0 ? shipping : null,
         prazo_entrega: prazoEntrega.trim() || null,
+        validade: validade.trim() || null,
       } as any).select("id").single();
       if (qErr) throw qErr;
 
@@ -1183,8 +1201,15 @@ function NovoOrcamento() {
         if (iErr) throw iErr;
       }
 
+      // Enviar o orçamento ao cliente (email + registo sent_final_at).
+      // Antes isto não acontecia: o orçamento ficava "enviado" sem o cliente receber nada.
+      const { data: sendRes, error: sendErr } = await supabase.functions.invoke("send-quote-final", { body: { quoteId: quote.id } });
       qc.invalidateQueries({ queryKey: ["gestao-quotes"] });
-      toast.success("Orçamento criado e enviado ao cliente.");
+      if (sendErr || sendRes?.error) {
+        toast.warning("Orçamento criado, mas o email ao cliente falhou. Use \"Enviar Orçamento ao Cliente\" no detalhe.");
+      } else {
+        toast.success("Orçamento criado e enviado ao cliente.");
+      }
       navigate(`/gestao/orcamentos/${quote.id}`);
     } catch (e: any) {
       toast.error(e.message ?? "Erro ao criar orçamento.");
@@ -1338,6 +1363,11 @@ function NovoOrcamento() {
               </div>
             </CardContent>
           </Card>
+          <MarginSummary lines={lines.map(l => ({
+            quantity: parseInt(l.quantity) || 0,
+            unitPriceVat: parseFloat(l.unit_price) || 0,
+            cost: l.purchase_price,
+          }))} />
           <Button className="w-full gap-2" onClick={handleSave} disabled={saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             <Send className="h-4 w-4" /> Criar e enviar ao cliente

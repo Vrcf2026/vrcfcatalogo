@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTierPrice } from "@/hooks/useTierPrice";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { useState, useEffect } from "react";
@@ -113,6 +114,9 @@ const Produto = () => {
     }
   }, [product?.id]);
 
+  // Preço de empresa (escalão 2/3) quando o cliente o tem; senão o normal
+  const tier = useTierPrice(product?.id, product?.price ?? null);
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (isError) return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -181,13 +185,14 @@ const Produto = () => {
   const worldPath = worldInfo.path;
 
   const worldLabel = worldInfo.label;
-  const priceWithVat = product.price ? product.price * 1.23 : null;
+  const effPrice = tier.price;
+  const priceWithVat = effPrice ? effPrice * 1.23 : null;
   const waText = encodeURIComponent(`Olá VRCF, quero informação sobre: ${product.name}${product.sku ? ` (Ref: ${product.sku})` : ""}`);
 
   const minSaleQty = product.min_sale_qty && product.min_sale_qty > 1 ? product.min_sale_qty : 1;
 
   const handleAddToCart = () => {
-    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: currentImage, category: product.category, sku: product.sku ?? null, weight: product.weight ?? null, fornecedor: product.fornecedor ?? null, envio_especial: envio_especial, minSaleQty }, minSaleQty);
+    addItem({ id: product.id, name: product.name, price: effPrice, imageUrl: currentImage, category: product.category, sku: product.sku ?? null, weight: product.weight ?? null, fornecedor: product.fornecedor ?? null, envio_especial: envio_especial, minSaleQty }, minSaleQty);
     toast.success(
       minSaleQty > 1
         ? `${minSaleQty}x ${product.name} adicionado ao orçamento (embalagem mínima)`
@@ -378,7 +383,12 @@ const Produto = () => {
                 {priceWithVat.toFixed(2).replace(".", ",")} €
                 <span className="ml-2 text-sm font-normal text-muted-foreground">c/ IVA</span>
               </p>
-              <p className="text-xs text-muted-foreground">{product.price?.toFixed(2).replace(".", ",")} € s/ IVA</p>
+              <p className="text-xs text-muted-foreground">{effPrice?.toFixed(2).replace(".", ",")} € s/ IVA</p>
+              {tier.isTier && product.price != null && (
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  Preço de empresa · normal <span className="line-through">{(product.price * 1.23).toFixed(2).replace(".", ",")} €</span>
+                </p>
+              )}
               <p className="text-[10px] text-muted-foreground italic">Preço indicativo — confirmado no orçamento</p>
             </div>
           ) : (
@@ -467,7 +477,7 @@ const Produto = () => {
               minQty={minSaleQty}
               onAdd={(qty) => {
                 addItem({
-                  id: product.id, name: product.name, price: product.price,
+                  id: product.id, name: product.name, price: effPrice,
                   imageUrl: currentImage, category: product.category,
                   weight: product.weight ?? null,
                   fornecedor: product.fornecedor ?? null,

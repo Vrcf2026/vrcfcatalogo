@@ -8,7 +8,7 @@ import { AdminDashboard } from "@/components/AdminDashboard";
 import { AddProductDialog } from "@/components/AddProductDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldCheck, LogOut, Loader2, Package, Image, Truck, Users, HeartPulse, ArrowLeft } from "lucide-react";
+import { ShieldCheck, LogOut, Loader2, Package, Image, Truck, Users, HeartPulse, ArrowLeft, Bell } from "lucide-react";
 import { DarkModeToggle } from "@/components/DarkModeToggle";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminLookups } from "@/hooks/useAdminLookups";
@@ -18,6 +18,7 @@ import { EditProductSheet } from "@/components/EditProductSheet";
 // Tabs carregados sob demanda — não pesam no bundle até o admin abrir o separador.
 const AdminProductsTab = lazy(() => import("@/components/admin/AdminProductsTab"));
 const AdminHealthTab   = lazy(() => import("@/components/admin/AdminHealthTab"));
+const AdminAlertsTab   = lazy(() => import("@/components/admin/AdminAlertsTab"));
 const BannersManager = lazy(() => import("@/components/BannersManager").then(m => ({ default: m.BannersManager })));
 const ShippingConfig = lazy(() => import("@/components/ShippingConfig").then(m => ({ default: m.ShippingConfig })));
 const UsersManager = lazy(() => import("@/components/UsersManager").then(m => ({ default: m.UsersManager })));
@@ -102,6 +103,9 @@ const Admin = () => {
             <TabsTrigger value="saude" className="gap-1.5">
               <HeartPulse className="h-4 w-4" /> Saúde
             </TabsTrigger>
+            <TabsTrigger value="alertas" className="gap-1.5">
+              <Bell className="h-4 w-4" /> Alertas
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="produtos" className="mt-4">
@@ -143,6 +147,12 @@ const Admin = () => {
           <TabsContent value="saude" className="mt-4">
             <Suspense fallback={<TabFallback />}>
               <AdminHealthTab onEditProduct={(p) => setHealthEditProduct(p)} />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="alertas" className="mt-4">
+            <Suspense fallback={<TabFallback />}>
+              <AdminAlertsTab onEditProduct={(p) => setHealthEditProduct(p)} />
             </Suspense>
           </TabsContent>
         </Tabs>

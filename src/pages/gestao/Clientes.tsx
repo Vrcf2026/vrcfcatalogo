@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Users, Search, FileText, Wrench, Phone, UserX } from "lucide-react";
+
+const TIER_LABEL: Record<number, string> = {
+  1: "Normal",
+  2: "Empresa (escalão 2)",
+  3: "Empresa (escalão 3)",
+};
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendente", sent: "Enviado", in_review: "Em análise",
@@ -18,6 +26,18 @@ export default function GestaoClientes() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<any | null>(null);
   const [anonSelected, setAnonSelected] = useState<any | null>(null); // {email, name, phone, quotes[]}
+  const qc = useQueryClient();
+
+  const setTier = async (profile: any, tier: number) => {
+    const { error } = await (supabase as any).from("customer_profiles").update({ price_tier: tier }).eq("id", profile.id);
+    if (error) {
+      toast.error("Não foi possível alterar o escalão.");
+      return;
+    }
+    setSelected({ ...profile, price_tier: tier });
+    qc.invalidateQueries({ queryKey: ["gestao-clientes"] });
+    toast.success(`Escalão de preço: ${TIER_LABEL[tier]}`);
+  };
 
   // ── Clientes com conta (customer_profiles) ────────────────────────
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
@@ -107,6 +127,18 @@ export default function GestaoClientes() {
               <p><span className="text-muted-foreground">Morada:</span> {selected.address_line1}{selected.city && `, ${selected.city}`}{selected.postal_code && ` ${selected.postal_code}`}</p>
             )}
             {selected.notes && <p><span className="text-muted-foreground">Notas:</span> {selected.notes}</p>}
+            <div className="flex items-center gap-2 pt-2">
+              <span className="text-muted-foreground">Preços:</span>
+              <Select value={String(selected.price_tier ?? 1)} onValueChange={(v) => setTier(selected, Number(v))}>
+                <SelectTrigger className="h-8 w-52 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3].map((t) => <SelectItem key={t} value={String(t)} className="text-xs">{TIER_LABEL[t]}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Com escalão de empresa, o cliente vê os preços de escalão nos produtos que os têm (hoje: economato ALL.TO).
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -180,6 +212,11 @@ export default function GestaoClientes() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{c.full_name || "—"}</span>
                         {c.company && <span className="text-xs text-muted-foreground">· {c.company}</span>}
+                        {(c.price_tier ?? 1) > 1 && (
+                          <span className="text-[10px] rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-emerald-700 dark:text-emerald-400">
+                            Escalão {c.price_tier}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         {c.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{c.phone}</span>}

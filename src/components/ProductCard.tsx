@@ -1,4 +1,5 @@
 import { useState, forwardRef } from "react";
+import { useTierPrice } from "@/hooks/useTierPrice";
 import { ImageOff, Star, Zap, ShoppingCart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
@@ -52,8 +53,9 @@ interface ProductCardProps {
 }
 
 export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
-  function ProductCard({ id, name, sku, description, category, price, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, minSaleQty, onEdit, isAdmin, onClick }, ref) {
+  function ProductCard({ id, name, sku, description, category, price: basePrice, imageUrl, images, familyName, brandName, featured, stockStatus, sobEncomenda, weight, fornecedor, envioEspecial, teclado, minSaleQty, onEdit, isAdmin, onClick }, ref) {
     const { addItem } = useCart();
+    const { price, isTier } = useTierPrice(id, basePrice);
     const [showSelector, setShowSelector] = useState(false);
     const allImages = images.length > 0
       ? images.sort((a, b) => a.position - b.position).map(i => i.image_url)
@@ -174,6 +176,11 @@ export const ProductCard = forwardRef<HTMLDivElement, ProductCardProps>(
                     {(price * 1.23).toFixed(2).replace(".", ",")} €
                   </span>
                   <span className="text-[10px] text-muted-foreground">c/ IVA</span>
+                  {isTier && basePrice != null && (
+                    <span className="text-[10px] text-muted-foreground line-through tabular-nums" title="Preço normal — está a ver o seu preço de empresa">
+                      {(basePrice * 1.23).toFixed(2).replace(".", ",")} €
+                    </span>
+                  )}
                 </div>
                 {stockStatus && (
                   <span
