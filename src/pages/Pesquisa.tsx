@@ -24,6 +24,105 @@ const MUNDO_ROUTES: Record<string, string> = {
   economato: "/economato",
 };
 
+type AiFilters = {
+  terms: string;
+  mundo: string | null;
+  category: string | null;
+  brand: string | null;
+  min_price: number | null;
+  max_price: number | null;
+  summary: string;
+};
+
+/** Frase em linguagem natural (vale a pena chamar a IA) vs. pesquisa direta. */
+function isNaturalQuery(raw: string): boolean {
+  const s = raw.trim().toLowerCase();
+  if (s.length < 3) return false;
+  const words = s.split(/\s+/);
+  // \b não funciona com acentos em JS, por isso compara palavra a palavra
+  const has = (...w: string[]) => words.some((x) => w.includes(x));
+  if (/€|\d\s*eur/.test(s) || has("euro", "euros", "até", "ate", "barato", "barata", "baratos", "baratas", "económico", "económica")) return true;
+  if (/menos de|mais de/.test(s)) return true;
+  if (words.length >= 3 && has("para", "preciso", "quero", "procuro", "algo", "bom", "boa", "melhor", "que", "sem")) return true;
+  return words.length >= 5;
+}
+
+type SearchArgs = {
+  terms: string;
+  mundo: string | null;
+  category: string | null;
+  brand: string | null;
+  minPrice: number | null;
+  maxPrice: number | null;
+  page: number;
+  allowFallback: boolean;
+};
+
+// Se a migração com os novos parâmetros ainda não estiver aplicada, usa a assinatura antiga
+let legacySearch = false;
+
+async function searchOnce(a: SearchArgs, opts: { category: string | null; brand: string | null; matchAny: boolean }) {
+  const from = (a.page - 1) * PAGE_SIZE;
+  const hasPrice = a.minPrice != null || a.maxPrice != null;
+  const base = {
+    p_query: a.terms,
+    p_mundo: a.mundo,
+    p_category: opts.category,
+    p_brand: opts.brand,
+    p_order_by: "featured",
+  };
+
+  if (!legacySearch) {
+    const { data, error } = await (supabase.rpc as any)("search_products", {
+      ...base,
+      p_limit: PAGE_SIZE,
+      p_offset: from,
+      p_min_price: a.minPrice,
+      p_max_price: a.maxPrice,
+      p_match_any: opts.matchAny,
+    });
+    if (!error) {
+      const rows = (data ?? []).map((r: any) => r.row_data);
+      const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
+      return { rows, count };
+    }
+    if (error.code !== "PGRST202") throw error;
+    legacySearch = true;
+  }
+
+  // Assinatura antiga: sem preço nem "qualquer termo" no SQL
+  const { data, error } = await supabase.rpc("search_products", {
+    ...base,
+    p_limit: hasPrice ? 300 : PAGE_SIZE,
+    p_offset: hasPrice ? 0 : from,
+  } as any);
+  if (error) throw error;
+  let rows = (data ?? []).map((r: any) => r.row_data);
+  if (hasPrice) {
+    rows = rows.filter((p: any) => p.price != null && (a.minPrice == null || p.price >= a.minPrice) && (a.maxPrice == null || p.price <= a.maxPrice));
+    return { rows: rows.slice(from, from + PAGE_SIZE), count: rows.length };
+  }
+  return { rows, count: data && data.length > 0 ? Number(data[0].total_count) : 0 };
+}
+
+/** Pesquisa com plano B: filtros da IA → sem categoria/marca → qualquer termo. */
+async function runSearch(a: SearchArgs) {
+  const attempts: { category: string | null; brand: string | null; matchAny: boolean }[] = [
+    { category: a.category, brand: a.brand, matchAny: false },
+  ];
+  if (a.allowFallback) {
+    if (a.category || a.brand) attempts.push({ category: null, brand: a.brand, matchAny: false });
+    if (a.brand) attempts.push({ category: null, brand: null, matchAny: false });
+    if (a.terms.split(/\s+/).length > 1) attempts.push({ category: null, brand: null, matchAny: true });
+  }
+  let last = { rows: [] as any[], count: 0 };
+  for (let i = 0; i < attempts.length; i++) {
+    last = await searchOnce(a, attempts[i]);
+    if (last.count > 0) return { ...last, relaxed: i > 0 };
+  }
+  return { ...last, relaxed: false };
+}
+
 const Pesquisa = () => {
   const { totalItems, setIsOpen } = useCart();
   const navigate = useNavigate();
@@ -44,21 +143,18 @@ const Pesquisa = () => {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Pesquisa inteligente (IA) para frases em linguagem natural
+  // Pesquisa inteligente (IA) — só para frases em linguagem natural.
+  // Pesquisas exatas ("câmara dahua 4mp", referências) vão direto à BD: mais rápido e sem custo.
   const [exactMode, setExactMode] = useState(false);
   useEffect(() => { setExactMode(false); }, [search]);
-  const isNatural = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    if (s.length < 3) return false;
-    return s.split(/\s+/).length >= 3 || /€|euro|até|barat|para\s/.test(s);
-  }, [search]);
+  const isNatural = useMemo(() => isNaturalQuery(search), [search]);
 
   const aiQuery = useQuery({
     queryKey: ["smart-search", search.trim().toLowerCase()],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("smart-search", { body: { query: search.trim() } });
       if (error || data?.error) return null;
-      return data as { terms: string; mundo: string | null; min_price: number | null; max_price: number | null; summary: string };
+      return data as AiFilters;
     },
     enabled: isNatural && !exactMode,
     staleTime: 30 * 60 * 1000,
@@ -69,30 +165,24 @@ const Pesquisa = () => {
   const aiPending = isNatural && !exactMode && aiQuery.isLoading;
   const effTerms = ai?.terms?.trim() || search.trim();
   const effMundo = mundoFilter !== "all" ? mundoFilter : ai?.mundo ?? null;
+  const aiCategory = mundoFilter === "all" || mundoFilter === ai?.mundo ? ai?.category ?? null : null;
+  const aiBrand = ai?.brand ?? null;
   const minP = ai?.min_price ?? null;
   const maxP = ai?.max_price ?? null;
-  const hasPrice = minP != null || maxP != null;
 
   const productsQuery = useQuery({
-    queryKey: ["global-search", effTerms, effMundo, minP, maxP, page],
-    queryFn: async () => {
-      const from = (page - 1) * PAGE_SIZE;
-      const { data, error } = await supabase.rpc("search_products", {
-        p_query: effTerms,
-        p_mundo: effMundo,
-        p_limit: hasPrice ? 300 : PAGE_SIZE,
-        p_offset: hasPrice ? 0 : from,
-        p_order_by: "featured",
-      });
-      if (error) throw error;
-      let rows = (data ?? []).map((r: any) => r.row_data);
-      if (hasPrice) {
-        rows = rows.filter((p: any) => p.price != null && (minP == null || p.price >= minP) && (maxP == null || p.price <= maxP));
-        return { rows: rows.slice(from, from + PAGE_SIZE), count: rows.length };
-      }
-      const count = data && data.length > 0 ? Number(data[0].total_count) : 0;
-      return { rows, count };
-    },
+    queryKey: ["global-search", effTerms, effMundo, aiCategory, aiBrand, minP, maxP, page],
+    queryFn: () => runSearch({
+      terms: effTerms,
+      mundo: effMundo,
+      category: aiCategory,
+      brand: aiBrand,
+      minPrice: minP,
+      maxPrice: maxP,
+      page,
+      // Só a pesquisa interpretada pela IA tem plano B; a exata mostra o que encontra
+      allowFallback: !!ai,
+    }),
     placeholderData: keepPreviousData,
     staleTime: 2 * 60 * 1000,
     enabled: search.trim().length > 0 && !aiPending,
@@ -100,20 +190,22 @@ const Pesquisa = () => {
 
   const products = productsQuery.data?.rows ?? [];
   const total = productsQuery.data?.count ?? 0;
+  const relaxed = productsQuery.data?.relaxed ?? false;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Categorias com contagem precisa (agregação server-side)
+  // Categorias com contagem precisa (agregação server-side), coerentes com os termos usados
+  const chipTerms = ai ? effTerms : search.trim();
   const categoriesQuery = useQuery({
-    queryKey: ["search-categories", search, mundoFilter],
+    queryKey: ["search-categories", chipTerms, effMundo],
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)("get_search_category_counts", {
-        p_query: search.trim(),
-        p_mundo: mundoFilter,
+        p_query: chipTerms,
+        p_mundo: effMundo,
       });
       if (error) throw error;
       return (data ?? []) as { category: string; count: number }[];
     },
-    enabled: search.trim().length > 0 && mundoFilter !== "all",
+    enabled: chipTerms.length > 0 && !!effMundo,
     staleTime: 2 * 60 * 1000,
   });
 
@@ -189,14 +281,14 @@ const Pesquisa = () => {
         </div>
 
         {/* Categorias do mundo selecionado */}
-        {mundoFilter !== "all" && search.trim() && categoryChips.length > 0 && (
+        {effMundo && MUNDO_ROUTES[effMundo] && search.trim() && categoryChips.length > 0 && (
           <div className="border-t border-border/50 px-3 py-2 sm:px-4 flex items-start gap-2">
             <Tag className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1" />
             <div className="flex gap-1.5 flex-wrap">
               {categoryChips.map((c) => (
                 <button
                   key={c.name}
-                  onClick={() => navigate(`${MUNDO_ROUTES[mundoFilter]}?categoria=${encodeURIComponent(c.name)}&q=${encodeURIComponent(search.trim())}`)}
+                  onClick={() => navigate(`${MUNDO_ROUTES[effMundo]}?categoria=${encodeURIComponent(c.name)}&q=${encodeURIComponent(chipTerms)}`)}
                   className="text-xs px-2.5 py-1 rounded-full border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
                   title={`Ver categoria ${c.name}`}
                 >
@@ -229,7 +321,7 @@ const Pesquisa = () => {
             {ai && (
               <div className="mb-4 mx-auto max-w-2xl flex flex-wrap items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
                 <Wand2 className="h-4 w-4 text-primary shrink-0" />
-                <span>{ai.summary}</span>
+                <span>{relaxed ? "Não encontrámos tudo o que pediu — mostramos os produtos mais próximos." : ai.summary}</span>
                 <button onClick={() => setExactMode(true)} className="text-xs text-muted-foreground underline hover:text-foreground">
                   Pesquisar texto exato
                 </button>

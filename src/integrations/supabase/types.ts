@@ -1255,6 +1255,9 @@ export type Database = {
           p_category?: string
           p_family_id?: string
           p_limit?: number
+          p_match_any?: boolean
+          p_max_price?: number
+          p_min_price?: number
           p_mundo?: string
           p_offset?: number
           p_order_asc?: boolean

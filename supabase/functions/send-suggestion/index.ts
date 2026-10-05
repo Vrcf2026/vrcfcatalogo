@@ -1,4 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimits, clientIp, tooManyRequests } from "../_shared/rate-limit.ts";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -50,11 +53,26 @@ serve(async (req) => {
       });
     }
 
+    if (!EMAIL_RE.test(String(email))) {
+      return new Response(JSON.stringify({ error: "Email inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Formulário público: limitar por IP e por email de destino
+    const ip = clientIp(req);
+    const allowed = await checkRateLimits([
+      { key: `suggestion:ip:${ip}`, max: 5, windowSeconds: 3600 },
+      { key: `suggestion:email:${String(email).toLowerCase()}`, max: 3, windowSeconds: 3600 },
+    ]);
+    if (!allowed) return tooManyRequests(corsHeaders);
+
     const requestId = crypto.randomUUID();
     const data = {
-      name: String(name),
-      email: String(email),
-      message: String(message),
+      name: String(name).slice(0, 120),
+      email: String(email).slice(0, 200),
+      message: String(message).slice(0, 2000),
     };
 
     await invokeTransactionalEmail({

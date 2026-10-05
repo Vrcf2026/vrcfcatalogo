@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimits, clientIp, tooManyRequests } from "../_shared/rate-limit.ts";
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const clip = (v: unknown, n: number) => String(v ?? "").slice(0, n);
 
 async function resolveRecipientEmail(): Promise<string> {
   const fallback = "geral@vrcf.pt";
@@ -81,10 +85,25 @@ serve(async (req) => {
       });
     }
 
+    if (!EMAIL_RE.test(String(customerEmail)) || items.length > 100) {
+      return new Response(JSON.stringify({ error: "Dados inválidos" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Formulário público: limitar por IP e por email de destino
+    const ip = clientIp(req);
+    const allowed = await checkRateLimits([
+      { key: `quote-request:ip:${ip}`, max: 5, windowSeconds: 3600 },
+      { key: `quote-request:email:${String(customerEmail).toLowerCase()}`, max: 3, windowSeconds: 3600 },
+    ]);
+    if (!allowed) return tooManyRequests(corsHeaders);
+
     const requestId = crypto.randomUUID();
     const safeItems = (items as any[]).map((i) => ({
-      name: String(i.name ?? ""),
-      category: i.category ? String(i.category) : undefined,
+      name: clip(i.name, 300),
+      category: i.category ? clip(i.category, 120) : undefined,
       quantity: Number(i.quantity) || 0,
       price: i.price != null ? Number(i.price) : null,
     }));
@@ -97,10 +116,10 @@ serve(async (req) => {
 
       idempotencyKey: `quote-admin-${requestId}`,
       templateData: {
-        customerName: String(customerName),
-        customerEmail: String(customerEmail),
-        customerPhone: String(customerPhone ?? ""),
-        notes: notes ? String(notes) : "",
+        customerName: clip(customerName, 120),
+        customerEmail: clip(customerEmail, 200),
+        customerPhone: clip(customerPhone, 40),
+        notes: notes ? clip(notes, 2000) : "",
         items: safeItems,
         shippingEstimate: shippingEstimate != null ? Number(shippingEstimate) : null,
       },
@@ -112,8 +131,8 @@ serve(async (req) => {
         recipientEmail: String(customerEmail),
         idempotencyKey: `quote-customer-${requestId}`,
         templateData: {
-          customerName: String(customerName),
-          notes: notes ? String(notes) : "",
+          customerName: clip(customerName, 120),
+          notes: notes ? clip(notes, 2000) : "",
           items: safeItems,
         },
       });
