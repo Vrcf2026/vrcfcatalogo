@@ -95,8 +95,8 @@ serve(async (req) => {
     // Formulário público: limitar por IP e por email de destino
     const ip = clientIp(req);
     const allowed = await checkRateLimits([
-      { key: `quote-request:ip:${ip}`, max: 5, windowSeconds: 3600 },
-      { key: `quote-request:email:${String(customerEmail).toLowerCase()}`, max: 3, windowSeconds: 3600 },
+      { key: `quote-request:ip:${ip}`, max: 15, windowSeconds: 3600 },
+      { key: `quote-request:email:${String(customerEmail).toLowerCase()}`, max: 8, windowSeconds: 3600 },
     ]);
     if (!allowed) return tooManyRequests(corsHeaders);
 

@@ -154,19 +154,7 @@ export default function PaginaOrcamento() {
         return null;
       })();
 
-      const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
-        body: {
-          customerName: name.trim(),
-          customerEmail: email.trim(),
-          customerPhone: phone.trim(),
-          notes: notes.trim(),
-          items: quoteItems,
-          sendCopyToCustomer: sendCopy,
-          shippingEstimate: portesEstimados,
-          shippingAddress: shippingAddrStr,
-        },
-      });
-      if (fnError) throw fnError;
+      let quoteSaved = false;
 
       try {
         const shippingTotal = totalPortes;
@@ -213,9 +201,30 @@ export default function PaginaOrcamento() {
             };
           });
           if (rows.length) await supabase.from("quote_items").insert(rows);
+          quoteSaved = true;
         }
       } catch (e) {
         console.warn("Could not save quote history", e);
+      }
+
+      // Email para a VRCF (e cópia ao cliente) depois de gravar o pedido
+      const { error: fnError } = await supabase.functions.invoke("send-quote-request", {
+        body: {
+          customerName: name.trim(),
+          customerEmail: email.trim(),
+          customerPhone: phone.trim(),
+          notes: notes.trim(),
+          items: quoteItems,
+          sendCopyToCustomer: sendCopy,
+          shippingEstimate: portesEstimados,
+          shippingAddress: shippingAddrStr,
+        },
+      });
+      // O pedido já ficou gravado na gestão: uma falha no email não deve perder o pedido
+      // nem levar o cliente a submeter de novo (duplicado).
+      if (fnError) {
+        if (!quoteSaved) throw fnError;
+        console.error("Pedido gravado, mas o email de notificação falhou", fnError);
       }
 
       items.forEach(i => trackEvent(i.id, "quote"));
